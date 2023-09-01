@@ -1,0 +1,460 @@
+h3 {
+    background-image: linear-gradient(to right, aliceblue, white);
+    padding: 2px;
+    font-family: sans-serif;
+    font-variant-caps: small-caps;
+}
+
+#split {
+    display: flex;
+    gap: 1em;
+}
+
+#cubewithcontrols {
+    display: grid;
+    grid-template-columns: min-content 1fr min-content;
+}
+
+#controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+#editbuttons {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 5px 2px;
+    align-items: start;
+    justify-content: start;
+    padding-top: 1em;
+}
+
+#solvebtn {
+    grid-row: 3/5;
+    grid-column: 2/3;
+    align-self: stretch;
+}
+
+#rotatewalls {
+    display: grid;
+    grid-template-columns: repeat(4, min-content);
+    background-color: aliceblue;
+    border-style: solid;
+    border-color: aquamarine;
+    justify-content: center;
+}
+
+#rotatewalls > div {
+    padding: 2px;
+}
+
+#rotatewalls > div > button {
+    height: 1.5em;
+}
+
+#rotatecube {
+    display: grid;
+    grid-template-columns: repeat(3, min-content) 1fr;
+    gap: 2px;
+    border-style: solid;
+    border-color: aquamarine;
+    background-color: aliceblue;
+    align-items: center;
+    justify-items: center;
+}
+
+#rotatecubetitle {
+     grid-column: 1/-1;
+     justify-self: stretch;
+     border-bottom-style: solid;
+     border-color: aquamarine;
+}
+
+#angle {
+    width: 5ex;
+}
+
+#movebuttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+#movebuttons > button {
+    height: 1.5em;
+    width: 7em;
+}
+
+.currentmv {
+    background-color: khaki;
+}
+
+#logarea {
+    width: 100%;
+}
+
+#depth {
+    height: 16em;
+    overflow-y: scroll;
+}
+
+#solutions {
+    height: 10em;
+    overflow-y: scroll;
+}
+
+#container {
+    perspective: 8000px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    height: 25em;
+    width: 30em;
+    align-self: center;
+}
+
+#cubeimg {
+    width: 12em;
+    height: 12em;
+    transform-style: preserve-3d;
+    transition: 0.5s;
+    rotate: 1 1 0 -30deg;
+    font-size: large;
+}
+
+.corner, .edge {
+    width: 12em;
+    height: 12em;
+    position: absolute;
+    transform-style: preserve-3d;
+    transition: 0.5s;
+}
+
+.square {
+    border-style: solid;
+    border-width: 1px;
+    width: 4em;
+    height: 4em;
+    position: absolute;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.square:not(:has(> button:not(.cnone) ~ button:not(.cnone))) {
+    grid-template-columns: 1fr;
+}
+
+.csq1 {
+    translate: 0 0 6em;
+}
+
+.csq2 {
+    translate: -2em 0 4em;
+    rotate: y -90deg;
+}
+
+.csq3 {
+    translate: 0 -2em 4em;
+    rotate: x 90deg;
+}
+
+#c2 > .csq1 {
+    rotate: z -90deg;
+}
+
+#c2 > .csq2 {
+    rotate: 1 -1 -1 120deg;
+}
+
+#c2 > .csq3 {
+    rotate: 1 1 -1 120deg;
+}
+
+#c3 > .csq1 {
+    rotate: z 90deg;
+}
+
+#c3 > .csq2 {
+    rotate: -1 -1 1 120deg;
+}
+
+#c3 > .csq3 {
+    rotate: 1 -1 1 120deg;
+}
+
+#c4 > .csq1 {
+    rotate: z 180deg;
+}
+
+#c4 > .csq2 {
+    rotate: 1 0 -1 180deg;
+}
+
+#c4 > .csq3 {
+    rotate: 0 1 -1 180deg;
+}
+
+#c5 > .csq1 {
+    rotate: z -90deg;
+}
+
+#c5 > .csq2 {
+    rotate: -1 -1 1 120deg;
+}
+
+#c5 > .csq3 {
+    rotate: 1 1 -1 120deg;
+}
+
+#c6 > .csq3 {
+    rotate: 0 1 -1 180deg;
+}
+
+#c7 > .csq1 {
+    rotate: z 180deg;
+}
+
+#c7 > .csq2 {
+    rotate: 1 0 -1 180deg;
+}
+
+#c8 > .csq1 {
+    rotate: z 90deg;
+}
+
+#c8 > .csq2 {
+    rotate: 1 -1 -1 120deg;
+}
+
+#c8 > .csq3 {
+    rotate: 1 -1 1 120deg;
+}
+
+.esq1 {
+    translate: 4em 0 6em;
+}
+
+.esq2 {
+    translate: 4em -2em 4em;
+    rotate: x 90deg;
+}
+
+#e2 > .esq1 {
+    rotate: z -90deg;
+}
+
+#e2 > .esq2 {
+    rotate: 1 1 -1 120deg;
+}
+
+#e3 > .esq1 {
+    rotate: z 90deg;
+}
+
+#e3 > .esq2 {
+    rotate: 1 -1 1 120deg;
+}
+
+#e4 > .esq1 {
+    rotate: z 180deg;
+}
+
+#e4 > .esq2 {
+    rotate: 0 1 -1 180deg;
+}
+
+#e5 > .esq1 {
+    rotate: z 90deg;
+}
+
+#e5 > .esq2 {
+    rotate: 0 1 -1 180deg;
+}
+
+#e6 > .esq1 {
+    rotate: z -90deg;
+}
+
+#e6 > .esq2 {
+    rotate: 0 1 -1 180deg;
+}
+
+#e7 > .esq1 {
+    rotate: z 90deg;
+}
+
+#e8 > .esq1 {
+    rotate: z -90deg;
+}
+
+#e9 > .esq2 {
+    rotate: 0 1 -1 180deg;
+}
+
+#ea > .esq1 {
+    rotate: z 90deg;
+}
+
+#ea > .esq2 {
+    rotate: 1 -1 1 120deg;
+}
+
+#eb > .esq1 {
+    rotate: z -90deg;
+}
+
+#eb > .esq2 {
+    rotate: 1 1 -1 120deg;
+}
+
+#ec > .esq1 {
+    rotate: z 180deg;
+}
+
+#c2 {
+    transform: matrix3d(0, 1, 0, 0,  -1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
+}
+
+#c3 {
+    transform: matrix3d(0, -1, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
+}
+
+#c4 {
+    transform: matrix3d(-1, 0, 0, 0,  0, -1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
+}
+
+#c5 {
+    transform: matrix3d(0, 1, 0, 0,  1, 0, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#c6 {
+    transform: matrix3d(-1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#c7 {
+    transform: matrix3d(1, 0, 0, 0,  0, -1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#c8 {
+    transform: matrix3d(0, -1, 0, 0,  -1, 0, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#e2 {
+    transform: matrix3d(0, 1, 0, 0,  0, 0, -1, 0,  -1, 0, 0, 0,  0, 0, 0, 1);
+}
+
+#e3 {
+    transform: matrix3d(0, -1, 0, 0,  0, 0, -1, 0,  1, 0, 0, 0,  0, 0, 0, 1);
+}
+
+#e4 {
+    transform: matrix3d(-1, 0, 0, 0,  0, -1, 0, 0,  0, 0, 1, 0,  0, 0, 0, 1);
+}
+
+#e5 {
+    transform: matrix3d(0, 0, -1, 0,  1, 0, 0, 0,  0, -1, 0, 0,  0, 0, 0, 1);
+}
+
+#e6 {
+    transform: matrix3d(0, 0, 1, 0,  -1, 0, 0, 0,  0, -1, 0, 0,  0, 0, 0, 1);
+}
+
+#e7 {
+    transform: matrix3d(0, 0, 1, 0,  1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 1);
+}
+
+#e8 {
+    transform: matrix3d(0, 0, -1, 0,  -1, 0, 0, 0,  0, 1, 0, 0,  0, 0, 0, 1);
+}
+
+#e9 {
+    transform: matrix3d(-1, 0, 0, 0,  0, 1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#ea {
+    transform: matrix3d(0, -1, 0, 0,  0, 0, 1, 0,  -1, 0, 0, 0,  0, 0, 0, 1);
+}
+
+#eb {
+    transform: matrix3d(0, 1, 0, 0,  0, 0, 1, 0,  1, 0, 0, 0,  0, 0, 0, 1);
+}
+
+#ec {
+    transform: matrix3d(1, 0, 0, 0,  0, -1, 0, 0,  0, 0, -1, 0,  0, 0, 0, 1);
+}
+
+#wyellow {
+    translate: 4em -2em 0;
+    transform: matrix3d(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 1);
+    transition: 0.5s;
+}
+
+#wblue {
+    translate: 4em 4em 6em;
+    transition: 0.5s;
+}
+
+#worange {
+    translate: -2em 4em 0;
+    transform: matrix3d(0, 0, 1, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 0, 0, 1);
+    transition: 0.5s;
+}
+
+#wred {
+    translate: 10em 4em 0;
+    transform: matrix3d(0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1);
+    transition: 0.5s;
+}
+
+#wgreen {
+    translate: 4em 4em -6em;
+    transform: matrix3d(-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0);
+    transition: 0.5s;
+}
+
+#wwhite {
+    translate: 4em 10em 0;
+    transform: matrix3d(1, 0, 0, 0, 0, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 1);
+    transition: 0.5s;
+}
+
+.cyellow {
+    background-color: yellow;
+}
+
+.cblue {
+    background-color: blue;
+    color: white;
+}
+
+.corange {
+    background-color: darkorange;
+}
+
+.cred {
+    background-color: red;
+}
+
+.cgreen {
+    background-color: limegreen;
+}
+
+.cwhite {
+    background-color: white;
+}
+
+.cnone {
+    display: none;
+}
+
+#cubeimg.editmode > .edge > .square, #cubeimg.editmode > .corner > .square {
+    background-image: repeating-linear-gradient(30deg, khaki 0 3px, transparent 3px 6px),
+        repeating-linear-gradient(to right, bisque 0 3px, gray 3px 6px);
+}
+
+#cubeimg:not(.editmode) > .edge > .square > .csel, #cubeimg:not(.editmode) > .corner > .square  > .csel {
+    display: none;
+}
+

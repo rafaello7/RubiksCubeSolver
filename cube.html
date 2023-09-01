@@ -1,0 +1,540 @@
+<!doctype html>
+<html>
+	<head>
+        <title>Cube</title>
+        <link rel='stylesheet' href='cube.css'>
+        <script src='cube.js'></script>
+	</head>
+	<body>
+        <h3>Cube Solver</h3>
+        <div id='split'>
+            <div>
+                <div>Load from file: <input id='cubefile' type='file'></div>
+                <div id='cubewithcontrols'>
+                    <div id='controls'>
+                        <div id='editbuttons'>
+                            Mode:
+                            <label><input type='radio' name='modebtn' id='manipmodebtn' checked>Manipulate</label>
+                            <div></div>
+                            <label><input type='radio' name='modebtn' id='editmodebtn'>Edit</label>
+                            <button id='resetbtn' class='editmodeonly' disabled>Reset</button>
+                            <button id='applybtn' disabled>Apply</button>
+                            <button id='solvebtn' class='manipmodeonly'>Solve</button>
+                        </div>
+                        <div id='rotatecube'>
+                            <div id='rotatecubetitle'>Rotate Cube&emsp;
+                            <input type='number' min='15' max='90' step='15' value='90' id='angle'>&deg;
+                            </div>
+                            <div></div>
+                            <button id='rxubutton'>&UpArrow;</button>
+                            <div></div>
+                            <button id='rzrbutton'>&#x2B6E;</button>
+
+                            <button id='rylbutton'>&LeftArrow;</button>
+                            <div></div>
+                            <button id='ryrbutton'>&RightArrow;</button>
+                            <div></div>
+
+                            <div></div>
+                            <button id='rxdbutton'>&DownArrow;</button>
+                            <div></div>
+                            <button id='rzlbutton'>&#x2B6F;</button>
+                        </div>
+                        <div id='rotatewalls'>
+                            <div style='grid-column: 1/-1'>Rotate Wall</div>
+                            <div class='cblue'>Blue</div>
+                            <div class='cblue'><button class='manipmodeonly' id='rbluewall270'>&#x21b6;</button></div>
+                            <div class='cblue'><button class='manipmodeonly' id='rbluewall180'>180&deg;</button></div>
+                            <div class='cblue'><button class='manipmodeonly' id='rbluewall90'>&#x21b7;</button></div>
+                            <div class='cred'>Red</div>
+                            <div class='cred'><button class='manipmodeonly' id='rredwall270'>&#x21b6;</button></div>
+                            <div class='cred'><button class='manipmodeonly' id='rredwall180'>180&deg;</button></div>
+                            <div class='cred'><button class='manipmodeonly' id='rredwall90'>&#x21b7;</button></div>
+                            <div class='cyellow'>Yellow</div>
+                            <div class='cyellow'><button class='manipmodeonly' id='ryellowwall270'>&#x21b6;</button></div>
+                            <div class='cyellow'><button class='manipmodeonly' id='ryellowwall180'>180&deg;</button></div>
+                            <div class='cyellow'><button class='manipmodeonly' id='ryellowwall90'>&#x21b7;</button></div>
+                            <div class='cgreen'>Green</div>
+                            <div class='cgreen'><button class='manipmodeonly' id='rgreenwall270'>&#x21b6;</button></div>
+                            <div class='cgreen'><button class='manipmodeonly' id='rgreenwall180'>180&deg;</button></div>
+                            <div class='cgreen'><button class='manipmodeonly' id='rgreenwall90'>&#x21b7;</button></div>
+                            <div class='corange'>Orange</div>
+                            <div class='corange'><button class='manipmodeonly' id='rorangewall270'>&#x21b6;</button></div>
+                            <div class='corange'><button class='manipmodeonly' id='rorangewall180'>180&deg;</button></div>
+                            <div class='corange'><button class='manipmodeonly' id='rorangewall90'>&#x21b7;</button></div>
+                            <div class='cwhite'>White</div>
+                            <div class='cwhite'><button class='manipmodeonly' id='rwhitewall270'>&#x21b6;</button></div>
+                            <div class='cwhite'><button class='manipmodeonly' id='rwhitewall180'>180&deg;</button></div>
+                            <div class='cwhite'><button class='manipmodeonly' id='rwhitewall90'>&#x21b7;</button></div>
+                        </div>
+                    </div>
+                    <div id='container'>
+                        <div id='cubeimg'>
+                            <div id='wyellow' class='square cyellow'></div>
+                            <div id='wblue' class='square cblue'></div>
+                            <div id='worange' class='square corange'></div>
+                            <div id='wred' class='square cred'></div>
+                            <div id='wgreen' class='square cgreen'></div>
+                            <div id='wwhite' class='square cwhite'></div>
+
+                            <div id='c1' class='corner'>
+                                <div class='square csq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c2' class='corner'>
+                                <div class='square csq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c3' class='corner'>
+                                <div class='square csq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c4' class='corner'>
+                                <div class='square csq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c5' class='corner'>
+                                <div class='square csq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c6' class='corner'>
+                                <div class='square csq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c7' class='corner'>
+                                <div class='square csq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='c8' class='corner'>
+                                <div class='square csq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq2 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square csq3 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+
+                            <div id='e1' class='edge'>
+                                <div class='square esq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e2' class='edge'>
+                                <div class='square esq1 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e3' class='edge'>
+                                <div class='square esq1 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e4' class='edge'>
+                                <div class='square esq1 cblue'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e5' class='edge'>
+                                <div class='square esq1 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e6' class='edge'>
+                                <div class='square esq1 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e7' class='edge'>
+                                <div class='square esq1 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e8' class='edge'>
+                                <div class='square esq1 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='e9' class='edge'>
+                                <div class='square esq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cyellow'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='ea' class='edge'>
+                                <div class='square esq1 corange'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='eb' class='edge'>
+                                <div class='square esq1 cred'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                            <div id='ec' class='edge'>
+                                <div class='square esq1 cgreen'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                                <div class='square esq2 cwhite'>
+                                    <button class='csel cblue'></button>
+                                    <button class='csel corange'></button>
+                                    <button class='csel cyellow'></button>
+                                    <button class='csel cred'></button>
+                                    <button class='csel cgreen'></button>
+                                    <button class='csel cwhite'></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id='movebuttons'>
+                <button id='movebuttonini' class='currentmv manipmodeonly'>Initial</button>
+                <button id='movebutton0' class='movebtn manipmodeonly'></button>
+                <button id='movebutton1' class='movebtn manipmodeonly'></button>
+                <button id='movebutton2' class='movebtn manipmodeonly'></button>
+                <button id='movebutton3' class='movebtn manipmodeonly'></button>
+                <button id='movebutton4' class='movebtn manipmodeonly'></button>
+                <button id='movebutton5' class='movebtn manipmodeonly'></button>
+                <button id='movebutton6' class='movebtn manipmodeonly'></button>
+                <button id='movebutton7' class='movebtn manipmodeonly'></button>
+                <button id='movebutton8' class='movebtn manipmodeonly'></button>
+                <button id='movebutton9' class='movebtn manipmodeonly'></button>
+                <button id='movebutton10' class='movebtn manipmodeonly'></button>
+                <button id='movebutton11' class='movebtn manipmodeonly'></button>
+                <button id='movebutton12' class='movebtn manipmodeonly'></button>
+                <button id='movebutton13' class='movebtn manipmodeonly'></button>
+                <button id='movebutton14' class='movebtn manipmodeonly'></button>
+                <button id='movebutton15' class='movebtn manipmodeonly'></button>
+                <button id='movebutton16' class='movebtn manipmodeonly'></button>
+                <button id='movebutton17' class='movebtn manipmodeonly'></button>
+                <button id='movebutton18' class='movebtn manipmodeonly'></button>
+                <button id='movebutton19' class='movebtn manipmodeonly'></button>
+            </div>
+            <div id='logarea'>
+                <div id='err' class='log'></div>
+                <div id='depth' class='log'></div>
+                <div id='progress' class='log'></div>
+                <p id='solutions' class='log'></p>
+            </div>
+        </div>
+	</body>
+</html>
