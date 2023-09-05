@@ -1958,19 +1958,29 @@ static unsigned short cornersOrientToIdx(cubecorner_orients cco)
 	return res;
 }
 
-enum { CSARR_MAX = 7, CSREPR_MAX = 3 };
+enum { CSARR_SIZE = 9, CSREPR_SIZE = 3 };
 
-static int depthMaxInitFn() {
+const struct {
+    unsigned csarr, csrepr;
+} depthMaxByMem[] = {
+    { .csarr = 6, .csrepr = 1 },    // ~1GB
+    { .csarr = 7, .csrepr = 0 },    // ~2.3GB
+    { .csarr = 6, .csrepr = 2 },    // ~8.7GB
+    { .csarr = 7, .csrepr = 1 },    // ~10GB
+    { .csarr = 8, .csrepr = 0 },    // ~24.7GB
+};
+
+static int depthMaxSelFn() {
     long pageSize = sysconf(_SC_PAGESIZE);
     long pageCount = sysconf(_SC_PHYS_PAGES);
     long memSizeGB = pageSize * pageCount / 1073741824;
-    int depth = std::min((int)CSARR_MAX-1, 8 - CSREPR_MAX + (memSizeGB >= 10));
-    printf("page size: %ld, count: %ld, mem GB: %ld, depth: %d\n",
-            pageSize, pageCount, memSizeGB, depth);
-    return depth;
+    int model = /*memSizeGB >= 26 ? 4 :*/ memSizeGB >= 11 ? 3 : memSizeGB >= 10 ? 2 : memSizeGB >= 3 ? 1 : 0;
+    printf("page size: %ld, count: %ld, mem GB: %ld, model: %d\n",
+            pageSize, pageCount, memSizeGB, model);
+    return model;
 }
 
-const int DEPTH_MAX = depthMaxInitFn();
+auto [DEPTH_MAX, DREPR_MAX] = depthMaxByMem[depthMaxSelFn()];
 
 class CubeSetArray {
 	struct cubeset {
@@ -2664,7 +2674,6 @@ static void searchMovesTaRepr(const std::vector<CubeSetArray> *cubeSets,
                 cubeedges ceNew = cubeedges::compose(csearch->ce, ce);
                 cubeedges ceNewRepr = cubeedgesRepresentative(ceNew, otransform);
                 if( csArrRepr.containsCubeEdges(cornerOrientIdx, ceNewRepr) ) {
-                    flockfile(stdout);
                     cube c = { .cc = cubecorners(ccp, cco), .ce = ce };
                     std::string moves = "solution:";
                     moves += printMoves(cubeSets, c);
@@ -2847,8 +2856,8 @@ static bool searchMovesB(const std::vector<CubeSetArray> *cubeSets,
 
 static void searchMoves(const cube &csearch, int threadCount, int fdReq)
 {
-	static std::vector<CubeSetArray> cubeSets[CSARR_MAX];
-    static std::vector<CubeSetReprArray> cubeSetsRepr[CSREPR_MAX];
+	static std::vector<CubeSetArray> cubeSets[CSARR_SIZE];
+    static std::vector<CubeSetReprArray> cubeSetsRepr[CSREPR_SIZE];
 
     fmt_time(); // reset time elapsed
     if( cubeSets[0].empty() ) {
@@ -2873,20 +2882,20 @@ static void searchMoves(const cube &csearch, int threadCount, int fdReq)
         return;
     if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, 0, threadCount, fdReq) )
         return;
-    if( CSREPR_MAX > 1 ) {
+    if( DREPR_MAX > 0 ) {
         if( cubeSetsRepr[1].empty() )
             addCubesRepr2(cubeSets, cubeSetsRepr, threadCount, fdReq);
         if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, 1, threadCount, fdReq) )
             return;
     }
-    for(int depthRepr = 2; depthRepr < CSREPR_MAX; ++depthRepr) {
+    for(int depthRepr = 2; depthRepr <= DREPR_MAX; ++depthRepr) {
         if( cubeSetsRepr[depthRepr].empty() )
             addCubesReprN(cubeSetsRepr, depthRepr, threadCount, fdReq);
         if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, depthRepr, threadCount, fdReq) )
             return;
     }
 	for(int depth = 2; depth <= DEPTH_MAX; ++depth) {
-        if( searchMovesB(cubeSets, cubeSetsRepr, csearch, depth, CSREPR_MAX-1, threadCount, fdReq) )
+        if( searchMovesB(cubeSets, cubeSetsRepr, csearch, depth, DREPR_MAX, threadCount, fdReq) )
             return;
 	}
 }

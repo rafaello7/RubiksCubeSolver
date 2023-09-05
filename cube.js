@@ -876,7 +876,7 @@ setInterval(function () {
     }
 }, 100);
 
-async function searchMoves(c, threadCount) {
+async function searchMoves(c) {
     moves = [];
     moveidx = moveidxgoal = -1;
     document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
@@ -898,6 +898,7 @@ async function searchMoves(c, threadCount) {
             let line = msg.substring(0, lineEnd);
             msg = msg.substring(lineEnd+1);
             if( line.startsWith("solution: ") ) {
+                dolog('solutions', `${line}\n`);
                 if( moves.length == 0 ) {
                     let movesStr = line.split(' ');
                     for(let i = 1; i < movesStr.length; ++i) {
@@ -928,8 +929,7 @@ async function searchMoves(c, threadCount) {
                     }
                     moveidxgoal = moves.length - 1;
                     rewind = 10;
-                }else
-                    dolog('solutions', `another ${line}\n`);
+                }
             }else if( line.startsWith("progress: ") )
                 dolog('progress', `${line.substring(10)}\n`);
             else
@@ -1651,7 +1651,7 @@ function searchSolution() {
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
     else
-        searchMoves(c, 4);
+        searchMoves(c);
 }
 
 onload = () => {
