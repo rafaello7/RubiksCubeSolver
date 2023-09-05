@@ -1198,41 +1198,6 @@ let eorangemx = [
     [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
 ];
 
-function shortcutMatrixes(mxarr) {
-    let res = [];
-    let positions = [
-        [ 0, 1, 2 ],
-        [ 0, 2, 1 ],
-        [ 1, 0, 2 ],
-        [ 1, 2, 0 ],
-        [ 2, 0, 1 ],
-        [ 2, 1, 0 ]
-    ];
-    for(let i = 0; i < mxarr.length; ++i) {
-        let pp;
-        for(let p = 0; p < positions.length; ++p) {
-            if( mxarr[i][0][positions[p][0]] != 0 &&
-                mxarr[i][1][positions[p][1]] != 0 && mxarr[i][2][positions[p][2]] != 0 )
-            {
-                pp = p;
-                break;
-            }
-        }
-        if( pp == undefined )
-            console.log(`pp is undefined, i=${i}`);
-        let a = 0;
-        if( mxarr[i][0][positions[pp][0]] < 0 )
-            a += 4;
-        if( mxarr[i][1][positions[pp][1]] < 0 )
-            a += 2;
-        if( mxarr[i][2][positions[pp][2]] < 0 )
-            a += 1;
-        let idx = 10 * pp + a;
-        res.push(idx);
-    }
-    return res;
-}
-
 function multiplyMatrixes(a, b) {
     let res = [ [], [], [], [] ];
     for(let y = 0; y < 4; ++y) {
