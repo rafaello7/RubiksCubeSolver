@@ -1971,7 +1971,6 @@ static int depthMaxSelFn() {
     int model = memSizeGB >= 26 ? 4 : memSizeGB >= 11 ? 3 : memSizeGB >= 10 ? 2 : memSizeGB >= 3 ? 1 : 0;
     printf("page size: %ld, count: %ld, mem GB: %ld, model: %d\n",
             pageSize, pageCount, memSizeGB, model);
-    return 3;
     return model;
 }
 
