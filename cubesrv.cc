@@ -1971,6 +1971,7 @@ static int depthMaxSelFn() {
     int model = memSizeGB >= 26 ? 4 : memSizeGB >= 11 ? 3 : memSizeGB >= 10 ? 2 : memSizeGB >= 3 ? 1 : 0;
     printf("page size: %ld, count: %ld, mem GB: %ld, model: %d\n",
             pageSize, pageCount, memSizeGB, model);
+    return 3;
     return model;
 }
 
@@ -2635,22 +2636,22 @@ static void searchMovesTaRepr(const std::vector<CubeSetArray> *cubeSets,
 
 static bool searchMovesArepr(const std::vector<CubeSetArray> *cubeSets,
         const std::vector<CubeSetReprArray> *cubeSetsRepr,
-		const cube &csearch, int threadCount, int fdReq)
+		const cube &csearch, int depthRepr, int threadCount, int fdReq)
 {
     std::thread threads[threadCount];
     std::atomic_bool isFinish(false);
     std::atomic_int idx(-1);
     for(int t = 0; t < threadCount; ++t) {
-        threads[t] = std::thread(searchMovesTaRepr, cubeSets, cubeSetsRepr, &csearch,
+        threads[t] = std::thread(searchMovesTaRepr, cubeSets, cubeSetsRepr+depthRepr, &csearch,
                 &idx, &isFinish, fdReq);
     }
     for(int t = 0; t < threadCount; ++t)
         threads[t].join();
     if( isFinish.load() ) {
-        sendRespMessage(fdReq, "%s -- %d moves --\n", fmt_time().c_str(), 2*DEPTH_MAX+1);
+        sendRespMessage(fdReq, "%s -- %d moves --\n", fmt_time().c_str(), 2*DEPTH_MAX+depthRepr+1);
         return true;
     }
-    sendRespMessage(fdReq, "%s depth %d end\n", fmt_time().c_str(), 2*DEPTH_MAX+1);
+    sendRespMessage(fdReq, "%s depth %d end\n", fmt_time().c_str(), 2*DEPTH_MAX+depthRepr+1);
     return false;
 }
 
@@ -2835,23 +2836,21 @@ static void searchMoves(const cube &csearch, int threadCount, int fdReq)
     }
     if( cubeSetsRepr[0].empty() )
         addCubesRepr(cubeSets, cubeSetsRepr, threadCount, fdReq);
-    if( searchMovesArepr(cubeSets, cubeSetsRepr, csearch, threadCount, fdReq) )
-        return;
-    if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, 0, threadCount, fdReq) )
+    if( searchMovesArepr(cubeSets, cubeSetsRepr, csearch, 0, threadCount, fdReq) )
         return;
     if( DREPR_MAX > 0 ) {
         if( cubeSetsRepr[1].empty() )
             addCubesRepr2(cubeSets, cubeSetsRepr, threadCount, fdReq);
-        if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, 1, threadCount, fdReq) )
+        if( searchMovesArepr(cubeSets, cubeSetsRepr, csearch, 1, threadCount, fdReq) )
             return;
     }
     for(int depthRepr = 2; depthRepr <= DREPR_MAX; ++depthRepr) {
         if( cubeSetsRepr[depthRepr].empty() )
             addCubesRepr3(cubeSetsRepr, depthRepr, threadCount, fdReq);
-        if( searchMovesB(cubeSets, cubeSetsRepr, csearch, 1, depthRepr, threadCount, fdReq) )
+        if( searchMovesArepr(cubeSets, cubeSetsRepr, csearch, depthRepr, threadCount, fdReq) )
             return;
     }
-	for(int depth = 2; depth <= DEPTH_MAX; ++depth) {
+	for(int depth = 1; depth <= DEPTH_MAX; ++depth) {
         if( searchMovesB(cubeSets, cubeSetsRepr, csearch, depth, DREPR_MAX, threadCount, fdReq) )
             return;
 	}
