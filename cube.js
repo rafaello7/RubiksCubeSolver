@@ -1,12 +1,21 @@
+let startTime, lastTime;
+
 function dolog(section, text) {
     let el = document.querySelector(`#${section}`);
     if( section == 'depth' )
         document.querySelector('#progress').textContent = '';
-    if( section == 'progress' )
+    if( startTime ) {
+        let curTime = Date.now();
+        if( curTime - lastTime >= 1000 )
+            text = `${Math.floor((curTime-lastTime)/1000)}/${Math.floor((curTime-startTime)/1000)}s ${text}`;
+        if( section == 'depth' )
+            lastTime = curTime;
+    }
+    if( section == 'progress' ) {
         el.textContent = text;
-    else{
+    }else{
         let d = document.createElement('div');
-        d.textContent = new Date().toLocaleTimeString().substring(0, 8) + ' ' + text;
+        d.textContent =  text;
         document.querySelector(`#${section}`).append(d);
         d.scrollIntoView();
     }
@@ -877,6 +886,7 @@ setInterval(function () {
 }, 100);
 
 async function searchMoves(c) {
+    startTime = lastTime = Date.now();
     moves = [];
     moveidx = moveidxgoal = -1;
     document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
@@ -936,6 +946,7 @@ async function searchMoves(c) {
                 dolog('depth', `${line}\n`);
         }
     }
+    startTime = undefined;
 }
  
 let cubeimgmx = [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ];
@@ -1622,10 +1633,14 @@ function enterEditMode() {
     applybtn.disabled = ! areCubeColorsFilled();
 }
 
-function resetEdit() {
-    fixedCornerColors = [ [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1] ];
-    fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
-    document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
+function doReset() {
+    if( cubeimg.classList.contains('editmode') ) {
+        fixedCornerColors = [ [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1] ];
+        fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
+        document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
+    }else{
+        cubePrint(csolved);
+    }
 }
 
 function enterManipulateMode() {
@@ -1648,6 +1663,7 @@ function applyEdit() {
 function searchSolution() {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
     let c = cubeimgToCube();
+    localStorage.setItem('cube', `${c.cc.getPerms().getPermVal()} ${c.cc.getOrients().get()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
     else
@@ -1732,8 +1748,14 @@ onload = () => {
     rwhitewall270.addEventListener('click', rotateWhiteWall270);
     document.querySelectorAll('.csel').forEach( (elem) => { elem.addEventListener('click', selectColors); });
     editmodebtn.addEventListener('change', enterEditMode);
-    resetbtn.addEventListener('click', resetEdit);
+    resetbtn.addEventListener('click', doReset);
     applybtn.addEventListener('click', applyEdit);
     manipmodebtn.addEventListener('change', enterManipulateMode);
     solvebtn.addEventListener('click', searchSolution);
+    let crestore = localStorage.getItem('cube');
+    if( crestore ) {
+        let cr = crestore.split(' ');
+        let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
+        cubePrint(c);
+    }
 }
