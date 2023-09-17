@@ -907,7 +907,9 @@ async function searchMoves(c) {
         while( (lineEnd = msg.indexOf('\n')) > 0 ) {
             let line = msg.substring(0, lineEnd);
             msg = msg.substring(lineEnd+1);
-            if( line.startsWith("solution: ") ) {
+            if( line.startsWith("setup: ") ) {
+                dolog('err', `${line.substring(7)}\n`);
+            }else if( line.startsWith("solution: ") ) {
                 dolog('solutions', `${line}\n`);
                 if( moves.length == 0 ) {
                     let movesStr = line.split(' ');

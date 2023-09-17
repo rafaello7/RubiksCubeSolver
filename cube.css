@@ -94,6 +94,11 @@ h3 {
     width: 100%;
 }
 
+#err {
+    font-weight: bold;
+    padding: 1ex 0px;
+}
+
 #depth {
     height: 16em;
     overflow-y: scroll;
