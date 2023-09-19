@@ -1,42 +1,63 @@
 # Rubik's Cube Solver
 
-Program pozwala ułożyć kostkę Rubika. Wyszukuje najmniejszą możliwą liczbę ruchów które układają kostkę.
+The program solves Rubik's cube. The found solution is always optimal,
+i.e. has minimal possible number of steps.
 
-## Wymagania
+## Requirements
 
-Program kompiluje się i uruchamia pod Linuksem. Do kompilacji wymaga programu `g++`. Do uruchomienia
-wymaga komputera z minimum 4GB RAM. Jednakże w przypadku niektórych kostek wyszukiwanie rozwiązania
-przebiega znacznie szybciej gdy komputer ma co najmniej 32GB RAM.
+The program can be compiled and run under Linux operating system. It is
+compiled using `g++`.
 
-## Kompilacja
+To run, a computer with at least 2GB RAM is required. But, the program performs
+a lot of computations. The more memory, more processors, the less time the
+calculations will take. 4GB RAM is better, 16GB even better.
 
-By skompilować program, należy wejść do katalogu ze źródłami i uruchomić `make`.
+## Compilation
 
-## Uruchamianie
+To compile, go to the directory with sources and run `make`.
 
-Należy wejść do katalogu ze źródłami i uruchomić program `./cubesrv` (bez parametrów).
-Ważne jest, aby bieżącym katalogiem był ten ze źródłami, gdyż program czyta dodatkowe pliki (_cube.html_,
-_cube.css_ etc.) z bieżącego katalogu.
+## Running
 
-Program działa jako serwer http, nasłuchuje na porcie 8080. Tak więc po uruchomieniu należy wejść przeglądarką
-na stronę [http://localhost:8080/](http://localhost:8080/).
+To run, go to the directory with sources and invoke `./cubesrv`
+(without parameters). It is important that the current directory is
+the source directory, because the program reads additional files
+(_cube.html_, _cube.css_ etc.) from the current directory.
 
-Strona ma dwa tryby działania kostką: _Manipulate_ oraz _Edit_. Początkowo jest aktywny tryb _Manipulate_,
-który pozwala kręcić ścianami kostki. Natomiast tryb _Edit_ pozwala na selekcję kolorów poszczególnych
-kwadracików.
+The program works as an http server, listening on port 8080. So,
+after starting it, you need to open
+[http://localhost:8080/](http://localhost:8080/) in a browser.
 
-Jeśli ma się fizyczną kostkę do ułożenia, należy przejść w tryb _Edit_ (wybrać radio button `Edit`). Na
-każdym kwadraciku pojawia się 6 kolorów do wyboru. Należy wyklikać odpowiednie kolory na wszystkich
-ścianach, po czym kliknąć button `Apply`.
+The page can operate the cube in two modes: _Manipulate_ and _Edit_.
+Initially the _Manipulate_ mode is active, which allows to rotate walls.
+In _Edit_ mode, it is possible to select colors of squares.
 
-Kliknięcie w już wybrany kolor powoduje odznaczenie tego koloru jako wybranego i powrót do listy kolorów na
-tym kwadraciku do wyboru.
+If you have a physical cube to solve, go to _Edit_ mode (select the
+`Edit` radio button). Each square shows 6 colors to choose from.
+Click the appropriate colors on all walls and then click the `Apply` button.
 
-Dopóki kolory na wszystkich ściankach nie są wybrane, button `Apply` pozostaje wyszarzony. Kliknięcie
-`Apply` powoduje zatwierdzenie wyglądu kostki i przejście z powrotem do trybu `Manipulate`.
+Clicking on an already selected color deselects that color as selected
+and returns to the list of colors in that square to choose from.
 
-W trybie `Manipulate`, kliknięcie przycisku `Solve` zaczyna wyszukiwanie ruchów układających kostkę.
-Zależnie od układu kostki i mocy komputera, wyszukiwanie rozwiązania może trwać od kilku sekund do godzin.
-Lista ruchów układających kostkę pojawia się po prawej stronie kostki. Kliknięcie elementu na liście
-powoduje przejście kostki do stanu pośredniego, tego po wybranym (klikniętym) ruchu.
+Until the colors on all faces are selected, the `Apply` button remains
+greyed out. Clicking `Apply` confirms the appearance of the cube and
+returns to `Manipulate` mode.
+
+In `Manipulate` mode, clicking the `Solve` button starts searching for
+moves to solve the cube. Depending on the layout of the cube and the
+power of the computer, searching for a solution may take from
+a few seconds to hours. The list of moves to solve the cube appears on
+the right side of the cube. Clicking on an item on the list causes the
+cube to move to an intermediate state, the one after the selected
+(clicked) move.
+
+Note that while the program is looking for a solution, does not
+dispatch any HTTP requests.
+
+## Algorithm
+
+The program uses a dumb algorithm, without use of any heuristics, group theory
+etc.  The program creates a set of mixed cubes which can be solved in a few
+moves, then attempts to find a cube in the set among all reached from the cube
+to solve in a few moves. The program does it repeatedly using more and more
+moves, until found.
 
