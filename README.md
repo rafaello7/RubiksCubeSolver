@@ -8,9 +8,10 @@ i.e. has minimal possible number of steps.
 The program can be compiled and run under Linux operating system. It is
 compiled using `g++`.
 
-To run, a computer with at least 2GB RAM is required. But, the program performs
-a lot of computations. The more memory, more processors, the less time the
-calculations will take. 4GB RAM is better, 16GB even better.
+To run, a computer with at least 6GB RAM is recommended.
+The program can run with less memory, but it will perform poorly.
+Please note that the program performs a lot of computations. The more
+more processors, the less time the calculations will take.
 
 ## Compilation
 
