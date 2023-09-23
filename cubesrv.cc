@@ -293,6 +293,7 @@ public:
 	bool operator==(const cubeedges &ce) const { return edges == ce.edges; }
 	bool operator!=(const cubeedges &ce) const { return edges != ce.edges; }
 	bool operator<(const cubeedges &ce) const { return edges < ce.edges; }
+    unsigned getPermIdx() const;
     unsigned short getOrientIdx() const;
     unsigned long get() const { return edges; }
 };
@@ -393,6 +394,20 @@ cubeedges cubeedges::compose(cubeedges ce1, cubeedges ce2)
 	return res;
 }
 
+unsigned cubeedges::getPermIdx() const {
+    unsigned res = 0;
+    unsigned long indexes = 0;
+    unsigned long e = edges << 2;
+    unsigned shift = 60;
+    for(unsigned i = 1; i <= 12; ++i) {
+        shift -= 5;
+        unsigned p = e >> shift & 0x3c;
+        res = i * res + (indexes >> p & 0xf);
+        indexes += 0x111111111111ul << p;
+    }
+    return res;
+}
+
 unsigned short cubeedges::getOrientIdx() const {
     unsigned short res;
 #ifdef USE_ASM
@@ -407,9 +422,16 @@ unsigned short cubeedges::getOrientIdx() const {
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
-    res = 0;
-	for(int i = 10; i >= 0; --i)
-        res = 2*res | (edges >> 5*i+4 & 1);
+    unsigned long orients = (edges & 0x42108421084210ul) >> 4;
+    // orients == k0000j0000i0000h0000g0000f0000e0000d0000c0000b0000a
+    orients |= orients >> 4;
+    // orients == k000kj000ji000ih000hg000gf000fe000ed000dc000cb000ba
+    orients |= orients >> 8;
+    // orients == k000kj00kji0kjih0jihg0ihgf0hgfe0gfed0fedc0edcb0dcba
+    orients &= 0x70000f0000ful;
+    // orients ==         kji0000000000000000hgfe0000000000000000dcba
+    res = orients | orients >> 16 | orients >> 32;
+    // res == kjihgfedcba   (bit over 16 are cut off due to res variable type)
 #endif
 #ifdef ASMCHECK
     if( res != chk ) {
@@ -2286,6 +2308,21 @@ static unsigned short cornersOrientToIdx(cubecorner_orients cco)
 	return res;
 }
 
+static cubeedges edgesIdxToPerm(unsigned idx)
+{
+    unsigned long unused = 0xba9876543210ul;
+    cubeedges ce;
+
+    for(unsigned edgeIdx = 12; edgeIdx > 0; --edgeIdx) {
+        unsigned p = idx % edgeIdx * 4;
+        ce.setPermAt(12-edgeIdx, unused >> p & 0xf);
+        unsigned long m = (1ul << p) - 1;
+        unused = unused & m | unused >> 4 & ~m;
+        idx /= edgeIdx;
+    }
+    return ce;
+}
+
 enum { CSARR_SIZE = 11 };
 
 static int depthMaxSelFn() {
@@ -2355,7 +2392,6 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
 
 bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
 {
-    unsigned short orientIdx = ce.getOrientIdx();
     if( ! m_orientOccur.empty() ) {
         unsigned short orientIdx = ce.getOrientIdx();
         if( (m_orientOccur[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )

@@ -6,8 +6,11 @@ function dolog(section, text) {
         document.querySelector('#progress').textContent = '';
     if( startTime ) {
         let curTime = Date.now();
-        if( curTime - lastTime >= 1000 )
-            text = `${Math.floor((curTime-lastTime)/1000)}/${Math.floor((curTime-startTime)/1000)}s ${text}`;
+        if( curTime - lastTime >= 100 ) {
+            let dig1 = curTime - lastTime < 10000 ? 1 : 0;
+            let dig2 = curTime - startTime < 10000 ? 1 : 0;
+            text = `${((curTime-lastTime)/1000).toFixed(dig1)}/${((curTime-startTime)/1000).toFixed(dig2)}s ${text}`;
+        }
         if( section == 'depth' )
             lastTime = curTime;
     }
