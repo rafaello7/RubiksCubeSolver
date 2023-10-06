@@ -510,7 +510,7 @@ struct elemLoc {
 };
 */
 
-function cubeRead(text)
+function cubeReadFromFile(text)
 {
 	let walls = [ [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []] ]; //[6][3][3];
 	let wno = 0, rno = 0;
@@ -550,15 +550,22 @@ function cubeRead(text)
 	while( lineNo < textlines.length ) {
         let line = textlines[lineNo];
         ++lineNo;
-		for(let cno = 0; cno < (wno == 1 ? 16 : 3); ++cno) {
-			if( cno % 4 != 3 ) {
+        let sqcount = 0, cno = 0;
+        while( sqcount < (wno == 1 ? 12 : 3) ) {
+            if( cno == line.length ) {
+                dolog('err', `too few letters at line ${lineNo}\n`);
+                return null;
+            }
+            if( ! /\s/.test(line[cno]) ) {
 				let lpos = colorLetters.indexOf(line[cno].toUpperCase());
 				if(lpos < 0) {
 					dolog('err', `bad letter at line ${lineNo} column ${cno}\nwno=${wno} rno=${rno} cno=${cno}\n`);
 					return null;
 				}
-				walls[wno + Math.floor(cno / 4)][rno][cno % 4] = lpos;
+				walls[wno + Math.floor(sqcount / 3)][rno][sqcount % 3] = lpos;
+                ++sqcount;
 			}
+            ++cno;
 		}
 		if( rno == 2 ) {
 			if( wno == 5 )
@@ -670,7 +677,7 @@ function cubeRead(text)
 	return c;
 }
 
-function cubeWrite(c)
+function cubeToParamText(c)
 {
 	const colorChars = 'YOBRGW';
     let res = '';
@@ -734,6 +741,90 @@ function cubeWrite(c)
     res += colorChars[cubeCornerColors[c.cc.getPermAt(6)][R240[c.cc.getOrientAt(6)]]];
     res += colorChars[cubeEdgeColors[c.ce.edgeN(11)][1-c.ce.edgeR(11)]];
     res += colorChars[cubeCornerColors[c.cc.getPermAt(7)][R120[c.cc.getOrientAt(7)]]];
+    return res;
+}
+
+function cubeToSaveText(c)
+{
+	const colorChars = 'YOBRGW';
+    let res = '    ';
+
+	res += colorChars[cubeCornerColors[c.cc.getPermAt(4)][R120[c.cc.getOrientAt(4)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(8)][1-c.ce.edgeR(8)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(5)][R240[c.cc.getOrientAt(5)]]];
+    res += '\n    ';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(4)][c.ce.edgeR(4)]];
+    res += 'Y';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(5)][c.ce.edgeR(5)]];
+    res += '\n    ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(0)][R240[c.cc.getOrientAt(0)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(0)][1-c.ce.edgeR(0)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(1)][R120[c.cc.getOrientAt(1)]]];
+    res += '\n';
+
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(4)][R240[c.cc.getOrientAt(4)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(4)][1-c.ce.edgeR(4)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(0)][R120[c.cc.getOrientAt(0)]]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(0)][c.cc.getOrientAt(0)]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(0)][c.ce.edgeR(0)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(1)][c.cc.getOrientAt(1)]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(1)][R240[c.cc.getOrientAt(1)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(5)][1-c.ce.edgeR(5)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(5)][R120[c.cc.getOrientAt(5)]]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(5)][c.cc.getOrientAt(5)]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(8)][c.ce.edgeR(8)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(4)][c.cc.getOrientAt(4)]];
+    res += '\n';
+
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(9)][c.ce.edgeR(9)]];
+    res += 'O';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(1)][c.ce.edgeR(1)]];
+    res += ' ';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(1)][1-c.ce.edgeR(1)]];
+    res += 'B';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(2)][1-c.ce.edgeR(2)]];
+    res += ' ';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(2)][c.ce.edgeR(2)]];
+    res += 'R';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(10)][c.ce.edgeR(10)]];
+    res += ' ';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(10)][1-c.ce.edgeR(10)]];
+    res += 'G';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(9)][1-c.ce.edgeR(9)]];
+    res += '\n';
+
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(6)][R120[c.cc.getOrientAt(6)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(6)][1-c.ce.edgeR(6)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(2)][R240[c.cc.getOrientAt(2)]]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(2)][c.cc.getOrientAt(2)]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(3)][c.ce.edgeR(3)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(3)][c.cc.getOrientAt(3)]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(3)][R120[c.cc.getOrientAt(3)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(7)][1-c.ce.edgeR(7)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(7)][R240[c.cc.getOrientAt(7)]]];
+    res += ' ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(7)][c.cc.getOrientAt(7)]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(11)][c.ce.edgeR(11)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(6)][c.cc.getOrientAt(6)]];
+    res += '\n    ';
+
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(2)][R120[c.cc.getOrientAt(2)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(3)][1-c.ce.edgeR(3)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(3)][R240[c.cc.getOrientAt(3)]]];
+    res += '\n    ';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(6)][c.ce.edgeR(6)]];
+    res += 'W';
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(7)][c.ce.edgeR(7)]];
+    res += '\n    ';
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(6)][R240[c.cc.getOrientAt(6)]]];
+    res += colorChars[cubeEdgeColors[c.ce.edgeN(11)][1-c.ce.edgeR(11)]];
+    res += colorChars[cubeCornerColors[c.cc.getPermAt(7)][R120[c.cc.getOrientAt(7)]]];
+    res += '\n';
     return res;
 }
 
@@ -896,7 +987,7 @@ async function searchMoves(c) {
     movebuttonini.classList.add('currentmv');
     document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
 
-    let qparam=cubeWrite(c);
+    let qparam=cubeToParamText(c);
     let a = await fetch('/?' + qparam);
     let b = a.body.getReader();
     const utf8Decoder = new TextDecoder("utf-8");
@@ -1675,14 +1766,56 @@ function searchSolution() {
         searchMoves(c);
 }
 
+function loadFromFile() {
+    showOpenFilePicker({
+        types: [ {
+            description: 'saved cube',
+            accept: { 'text/plain': [ '.txt' ] }
+        } ]
+    }).then(async function ( [fileHandle] ) {
+        let file = await fileHandle.getFile();
+        let val = await file.text();
+        let c = cubeReadFromFile(val);
+        cubePrint(c);
+    }, function() {});
+}
+
+function saveToFile() {
+    let fileSeq = localStorage.getItem('fileseq');
+    if( !fileSeq )
+        fileSeq = '1';
+    let fname = 'c' + fileSeq + '.txt';
+    showSaveFilePicker({
+        suggestedName: fname,
+        types: [ {
+            description: 'saved cube',
+            accept: { 'text/plain': [ '.txt' ] }
+        } ]
+    }).then(async function(fileHandle) {
+        const fout = await fileHandle.createWritable();
+        let c = cubeimgToCube();
+        let saveText = cubeToSaveText(c);
+        await fout.write(saveText);
+        await fout.close();
+        localStorage.setItem('fileseq', +fileSeq+1);
+    }, function() {});
+}
+
 onload = () => {
-    document.querySelector('#cubefile').addEventListener('change', (ev) => {
-        let file = ev.target.files[0];
-        file.text().then((val) => {
-            let c = cubeRead(val);
-            cubePrint(c);
+    if( window['showOpenFilePicker'] == undefined ) {
+        loadsavebtns.style.display = 'none';
+        document.querySelector('#cubefile').addEventListener('change', (ev) => {
+            let file = ev.target.files[0];
+            file.text().then((val) => {
+                let c = cubeReadFromFile(val);
+                cubePrint(c);
+            });
         });
-    });
+    }else{
+        loadonlybtn.style.display = 'none';
+        loadbtn.addEventListener('click', loadFromFile);
+        savebtn.addEventListener('click', saveToFile);
+    }
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);

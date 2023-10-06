@@ -2448,8 +2448,8 @@ static cubecorner_perms cornersIdxToPerm(unsigned short idx)
 	for(unsigned cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
 		unsigned p = idx % cornerIdx * 4;
 		ccp.setAt(8-cornerIdx, unused >> p & 0xf);
-		unsigned m = (1 << p) - 1;
-		unused = unused & m | unused >> 4 & ~m;
+		unsigned m = -1 << p;
+		unused = unused & ~m | unused >> 4 & m;
 		idx /= cornerIdx;
 	}
 	return ccp;
@@ -2497,8 +2497,8 @@ static cubeedges edgesIdxToPerm(unsigned idx)
     for(unsigned edgeIdx = 12; edgeIdx > 0; --edgeIdx) {
         unsigned p = idx % edgeIdx * 4;
         ce.setPermAt(12-edgeIdx, unused >> p & 0xf);
-        unsigned long m = (1ul << p) - 1;
-        unused = unused & m | unused >> 4 & ~m;
+        unsigned long m = -1ul << p;
+        unused = unused & ~m | unused >> 4 & m;
         idx /= edgeIdx;
     }
     return ce;
