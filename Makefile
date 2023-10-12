@@ -9,4 +9,4 @@ clean:
 	rm -f cubesrv.o cubesrv
 
 tar:
-	d=$${PWD##*/}; cd .. && tar czf $$d.tar.gz $$d/*.cc $$d/*.txt $$d/Makefile
+	d=$${PWD##*/}; cd .. && tar czf $$d.tar.gz $$d/*.[chij]* $$d/Makefile
