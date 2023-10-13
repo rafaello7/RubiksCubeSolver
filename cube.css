@@ -10,6 +10,28 @@ h3 {
     gap: 1em;
 }
 
+#saveload,#loadsavebtns {
+    display: flex;
+}
+
+#loadlist {
+    display: flex;
+    margin-left: 2em;
+    gap: 1ex;
+}
+
+#cubelistitemtext {
+    width: 10em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#cubelisttext {
+    width: 40em;
+    height: 20em;
+}
+
 #cubewithcontrols {
     display: grid;
     grid-template-columns: min-content 1fr min-content;

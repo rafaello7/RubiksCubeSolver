@@ -9,8 +9,19 @@
         <h3>Cube Solver</h3>
         <div id='split'>
             <div>
-                <div id='loadsavebtns'><button id='loadbtn'>Load from file</button> <button id='savebtn'>Save To File</button></div>
-                <div id='loadonlybtn'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
+                <div id='saveload'>
+                    <div id='loadsavebtns'>
+                        <button id='loadbtn'>Load From file</button>
+                        <button id='savebtn'>Save To File</button>
+                    </div>
+                    <div id='loadonlybtn'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
+                    <div id='loadlist'>
+                        <button id='cubelistloadbtn'>List</button>
+                        <button id='cubelistitemprev'>&lt;</button>
+                        <button id='cubelistitemnext'>&gt;</button>
+                        <div id='cubelistitemtext'></div>
+                    </div>
+                </div>
                 <div id='cubewithcontrols'>
                     <div id='controls'>
                         <div id='editbuttons'>
@@ -537,5 +548,13 @@
                 <p id='solutions' class='log'></p>
             </div>
         </div>
+        <dialog id='cubelist'>
+            Cube List
+            <div>
+                <textarea id='cubelisttext'></textarea>
+            </div>
+            <button id='cubelistsavebtn'>Save</button>
+            <button id='cubelistcancelbtn'>Cancel</button>
+        </dialog>
 	</body>
 </html>

@@ -99,6 +99,30 @@ function rotateDirName(rd) {
 	return '' + rd;
 }
 
+function rotateDirReverse(rd) {
+	switch( rd ) {
+	case ORANGECW:  return ORANGECCW;
+	case ORANGE180: return ORANGE180;
+	case ORANGECCW: return ORANGECW;
+	case REDCW:  return REDCCW;
+	case RED180: return RED180;
+	case REDCCW: return REDCW;
+	case YELLOWCW:  return YELLOWCCW;
+	case YELLOW180: return YELLOW180;
+	case YELLOWCCW: return YELLOWCW;
+	case WHITECW:  return WHITECCW;
+	case WHITE180: return WHITE180;
+	case WHITECCW: return WHITECW;
+	case GREENCW:  return GREENCCW;
+	case GREEN180: return GREEN180;
+	case GREENCCW: return GREENCW;
+	case BLUECW:  return BLUECCW;
+	case BLUE180: return BLUE180;
+	case BLUECCW: return BLUECW;
+	}
+	return RCOUNT;
+}
+
 class cubecorner_perms {
 	/*unsigned*/ #perms;
 
@@ -402,9 +426,9 @@ class cube {
 //           |         |
 //  _________|_________|_________ _________
 // |  ORANGE |   BLUE  |   RED   |  GREEN  |
-// |         | c  e  c |         | c     c |
+// |         | c  e  c |         | c  e  c |
 // | e     e |         | e     e |         |
-// |         | c  e  c |         | c     c |
+// |         | c  e  c |         | c  e  c |
 // |_________|_________|_________|_________|
 //           |  WHITE  |
 //           |         |
@@ -828,157 +852,6 @@ function cubeToSaveText(c)
     return res;
 }
 
-let moves = [], moveidx = -1, moveidxgoal = -1, rewind = 0;
-
-let lastMoveTime = 0;
-
-setInterval(function () {
-    let curTime = Date.now();
-    if( curTime < lastMoveTime + 600 )
-        return;
-    if( moveidx < moveidxgoal ) {
-        ++moveidx;
-        document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
-        document.querySelector(`#movebutton${moveidx}`).classList.add('currentmv');
-        if( moveidx < moves.length ) {
-            switch( moves[moveidx] ) {
-                case ORANGECW:
-                    rotateOrangeWall90();
-                    break;
-                case ORANGE180:
-                    rotateOrangeWall180();
-                    break;
-                case ORANGECCW:
-                    rotateOrangeWall270();
-                    break;
-                case REDCW:
-                    rotateRedWall90();
-                    break;
-                case RED180:
-                    rotateRedWall180();
-                    break;
-                case REDCCW:
-                    rotateRedWall270();
-                    break;
-                case YELLOWCW:
-                    rotateYellowWall90();
-                    break;
-                case YELLOW180:
-                    rotateYellowWall180();
-                    break;
-                case YELLOWCCW:
-                    rotateYellowWall270();
-                    break;
-                case WHITECW:
-                    rotateWhiteWall90();
-                    break;
-                case WHITE180:
-                    rotateWhiteWall180();
-                    break;
-                case WHITECCW:
-                    rotateWhiteWall270();
-                    break;
-                case GREENCW:
-                    rotateGreenWall90();
-                    break;
-                case GREEN180:
-                    rotateGreenWall180();
-                    break;
-                case GREENCCW:
-                    rotateGreenWall270();
-                    break;
-                case BLUECW:
-                    rotateBlueWall90();
-                    break;
-                case BLUE180:
-                    rotateBlueWall180();
-                    break;
-                case BLUECCW:
-                    rotateBlueWall270();
-                    break;
-            }
-        }
-        lastMoveTime = curTime;
-    }else if( moveidx > moveidxgoal ) {
-        while( moveidx > moveidxgoal ) {
-            if( moveidx < moves.length ) {
-                switch( moves[moveidx] ) {
-                    case ORANGECW:
-                        rotateOrangeWall270();
-                        break;
-                    case ORANGE180:
-                        rotateOrangeWall90();
-                        rotateOrangeWall90();
-                        break;
-                    case ORANGECCW:
-                        rotateOrangeWall90();
-                        break;
-                    case REDCW:
-                        rotateRedWall270();
-                        break;
-                    case RED180:
-                        rotateRedWall90();
-                        rotateRedWall90();
-                        break;
-                    case REDCCW:
-                        rotateRedWall90();
-                        break;
-                    case YELLOWCW:
-                        rotateYellowWall270();
-                        break;
-                    case YELLOW180:
-                        rotateYellowWall90();
-                        rotateYellowWall90();
-                        break;
-                    case YELLOWCCW:
-                        rotateYellowWall90();
-                        break;
-                    case WHITECW:
-                        rotateWhiteWall270();
-                        break;
-                    case WHITE180:
-                        rotateWhiteWall90();
-                        rotateWhiteWall90();
-                        break;
-                    case WHITECCW:
-                        rotateWhiteWall90();
-                        break;
-                    case GREENCW:
-                        rotateGreenWall270();
-                        break;
-                    case GREEN180:
-                        rotateGreenWall90();
-                        rotateGreenWall90();
-                        break;
-                    case GREENCCW:
-                        rotateGreenWall90();
-                        break;
-                    case BLUECW:
-                        rotateBlueWall270();
-                        break;
-                    case BLUE180:
-                        rotateBlueWall90();
-                        rotateBlueWall90();
-                        break;
-                    case BLUECCW:
-                        rotateBlueWall90();
-                        break;
-                }
-            }
-            --moveidx;
-        }
-        document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
-        if( moveidx >= 0 )
-            document.querySelector(`#movebutton${moveidx}`).classList.add('currentmv');
-        else
-            movebuttonini.classList.add('currentmv');
-        lastMoveTime = curTime;
-    }else if( moveidx == moveidxgoal && rewind ) {
-        if( --rewind == 0 )
-            moveidxgoal = -1;
-    }
-}, 100);
-
 async function searchMoves(c) {
     startTime = lastTime = Date.now();
     moves = [];
@@ -1356,24 +1229,32 @@ function hasMatrix(toFind, searchArr) {
     return false;
 }
 
-function cubePrint(c) {
+function updateStylesTransforms()
+{
     let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
     let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
+    let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
+    for(let i = 0; i < 8; ++i)
+        corners[i].style.transform = `matrix3d(${curcornersmx[i].join()})`;
+    for(let i = 0; i < 12; ++i)
+        edges[i].style.transform = `matrix3d(${curedgesmx[i].join()})`;
+    for(let i = 0; i < 6; ++i)
+        wcolors[i].style.transform = `matrix3d(${curmiddlemxs[i].join()})`;
+}
+
+function cubePrint(c) {
     for(let i = 0; i < 8; ++i) {
         let cno = c.cc.getPermAt(i);
         curcornersmx[cno] = cornersmx[i][c.cc.getOrientAt(i)];
-        corners[cno].style.transform = `matrix3d(${curcornersmx[cno].join()})`;
     }
     for(let i = 0; i < 12; ++i) {
         let eno = c.ce.edgeN(i);
         curedgesmx[eno] = edgesmx[i][c.ce.edgeR(i)];
-        edges[eno].style.transform = `matrix3d(${curedgesmx[eno].join()})`;
     }
+    updateStylesTransforms();
 }
 
 function cubeimgToCube() {
-    let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
-    let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
     let cc = new cubecorners();
     for(let i = 0; i < 8; ++i) {
         for(let cno = 0; cno < 8; ++cno) {
@@ -1398,103 +1279,242 @@ function cubeimgToCube() {
     return new cube(cc, ce);
 }
 
-function rotateWall(ccolormx, ecolormx, colornum, transform, wcolor) {
-    let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
-    let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
-    for(let i = 0; i < 8; ++i) {
-        if( hasMatrix(curcornersmx[i], ccolormx) ) {
-            curcornersmx[i] = multiplyMatrixesRnd(curcornersmx[i], transform);
-            corners[i].style.transform = `matrix3d(${curcornersmx[i].join()})`;
+const STYLEAPPLY_IMMEDIATE = 1;
+const STYLEAPPLY_DEFER = 2;
+const STYLEAPPLY_SKIP = 3;
+
+function rotateWall(rotateDir, styleApply) {
+    function rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor, styleApply) {
+        for(let i = 0; i < 8; ++i) {
+            if( hasMatrix(curcornersmx[i], ccolormx) )
+                curcornersmx[i] = multiplyMatrixesRnd(curcornersmx[i], transform);
         }
-    }
-    for(let i = 0; i < 12; ++i) {
-        if( hasMatrix(curedgesmx[i], ecolormx) ) {
-            curedgesmx[i] = multiplyMatrixesRnd(curedgesmx[i], transform);
-            edges[i].style.transform = `matrix3d(${curedgesmx[i].join()})`;
+        for(let i = 0; i < 12; ++i) {
+            if( hasMatrix(curedgesmx[i], ecolormx) )
+                curedgesmx[i] = multiplyMatrixesRnd(curedgesmx[i], transform);
         }
+        curmiddlemxs[colornum] = multiplyMatrixesRnd(curmiddlemxs[colornum], transform);
+        if( styleApply === STYLEAPPLY_SKIP )
+            return;
+        if( styleApply === STYLEAPPLY_DEFER )
+            setTimeout(updateStylesTransforms, 50);
+        else
+            updateStylesTransforms();
     }
-    curmiddlemxs[colornum] = multiplyMatrixesRnd(curmiddlemxs[colornum], transform);
-    wcolor.style.transform = `matrix3d(${curmiddlemxs[colornum].join()})`;
+
+    switch( rotateDir ) {
+        case ORANGECW:
+            rotateWallInt(corangemx, eorangemx, 1,
+                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], worange,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case ORANGE180:
+            if( styleApply === undefined ) {
+                //rotateOrangeWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(corangemx, eorangemx, 1,
+                    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+                    worange, STYLEAPPLY_IMMEDIATE);
+                //rotateOrangeWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(corangemx, eorangemx, 1,
+                    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+                    worange, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(corangemx, eorangemx, 1,
+                    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+                    worange, styleApply);
+            }
+            break;
+        case ORANGECCW:
+            rotateWallInt(corangemx, eorangemx, 1,
+                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], worange,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case REDCW:
+            rotateWallInt(credmx, eredmx, 3,
+                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], wred,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case RED180:
+            if( styleApply === undefined ) {
+                //rotateRedWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(credmx, eredmx, 3,
+                    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+                    wred, STYLEAPPLY_IMMEDIATE);
+                //rotateRedWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(credmx, eredmx, 3,
+                    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+                    wred, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(credmx, eredmx, 3,
+                    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+                    wred, styleApply);
+            }
+            break;
+        case REDCCW:
+            rotateWallInt(credmx, eredmx, 3,
+                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], wred,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case YELLOWCW:
+            rotateWallInt(cyellowmx, eyellowmx, 0,
+                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wyellow,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case YELLOW180:
+            if( styleApply === undefined ) {
+                //rotateYellowWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(cyellowmx, eyellowmx, 0,
+                    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+                    wyellow, STYLEAPPLY_IMMEDIATE);
+                //rotateYellowWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(cyellowmx, eyellowmx, 0,
+                    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+                    wyellow, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(cyellowmx, eyellowmx, 0,
+                    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+                    wyellow, styleApply);
+            }
+            break;
+        case YELLOWCCW:
+            rotateWallInt(cyellowmx, eyellowmx, 0,
+                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wyellow,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case WHITECW:
+            rotateWallInt(cwhitemx, ewhitemx, 5,
+                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wwhite,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case WHITE180:
+            if( styleApply === undefined ) {
+                //rotateWhiteWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(cwhitemx, ewhitemx, 5,
+                    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+                    wwhite, STYLEAPPLY_IMMEDIATE);
+                //rotateWhiteWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(cwhitemx, ewhitemx, 5,
+                    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+                    wwhite, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(cwhitemx, ewhitemx, 5,
+                    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+                    wwhite, styleApply);
+            }
+            break;
+        case WHITECCW:
+            rotateWallInt(cwhitemx, ewhitemx, 5,
+                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wwhite,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case GREENCW:
+            rotateWallInt(cgreenmx, egreenmx, 4,
+                [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case GREEN180:
+            if( styleApply === undefined ) {
+                //rotateGreenWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(cgreenmx, egreenmx, 4,
+                    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+                    wgreen, STYLEAPPLY_IMMEDIATE);
+                //rotateGreenWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(cgreenmx, egreenmx, 4,
+                    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+                    wgreen, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(cgreenmx, egreenmx, 4,
+                    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+                    wgreen, styleApply);
+            }
+            break;
+        case GREENCCW:
+            rotateWallInt(cgreenmx, egreenmx, 4,
+                [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case BLUECW:
+            rotateWallInt(cbluemx, ebluemx, 2,
+                [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+        case BLUE180:
+            if( styleApply === undefined ) {
+                //rotateBlueWall90(STYLEAPPLY_IMMEDIATE);
+                rotateWallInt(cbluemx, ebluemx, 2,
+                    [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+                    wblue, STYLEAPPLY_IMMEDIATE);
+                //rotateBlueWall90(STYLEAPPLY_DEFER);
+                rotateWallInt(cbluemx, ebluemx, 2,
+                    [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+                    wblue, STYLEAPPLY_DEFER);
+            }else{
+                rotateWallInt(cbluemx, ebluemx,
+                    2, [[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
+                    wblue, styleApply);
+            }
+            break;
+        case BLUECCW:
+            rotateWallInt(cbluemx, ebluemx, 2,
+                [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue,
+                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            break;
+    }
 }
 
-function rotateBlueWall90() {
-    rotateWall(cbluemx, ebluemx, 2, [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-}
+function rotateBlueWall90() { rotateWall(BLUECW); }
+function rotateBlueWall180() { rotateWall(BLUE180); }
+function rotateBlueWall270() { rotateWall(BLUECCW); }
+function rotateRedWall90() { rotateWall(REDCW); }
+function rotateRedWall180() { rotateWall(RED180); }
+function rotateRedWall270() { rotateWall(REDCCW); }
+function rotateYellowWall90() { rotateWall(YELLOWCW); }
+function rotateYellowWall180() { rotateWall(YELLOW180); }
+function rotateYellowWall270() { rotateWall(YELLOWCCW); }
+function rotateGreenWall90() { rotateWall(GREENCW); }
+function rotateGreenWall180() { rotateWall(GREEN180); }
+function rotateGreenWall270() { rotateWall(GREENCCW); }
+function rotateOrangeWall90() { rotateWall(ORANGECW); }
+function rotateOrangeWall180() { rotateWall(ORANGE180); }
+function rotateOrangeWall270() { rotateWall(ORANGECCW); }
+function rotateWhiteWall90() { rotateWall(WHITECW); }
+function rotateWhiteWall180() { rotateWall(WHITE180); }
+function rotateWhiteWall270() { rotateWall(WHITECCW); }
 
-function rotateBlueWall180() {
-    //rotateWall(cbluemx, ebluemx, 2, [[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-    rotateBlueWall90();
-    setTimeout(rotateBlueWall90, 10);
-}
+let moves = [], moveidx = -1, moveidxgoal = -1, rewind = 0;
 
-function rotateBlueWall270() {
-    rotateWall(cbluemx, ebluemx, 2, [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-}
+let lastMoveTime = 0;
 
-function rotateRedWall90() {
-    rotateWall(credmx, eredmx, 3, [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], wred);
-}
-
-function rotateRedWall180() {
-    rotateRedWall90();
-    setTimeout(rotateRedWall90, 10);
-}
-
-function rotateRedWall270() {
-    rotateWall(credmx, eredmx, 3, [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], wred);
-}
-
-function rotateYellowWall90() {
-    rotateWall(cyellowmx, eyellowmx, 0, [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
-}
-
-function rotateYellowWall180() {
-    rotateYellowWall90();
-    setTimeout(rotateYellowWall90, 10);
-}
-
-function rotateYellowWall270() {
-    rotateWall(cyellowmx, eyellowmx, 0, [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
-}
-
-function rotateGreenWall90() {
-    rotateWall(cgreenmx, egreenmx, 4, [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
-}
-
-function rotateGreenWall180() {
-    rotateGreenWall90();
-    setTimeout(rotateGreenWall90, 10);
-}
-
-function rotateGreenWall270() {
-    rotateWall(cgreenmx, egreenmx, 4, [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
-}
-
-function rotateOrangeWall90() {
-    rotateWall(corangemx, eorangemx, 1, [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], worange);
-}
-
-function rotateOrangeWall180() {
-    rotateOrangeWall90();
-    setTimeout(rotateOrangeWall90, 10);
-}
-
-function rotateOrangeWall270() {
-    rotateWall(corangemx, eorangemx, 1, [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], worange);
-}
-
-function rotateWhiteWall90() {
-    rotateWall(cwhitemx, ewhitemx, 5, [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
-}
-
-function rotateWhiteWall180() {
-    rotateWhiteWall90();
-    setTimeout(rotateWhiteWall90, 10);
-}
-
-function rotateWhiteWall270() {
-    rotateWall(cwhitemx, ewhitemx, 5, [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
-}
+setInterval(function () {
+    let curTime = Date.now();
+    if( curTime < lastMoveTime + 600 )
+        return;
+    if( moveidx < moveidxgoal ) {
+        ++moveidx;
+        document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
+        document.querySelector(`#movebutton${moveidx}`).classList.add('currentmv');
+        if( moveidx < moves.length ) {
+            rotateWall(moves[moveidx]);
+        }
+        lastMoveTime = curTime;
+    }else if( moveidx > moveidxgoal ) {
+        while( moveidx > moveidxgoal ) {
+            if( moveidx < moves.length ) {
+                rotateWall(rotateDirReverse(moves[moveidx]), STYLEAPPLY_IMMEDIATE);
+            }
+            --moveidx;
+        }
+        document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
+        if( moveidx >= 0 )
+            document.querySelector(`#movebutton${moveidx}`).classList.add('currentmv');
+        else
+            movebuttonini.classList.add('currentmv');
+        lastMoveTime = curTime;
+    }else if( moveidx == moveidxgoal && rewind ) {
+        if( --rewind == 0 )
+            moveidxgoal = -1;
+    }
+}, 100);
 
 let fixedCornerColors = [ [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1] ];
 let fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
@@ -1801,6 +1821,78 @@ function saveToFile() {
     }, function() {});
 }
 
+function showScramble(s) {
+    let rotateMap = new Map([
+        [ 'L1', ORANGECW ],
+        [ 'L2', ORANGE180],
+        [ 'L3', ORANGECCW],
+        [ 'R1', REDCW    ],
+        [ 'R2', RED180   ],
+        [ 'R3', REDCCW   ],
+        [ 'U1', YELLOWCW ],
+        [ 'U2', YELLOW180],
+        [ 'U3', YELLOWCCW],
+        [ 'D1', WHITECW  ],
+        [ 'D2', WHITE180 ],
+        [ 'D3', WHITECCW ],
+        [ 'B1', GREENCW  ],
+        [ 'B2', GREEN180 ],
+        [ 'B3', GREENCCW ],
+        [ 'F1', BLUECW   ],
+        [ 'F2', BLUE180  ],
+        [ 'F3', BLUECCW  ],
+    ]);
+    cubePrint(csolved);
+    for(let i = 0; i+1 < s.length; i+=2) {
+        let mappedVal = rotateMap.get(s.substring(i, i+2));
+        if( mappedVal != undefined )
+            rotateWall(mappedVal)
+        else
+            dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
+    }
+}
+
+let cubelistval = '', cubelistitemno = -1;
+
+function cubelistLoad() {
+    cubelist.showModal();
+}
+
+function cubelistSave() {
+    cubelistval = cubelisttext.value.trim();
+    localStorage.setItem('cubelist', cubelistval);
+    cubelist.close();
+}
+
+function cubelistCancel() {
+    cubelisttext.value = cubelistval;
+    cubelist.close();
+}
+
+function cubelistItemNext() {
+    if( cubelistval.length > 0 ) {
+        let itemsarr = cubelistval.split('\n');
+        let nextItem = cubelistitemno+1;
+        if( nextItem < itemsarr.length ) {
+            cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
+            showScramble(itemsarr[nextItem]);
+            cubelistitemno = nextItem;
+        }
+    }
+}
+
+function cubelistItemPrev() {
+    if( cubelistval.length > 0 ) {
+        let itemsarr = cubelistval.split('\n');
+        let nextItem = cubelistitemno-1;
+        if( nextItem >= 0 ) {
+            cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
+            showScramble(itemsarr[nextItem]);
+            cubelistitemno = nextItem;
+        }
+    }
+}
+
 onload = () => {
     if( window['showOpenFilePicker'] == undefined ) {
         loadsavebtns.style.display = 'none';
@@ -1816,6 +1908,11 @@ onload = () => {
         loadbtn.addEventListener('click', loadFromFile);
         savebtn.addEventListener('click', saveToFile);
     }
+    cubelistloadbtn.addEventListener('click', cubelistLoad);
+    cubelistsavebtn.addEventListener('click', cubelistSave);
+    cubelistcancelbtn.addEventListener('click', cubelistCancel);
+    cubelistitemprev.addEventListener('click', cubelistItemPrev);
+    cubelistitemnext.addEventListener('click', cubelistItemNext);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
@@ -1895,5 +1992,10 @@ onload = () => {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
         cubePrint(c);
+    }
+    crestore = localStorage.getItem('cubelist');
+    if( crestore ) {
+        cubelistval = crestore;
+        cubelisttext.value = cubelistval;
     }
 }
