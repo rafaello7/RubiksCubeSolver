@@ -996,26 +996,6 @@ let edgesmx = [
     ]
 ];
 
-let curcornersmx = [
-    cornersmx[0][0], cornersmx[1][0], cornersmx[2][0], cornersmx[3][0],
-    cornersmx[4][0], cornersmx[5][0], cornersmx[6][0], cornersmx[7][0]
-];
-
-let curedgesmx = [
-    edgesmx[0][0], edgesmx[1][0], edgesmx[2][0], edgesmx[3][0],
-    edgesmx[4][0], edgesmx[5][0], edgesmx[6][0], edgesmx[7][0],
-    edgesmx[8][0], edgesmx[9][0], edgesmx[10][0], edgesmx[11][0]
-];
-
-let curmiddlemxs = [
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], // yellow
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], // orange
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // blue
-    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], // red
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // green
-    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], // white
-];
-
 // corner/edge matrixes on particular walls
 let cbluemx = [
     [ [ 1,  0,  0, 0], [ 0,  1,  0, 0], [ 0,  0,  1, 0], [0, 0, 0, 1] ],
@@ -1229,27 +1209,171 @@ function hasMatrix(toFind, searchArr) {
     return false;
 }
 
+function cubeMxEqual(cubemx1, cubemx2, includingMiddle) {
+    for(let i = 0; i < 8; ++i)
+        if( !matrixesEqual(cubemx1.corners[i], cubemx2.corners[i] ) )
+            return false;
+    for(let i = 0; i < 12; ++i)
+        if( !matrixesEqual(cubemx1.edges[i], cubemx2.edges[i] ) )
+            return false;
+    if( includingMiddle ) {
+        for(let i = 0; i < 6; ++i)
+            if( !matrixesEqual(cubemx1.middles[i], cubemx2.middles[i] ) )
+                return false;
+    }
+    return true;
+}
+
+function cubeMxCopy(cubemx) {
+    let rescubemx = {
+        corners: [],
+        edges: [],
+        middles: [],
+    };
+    for(let i = 0; i < 8; ++i)
+        rescubemx.corners[i] = cubemx.corners[i];
+    for(let i = 0; i < 12; ++i)
+        rescubemx.edges[i] = cubemx.edges[i];
+    for(let i = 0; i < 6; ++i)
+        rescubemx.middles[i] = cubemx.middles[i];
+    return rescubemx;
+}
+
+function rotateWall(cubemx, rotateDir) {
+    let rescubemx = cubemx;
+    function rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor) {
+        rescubemx = cubeMxCopy(cubemx);
+        for(let i = 0; i < 8; ++i) {
+            if( hasMatrix(cubemx.corners[i], ccolormx) )
+                rescubemx.corners[i] = multiplyMatrixesRnd(cubemx.corners[i], transform);
+        }
+        for(let i = 0; i < 12; ++i) {
+            if( hasMatrix(cubemx.edges[i], ecolormx) )
+                rescubemx.edges[i] = multiplyMatrixesRnd(cubemx.edges[i], transform);
+        }
+        rescubemx.middles[colornum] = multiplyMatrixesRnd(cubemx.middles[colornum], transform);
+    }
+
+    switch( rotateDir ) {
+        case ORANGECW:
+            rotateWallInt(corangemx, eorangemx, 1,
+                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], worange);
+            break;
+        case ORANGE180:
+            rotateWallInt(corangemx, eorangemx, 1,
+                [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], worange);
+            break;
+        case ORANGECCW:
+            rotateWallInt(corangemx, eorangemx, 1,
+                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], worange);
+            break;
+        case REDCW:
+            rotateWallInt(credmx, eredmx, 3,
+                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], wred);
+            break;
+        case RED180:
+            rotateWallInt(credmx, eredmx, 3,
+                [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wred);
+            break;
+        case REDCCW:
+            rotateWallInt(credmx, eredmx, 3,
+                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], wred);
+            break;
+        case YELLOWCW:
+            rotateWallInt(cyellowmx, eyellowmx, 0,
+                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
+            break;
+        case YELLOW180:
+            rotateWallInt(cyellowmx, eyellowmx, 0,
+                [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wyellow);
+            break;
+        case YELLOWCCW:
+            rotateWallInt(cyellowmx, eyellowmx, 0,
+                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
+            break;
+        case WHITECW:
+            rotateWallInt(cwhitemx, ewhitemx, 5,
+                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
+            break;
+        case WHITE180:
+            rotateWallInt(cwhitemx, ewhitemx, 5,
+                [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wwhite);
+            break;
+        case WHITECCW:
+            rotateWallInt(cwhitemx, ewhitemx, 5,
+                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
+            break;
+        case GREENCW:
+            rotateWallInt(cgreenmx, egreenmx, 4,
+                [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
+            break;
+        case GREEN180:
+            rotateWallInt(cgreenmx, egreenmx, 4,
+                [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
+            break;
+        case GREENCCW:
+            rotateWallInt(cgreenmx, egreenmx, 4,
+                [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
+            break;
+        case BLUECW:
+            rotateWallInt(cbluemx, ebluemx, 2,
+                [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
+            break;
+        case BLUE180:
+            rotateWallInt(cbluemx, ebluemx, 2,
+                [[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
+            break;
+        case BLUECCW:
+            rotateWallInt(cbluemx, ebluemx, 2,
+                [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
+            break;
+    }
+    return rescubemx;
+}
+
+let solvedcubemx = {
+    corners: [
+        cornersmx[0][0], cornersmx[1][0], cornersmx[2][0], cornersmx[3][0],
+        cornersmx[4][0], cornersmx[5][0], cornersmx[6][0], cornersmx[7][0]
+    ],
+    edges: [
+        edgesmx[0][0], edgesmx[1][0], edgesmx[2][0], edgesmx[3][0],
+        edgesmx[4][0], edgesmx[5][0], edgesmx[6][0], edgesmx[7][0],
+        edgesmx[8][0], edgesmx[9][0], edgesmx[10][0], edgesmx[11][0]
+    ],
+    middles: [
+        [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], // yellow
+        [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], // orange
+        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // blue
+        [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], // red
+        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // green
+        [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], // white
+    ]
+};
+
+let curcubemx = cubeMxCopy(solvedcubemx);
+
 function updateStylesTransforms()
 {
     let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
     let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
     let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
     for(let i = 0; i < 8; ++i)
-        corners[i].style.transform = `matrix3d(${curcornersmx[i].join()})`;
+        corners[i].style.transform = `matrix3d(${curcubemx.corners[i].join()})`;
     for(let i = 0; i < 12; ++i)
-        edges[i].style.transform = `matrix3d(${curedgesmx[i].join()})`;
+        edges[i].style.transform = `matrix3d(${curcubemx.edges[i].join()})`;
     for(let i = 0; i < 6; ++i)
-        wcolors[i].style.transform = `matrix3d(${curmiddlemxs[i].join()})`;
+        wcolors[i].style.transform = `matrix3d(${curcubemx.middles[i].join()})`;
 }
 
 function cubePrint(c) {
     for(let i = 0; i < 8; ++i) {
         let cno = c.cc.getPermAt(i);
-        curcornersmx[cno] = cornersmx[i][c.cc.getOrientAt(i)];
+        curcubemx.corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
     }
     for(let i = 0; i < 12; ++i) {
         let eno = c.ce.edgeN(i);
-        curedgesmx[eno] = edgesmx[i][c.ce.edgeR(i)];
+        curcubemx.edges[eno] = edgesmx[i][c.ce.edgeR(i)];
     }
     updateStylesTransforms();
 }
@@ -1259,7 +1383,7 @@ function cubeimgToCube() {
     for(let i = 0; i < 8; ++i) {
         for(let cno = 0; cno < 8; ++cno) {
             for(let orient = 0; orient < 3; ++orient) {
-                if( matrixesEqual(curcornersmx[cno], cornersmx[i][orient]) ) {
+                if( matrixesEqual(curcubemx.corners[cno], cornersmx[i][orient]) ) {
                     cc.setPermAt(i, cno);
                     cc.setOrientAt(i, orient);
                 }
@@ -1270,7 +1394,7 @@ function cubeimgToCube() {
     for(let i = 0; i < 12; ++i) {
         for(let eno = 0; eno < 12; ++eno) {
             for(let orient = 0; orient < 2; ++orient) {
-                if( matrixesEqual(curedgesmx[eno], edgesmx[i][orient]) ) {
+                if( matrixesEqual(curcubemx.edges[eno], edgesmx[i][orient]) ) {
                     ce.set(i, eno, orient);
                 }
             }
@@ -1283,17 +1407,9 @@ const STYLEAPPLY_IMMEDIATE = 1;
 const STYLEAPPLY_DEFER = 2;
 const STYLEAPPLY_SKIP = 3;
 
-function rotateWall(rotateDir, styleApply) {
-    function rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor, styleApply) {
-        for(let i = 0; i < 8; ++i) {
-            if( hasMatrix(curcornersmx[i], ccolormx) )
-                curcornersmx[i] = multiplyMatrixesRnd(curcornersmx[i], transform);
-        }
-        for(let i = 0; i < 12; ++i) {
-            if( hasMatrix(curedgesmx[i], ecolormx) )
-                curedgesmx[i] = multiplyMatrixesRnd(curedgesmx[i], transform);
-        }
-        curmiddlemxs[colornum] = multiplyMatrixesRnd(curmiddlemxs[colornum], transform);
+function rotateCurWall(rotateDir, styleApply) {
+    function rotateCurWallInt(rotateDir, styleApply) {
+        curcubemx = rotateWall(curcubemx, rotateDir);
         if( styleApply === STYLEAPPLY_SKIP )
             return;
         if( styleApply === STYLEAPPLY_DEFER )
@@ -1301,185 +1417,59 @@ function rotateWall(rotateDir, styleApply) {
         else
             updateStylesTransforms();
     }
+    function rotateCurWallInt180(rotateDirCW) {
+        if( styleApply === undefined ) {
+            rotateCurWallInt(rotateDirCW, STYLEAPPLY_IMMEDIATE);
+            rotateCurWallInt(rotateDirCW, STYLEAPPLY_DEFER);
+        }else{
+            rotateCurWallInt(rotateDir, styleApply);
+        }
+    }
 
     switch( rotateDir ) {
-        case ORANGECW:
-            rotateWallInt(corangemx, eorangemx, 1,
-                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], worange,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
         case ORANGE180:
-            if( styleApply === undefined ) {
-                //rotateOrangeWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(corangemx, eorangemx, 1,
-                    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-                    worange, STYLEAPPLY_IMMEDIATE);
-                //rotateOrangeWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(corangemx, eorangemx, 1,
-                    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-                    worange, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(corangemx, eorangemx, 1,
-                    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-                    worange, styleApply);
-            }
-            break;
-        case ORANGECCW:
-            rotateWallInt(corangemx, eorangemx, 1,
-                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], worange,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
-        case REDCW:
-            rotateWallInt(credmx, eredmx, 3,
-                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], wred,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            rotateCurWallInt180(ORANGECW);
             break;
         case RED180:
-            if( styleApply === undefined ) {
-                //rotateRedWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(credmx, eredmx, 3,
-                    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-                    wred, STYLEAPPLY_IMMEDIATE);
-                //rotateRedWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(credmx, eredmx, 3,
-                    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-                    wred, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(credmx, eredmx, 3,
-                    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-                    wred, styleApply);
-            }
-            break;
-        case REDCCW:
-            rotateWallInt(credmx, eredmx, 3,
-                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], wred,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
-        case YELLOWCW:
-            rotateWallInt(cyellowmx, eyellowmx, 0,
-                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wyellow,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            rotateCurWallInt180(REDCW);
             break;
         case YELLOW180:
-            if( styleApply === undefined ) {
-                //rotateYellowWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(cyellowmx, eyellowmx, 0,
-                    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-                    wyellow, STYLEAPPLY_IMMEDIATE);
-                //rotateYellowWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(cyellowmx, eyellowmx, 0,
-                    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-                    wyellow, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(cyellowmx, eyellowmx, 0,
-                    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-                    wyellow, styleApply);
-            }
-            break;
-        case YELLOWCCW:
-            rotateWallInt(cyellowmx, eyellowmx, 0,
-                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wyellow,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
-        case WHITECW:
-            rotateWallInt(cwhitemx, ewhitemx, 5,
-                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wwhite,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            rotateCurWallInt180(YELLOWCW);
             break;
         case WHITE180:
-            if( styleApply === undefined ) {
-                //rotateWhiteWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(cwhitemx, ewhitemx, 5,
-                    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-                    wwhite, STYLEAPPLY_IMMEDIATE);
-                //rotateWhiteWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(cwhitemx, ewhitemx, 5,
-                    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-                    wwhite, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(cwhitemx, ewhitemx, 5,
-                    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-                    wwhite, styleApply);
-            }
-            break;
-        case WHITECCW:
-            rotateWallInt(cwhitemx, ewhitemx, 5,
-                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wwhite,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
-        case GREENCW:
-            rotateWallInt(cgreenmx, egreenmx, 4,
-                [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            rotateCurWallInt180(WHITECW);
             break;
         case GREEN180:
-            if( styleApply === undefined ) {
-                //rotateGreenWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(cgreenmx, egreenmx, 4,
-                    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-                    wgreen, STYLEAPPLY_IMMEDIATE);
-                //rotateGreenWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(cgreenmx, egreenmx, 4,
-                    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-                    wgreen, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(cgreenmx, egreenmx, 4,
-                    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-                    wgreen, styleApply);
-            }
-            break;
-        case GREENCCW:
-            rotateWallInt(cgreenmx, egreenmx, 4,
-                [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
-            break;
-        case BLUECW:
-            rotateWallInt(cbluemx, ebluemx, 2,
-                [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue,
-                styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
+            rotateCurWallInt180(GREENCW);
             break;
         case BLUE180:
-            if( styleApply === undefined ) {
-                //rotateBlueWall90(STYLEAPPLY_IMMEDIATE);
-                rotateWallInt(cbluemx, ebluemx, 2,
-                    [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
-                    wblue, STYLEAPPLY_IMMEDIATE);
-                //rotateBlueWall90(STYLEAPPLY_DEFER);
-                rotateWallInt(cbluemx, ebluemx, 2,
-                    [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
-                    wblue, STYLEAPPLY_DEFER);
-            }else{
-                rotateWallInt(cbluemx, ebluemx,
-                    2, [[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]],
-                    wblue, styleApply);
-            }
+            rotateCurWallInt180(BLUECW);
             break;
-        case BLUECCW:
-            rotateWallInt(cbluemx, ebluemx, 2,
-                [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue,
+        default:
+            rotateCurWallInt(rotateDir,
                 styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
             break;
     }
 }
 
-function rotateBlueWall90() { rotateWall(BLUECW); }
-function rotateBlueWall180() { rotateWall(BLUE180); }
-function rotateBlueWall270() { rotateWall(BLUECCW); }
-function rotateRedWall90() { rotateWall(REDCW); }
-function rotateRedWall180() { rotateWall(RED180); }
-function rotateRedWall270() { rotateWall(REDCCW); }
-function rotateYellowWall90() { rotateWall(YELLOWCW); }
-function rotateYellowWall180() { rotateWall(YELLOW180); }
-function rotateYellowWall270() { rotateWall(YELLOWCCW); }
-function rotateGreenWall90() { rotateWall(GREENCW); }
-function rotateGreenWall180() { rotateWall(GREEN180); }
-function rotateGreenWall270() { rotateWall(GREENCCW); }
-function rotateOrangeWall90() { rotateWall(ORANGECW); }
-function rotateOrangeWall180() { rotateWall(ORANGE180); }
-function rotateOrangeWall270() { rotateWall(ORANGECCW); }
-function rotateWhiteWall90() { rotateWall(WHITECW); }
-function rotateWhiteWall180() { rotateWall(WHITE180); }
-function rotateWhiteWall270() { rotateWall(WHITECCW); }
+function rotateBlueWall90() { rotateCurWall(BLUECW); }
+function rotateBlueWall180() { rotateCurWall(BLUE180); }
+function rotateBlueWall270() { rotateCurWall(BLUECCW); }
+function rotateRedWall90() { rotateCurWall(REDCW); }
+function rotateRedWall180() { rotateCurWall(RED180); }
+function rotateRedWall270() { rotateCurWall(REDCCW); }
+function rotateYellowWall90() { rotateCurWall(YELLOWCW); }
+function rotateYellowWall180() { rotateCurWall(YELLOW180); }
+function rotateYellowWall270() { rotateCurWall(YELLOWCCW); }
+function rotateGreenWall90() { rotateCurWall(GREENCW); }
+function rotateGreenWall180() { rotateCurWall(GREEN180); }
+function rotateGreenWall270() { rotateCurWall(GREENCCW); }
+function rotateOrangeWall90() { rotateCurWall(ORANGECW); }
+function rotateOrangeWall180() { rotateCurWall(ORANGE180); }
+function rotateOrangeWall270() { rotateCurWall(ORANGECCW); }
+function rotateWhiteWall90() { rotateCurWall(WHITECW); }
+function rotateWhiteWall180() { rotateCurWall(WHITE180); }
+function rotateWhiteWall270() { rotateCurWall(WHITECCW); }
 
 let moves = [], moveidx = -1, moveidxgoal = -1, rewind = 0;
 
@@ -1494,13 +1484,13 @@ setInterval(function () {
         document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
         document.querySelector(`#movebutton${moveidx}`).classList.add('currentmv');
         if( moveidx < moves.length ) {
-            rotateWall(moves[moveidx]);
+            rotateCurWall(moves[moveidx]);
         }
         lastMoveTime = curTime;
     }else if( moveidx > moveidxgoal ) {
         while( moveidx > moveidxgoal ) {
             if( moveidx < moves.length ) {
-                rotateWall(rotateDirReverse(moves[moveidx]), STYLEAPPLY_IMMEDIATE);
+                rotateCurWall(rotateDirReverse(moves[moveidx]), STYLEAPPLY_IMMEDIATE);
             }
             --moveidx;
         }
@@ -1821,7 +1811,7 @@ function saveToFile() {
     }, function() {});
 }
 
-function showScramble(s) {
+function getCubeMxScrambled(s) {
     let rotateMap = new Map([
         [ 'L1', ORANGECW ],
         [ 'L2', ORANGE180],
@@ -1842,17 +1832,37 @@ function showScramble(s) {
         [ 'F2', BLUE180  ],
         [ 'F3', BLUECCW  ],
     ]);
-    cubePrint(csolved);
+    let rescubemx = cubeMxCopy(solvedcubemx);
     for(let i = 0; i+1 < s.length; i+=2) {
         let mappedVal = rotateMap.get(s.substring(i, i+2));
         if( mappedVal != undefined )
-            rotateWall(mappedVal)
+            rescubemx = rotateWall(rescubemx, mappedVal)
         else
             dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
     }
+    return rescubemx;
 }
 
 let cubelistval = '', cubelistitemno = -1;
+
+function cubelistItemFind() {
+    if( cubelistval.length > 0 ) {
+        let itemsarr = cubelistval.split('\n');
+        let curItem = 0;
+        while( curItem < itemsarr.length ) {
+            if( cubeMxEqual(curcubemx, getCubeMxScrambled(itemsarr[curItem]), false) )
+                break;
+            ++curItem;
+        }
+        if( curItem < itemsarr.length ) {
+            cubelistitemtext.textContent = curItem + ' ' + itemsarr[curItem];
+            cubelistitemno = curItem;
+        }else{
+            cubelistitemtext.textContent = '';
+            cubelistitemno = -1;
+        }
+    }
+}
 
 function cubelistLoad() {
     cubelist.showModal();
@@ -1862,6 +1872,7 @@ function cubelistSave() {
     cubelistval = cubelisttext.value.trim();
     localStorage.setItem('cubelist', cubelistval);
     cubelist.close();
+    cubelistItemFind();
 }
 
 function cubelistCancel() {
@@ -1875,7 +1886,8 @@ function cubelistItemNext() {
         let nextItem = cubelistitemno+1;
         if( nextItem < itemsarr.length ) {
             cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
-            showScramble(itemsarr[nextItem]);
+            curcubemx = getCubeMxScrambled(itemsarr[nextItem]);
+            updateStylesTransforms();
             cubelistitemno = nextItem;
         }
     }
@@ -1884,11 +1896,12 @@ function cubelistItemNext() {
 function cubelistItemPrev() {
     if( cubelistval.length > 0 ) {
         let itemsarr = cubelistval.split('\n');
-        let nextItem = cubelistitemno-1;
-        if( nextItem >= 0 ) {
-            cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
-            showScramble(itemsarr[nextItem]);
-            cubelistitemno = nextItem;
+        let prevItem = cubelistitemno-1;
+        if( prevItem >= 0 ) {
+            cubelistitemtext.textContent = prevItem + ' ' + itemsarr[prevItem];
+            curcubemx = getCubeMxScrambled(itemsarr[prevItem]);
+            updateStylesTransforms();
+            cubelistitemno = prevItem;
         }
     }
 }
@@ -1997,5 +2010,6 @@ onload = () => {
     if( crestore ) {
         cubelistval = crestore;
         cubelisttext.value = cubelistval;
+        cubelistItemFind();
     }
 }
