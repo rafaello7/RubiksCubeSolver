@@ -233,6 +233,7 @@ cubecorner_perms cubecorner_perms::reverse() const
         "vpor %%xmm2, %%xmm1, %%xmm1\n"     // xmm1[63:0] | xmm1[127:64]
         "vphaddd %%xmm1, %%xmm1, %%xmm1\n"  // xmm1[31:0] + xmm1[63:32]
         "vpextrd $0, %%xmm1, %[res]\n"
+        "vzeroupper\n"
         : [res]         "=r"    (res),
           [tmp1]        "=&r"   (tmp1)
         : [perms]       "r"     (perms),
@@ -330,6 +331,7 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
         "vmovq %%xmm2, %[tmp1]\n"
         "pext %[depOrient], %[tmp1], %[tmp1]\n"
         "mov %w[tmp1], %[resOrients]\n"
+        "vzeroupper\n"
         : [resOrients]  "=r"  (resOrients),
           [tmp1]        "=&r" (tmp1)
         : [cco1]        "r"   ((unsigned long)cco1.get()),
@@ -585,7 +587,8 @@ cubeedges cubeedges::compose(cubeedges ce1, cubeedges ce2)
         // store ce1 in xmm1
         "pdep %[depItem], %[ce1], %[tmp2]\n"
         "vpinsrq $0, %[tmp2], %%xmm1, %%xmm1\n"
-        "shld $24, %[ce1], %[tmp1]\n"
+        "mov %[ce1], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
         "pdep %[depItem], %[tmp1], %[tmp2]\n"
         "vpinsrq $1, %[tmp2], %%xmm1, %%xmm1\n"
         // permute; result in xmm1
@@ -593,7 +596,7 @@ cubeedges cubeedges::compose(cubeedges ce1, cubeedges ce2)
         // store xmm1 in res
         "vpextrq $0, %%xmm1, %[res]\n"
         "pext %[depItem], %[res], %[res]\n"
-        "vpextrq $1, %%xmm1, %[tmp1]\n"
+        "vpextrd $2, %%xmm1, %k[tmp1]\n"
         "pext %[depItem], %[tmp1], %[tmp1]\n"
         "shl $40, %[tmp1]\n"
         "or %[tmp1], %[res]\n"
@@ -607,7 +610,6 @@ cubeedges cubeedges::compose(cubeedges ce1, cubeedges ce2)
               [ce1]      "r"   (ce1.edges)
             : "xmm1", "xmm2", "cc"
        );
-    res.edges &= (1ul<<60)-1;
 #ifdef ASMCHECK
     cubeedges chk = res;
     res.edges = 0;
@@ -641,63 +643,66 @@ cubeedges cubeedges::compose3(cubeedges ce1, cubeedges ce2, cubeedges ce3)
 {
 	cubeedges res;
 #ifdef USE_ASM
-    unsigned long tmp1, tmp2;
+    unsigned long tmp1;
 
     // needs: bmi2 (pext, pdep), sse3 (pshufb), sse4.1 (pinsrq, pextrq)
-    asm(// store ce2 perm in xmm2
-        "pext %[permMask], %[ce2], %[tmp1]\n"
-        "pdep %[depPerm], %[tmp1], %[tmp2]\n"
-        "vpinsrq $0, %[tmp2], %%xmm2, %%xmm2\n"
-        "shr $32, %[tmp1]\n"
-        "pdep %[depPerm], %[tmp1], %[tmp2]\n"
-        "vpinsrq $1, %[tmp2], %%xmm2, %%xmm2\n"
+    asm(
+        // store 0xf in xmm3
+        "mov $0xf, %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm3\n"
+        "vpbroadcastb %%xmm3, %%xmm3\n"
+        // store ce2 in xmm0
+        "pdep %[depItem], %[ce2], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm0, %%xmm0\n"
+        "mov %[ce2], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm0, %%xmm0\n"
+        // store ce2 perm in xmm2
+        "vpand %%xmm0, %%xmm3, %%xmm2\n"
         // store ce1 in xmm1
-        "pdep %[depItem], %[ce1], %[tmp2]\n"
-        "vpinsrq $0, %[tmp2], %%xmm1, %%xmm1\n"
-        "shld $24, %[ce1], %[tmp1]\n"
-        "pdep %[depItem], %[tmp1], %[tmp2]\n"
-        "vpinsrq $1, %[tmp2], %%xmm1, %%xmm1\n"
+        "pdep %[depItem], %[ce1], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        "mov %[ce1], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm1, %%xmm1\n"
         // permute; result in xmm1
         "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
         // store ce2 orient im xmm2
-        "andn %[ce2], %[permMask], %[tmp1]\n"
-        "pdep %[depItem], %[tmp1], %[tmp2]\n"
-        "vpinsrq $0, %[tmp2], %%xmm2, %%xmm2\n"
-        "shr $40, %[tmp1]\n"
-        "pdep %[depItem], %[tmp1], %[tmp2]\n"
-        "vpinsrq $1, %[tmp2], %%xmm2, %%xmm2\n"
+        "vpandn %%xmm0, %%xmm3, %%xmm2\n"
         // xor the orient
         "vpxor %%xmm2, %%xmm1, %%xmm1\n"
+        // store ce3 in xmm0
+        "pdep %[depItem], %[ce3], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm0, %%xmm0\n"
+        "mov %[ce3], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm0, %%xmm0\n"
         // store ce3 perm in xmm2
-        "pext %[permMask], %[ce3], %[tmp1]\n"
-        "pdep %[depPerm], %[tmp1], %[tmp2]\n"
-        "vpinsrq $0, %[tmp2], %%xmm2, %%xmm2\n"
-        "shr $32, %[tmp1]\n"
-        "pdep %[depPerm], %[tmp1], %[tmp2]\n"
-        "vpinsrq $1, %[tmp2], %%xmm2, %%xmm2\n"
+        "vpand %%xmm3, %%xmm0, %%xmm2\n"
         // permute; result in xmm1
         "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
+        // store ce3 orient in xmm2
+        "vpandn %%xmm0, %%xmm3, %%xmm2\n"
+        // xor the orient
+        "vpxor %%xmm2, %%xmm1, %%xmm1\n"
         // store xmm1 in res
-        "vpextrq $0, %%xmm1, %[res]\n"
-        "pext %[depItem], %[res], %[res]\n"
-        "vpextrq $1, %%xmm1, %[tmp1]\n"
+        "vpextrq $0, %%xmm1, %[tmp1]\n"
         "pext %[depItem], %[tmp1], %[tmp1]\n"
-        "shl $40, %[tmp1]\n"
+        "vpextrd $2, %%xmm1, %k[res]\n"
+        "pext %[depItem], %[res], %[res]\n"
+        "shl $40, %[res]\n"
         "or %[tmp1], %[res]\n"
             : [res]         "=&r"  (res.edges),
-              [tmp1]        "=&r" (tmp1),
-              [tmp2]        "=&r" (tmp2)
-            : [permMask]    "rm"  (0x7bdef7bdef7bdeful),
+              [tmp1]        "=&r" (tmp1)
+            : [ce1]         "r"   (ce1.edges),
               [ce2]         "r"   (ce2.edges),
-              [depPerm]     "rm"  (0xf0f0f0f0f0f0f0ful),
-              [depItem]     "rm"  (0x1f1f1f1f1f1f1f1ful),
-              [ce1]         "r"   (ce1.edges),
-              [ce3]         "r"   (ce3.edges)
-            : "xmm1", "xmm2", "cc"
+              [ce3]         "r"   (ce3.edges),
+              [depItem]     "rm"  (0x1f1f1f1f1f1f1f1ful)
+            : "xmm0", "xmm1", "xmm2", "xmm3", "cc"
        );
-    res.edges &= (1ul<<60)-1;
-    unsigned long edge3orients = ce3.edges & 0x842108421084210ul;
-    res.edges ^= edge3orients;
 #ifdef ASMCHECK
     cubeedges chk = res;
     res.edges = 0;
@@ -789,6 +794,7 @@ cubeedges cubeedges::reverse() const {
         "vpshufd $0x4e, %%xmm5, %%xmm6\n"
         "vpor %%xmm6, %%xmm5, %%xmm5\n"
         "vpextrq $0, %%xmm5, %[res]\n"
+        "vzeroupper\n"
         : [res]         "=r"    (res),
           [tmp1]        "=&r"   (tmp1),
           [tmp2]        "=&r"   (tmp2)
@@ -2101,7 +2107,7 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
         // store xmm1 in res
         "vpextrq $0, %%xmm1, %[res]\n"
         "pext %[depItem], %[res], %[res]\n"
-        "vpextrq $1, %%xmm1, %[tmp1]\n"
+        "vpextrd $2, %%xmm1, %k[tmp1]\n"
         "pext %[depItem], %[tmp1], %[tmp1]\n"
         "shl $40, %[tmp1]\n"
         "or %[tmp1], %[res]\n"
@@ -2118,7 +2124,6 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
           [cetransRev]  "r"   (cetransRev.edges)
         : "xmm1", "xmm2", "cc"
        );
-    res.edges &= (1ul<<60)-1;
 #ifdef ASMCHECK
     cubeedges chk = res;
     res.edges = 0;
