@@ -853,68 +853,73 @@ function cubeToSaveText(c)
 }
 
 async function searchMoves(c) {
-    startTime = lastTime = Date.now();
-    moves = [];
-    moveidx = moveidxgoal = -1;
-    document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
-    movebuttonini.classList.add('currentmv');
-    document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
+    try {
+        startTime = lastTime = Date.now();
+        moves = [];
+        moveidx = moveidxgoal = -1;
+        document.querySelectorAll(`#movebuttons > button`).forEach( (btn) => { btn.classList.remove('currentmv'); });
+        movebuttonini.classList.add('currentmv');
+        document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
 
-    let qparam=cubeToParamText(c);
-    let a = await fetch('/?' + qparam);
-    let b = a.body.getReader();
-    const utf8Decoder = new TextDecoder("utf-8");
-    let msg = '';
-    while(true) {
-        let c = await b.read();
-        if( c.done )
-            break;
-        msg += utf8Decoder.decode(c.value);
-        let lineEnd;
-        while( (lineEnd = msg.indexOf('\n')) > 0 ) {
-            let line = msg.substring(0, lineEnd);
-            msg = msg.substring(lineEnd+1);
-            if( line.startsWith("setup: ") ) {
-                dolog('err', `${line.substring(7)}\n`);
-            }else if( line.startsWith("solution: ") ) {
-                dolog('solutions', `${line}\n`);
-                if( moves.length == 0 ) {
-                    let movesStr = line.split(' ');
-                    for(let i = 1; i < movesStr.length; ++i) {
-                        switch( movesStr[i] ) {
-                            case "orange-cw": moves.push(ORANGECW); break;
-                            case "orange-180": moves.push(ORANGE180); break;
-                            case "orange-ccw": moves.push(ORANGECCW); break;
-                            case "red-cw": moves.push(REDCW); break;
-                            case "red-180": moves.push(RED180); break;
-                            case "red-ccw": moves.push(REDCCW); break;
-                            case "yellow-cw": moves.push(YELLOWCW); break;
-                            case "yellow-180": moves.push(YELLOW180); break;
-                            case "yellow-ccw": moves.push(YELLOWCCW); break;
-                            case "white-cw": moves.push(WHITECW); break;
-                            case "white-180": moves.push(WHITE180); break;
-                            case "white-ccw": moves.push(WHITECCW); break;
-                            case "green-cw": moves.push(GREENCW); break;
-                            case "green-180": moves.push(GREEN180); break;
-                            case "green-ccw": moves.push(GREENCCW); break;
-                            case "blue-cw": moves.push(BLUECW); break;
-                            case "blue-180": moves.push(BLUE180); break;
-                            case "blue-ccw": moves.push(BLUECCW); break;
+        let qparam=cubeToParamText(c);
+        let a = await fetch('/?' + qparam);
+        let b = a.body.getReader();
+        const utf8Decoder = new TextDecoder("utf-8");
+        let msg = '';
+        while(true) {
+            let c = await b.read();
+            if( c.done )
+                break;
+            msg += utf8Decoder.decode(c.value);
+            let lineEnd;
+            while( (lineEnd = msg.indexOf('\n')) > 0 ) {
+                let line = msg.substring(0, lineEnd);
+                msg = msg.substring(lineEnd+1);
+                if( line.startsWith("setup: ") ) {
+                    dolog('err', `${line.substring(7)}\n`);
+                }else if( line.startsWith("solution: ") ) {
+                    dolog('solutions', `${line}\n`);
+                    if( moves.length == 0 ) {
+                        let movesStr = line.split(' ');
+                        for(let i = 1; i < movesStr.length; ++i) {
+                            switch( movesStr[i] ) {
+                                case "orange-cw": moves.push(ORANGECW); break;
+                                case "orange-180": moves.push(ORANGE180); break;
+                                case "orange-ccw": moves.push(ORANGECCW); break;
+                                case "red-cw": moves.push(REDCW); break;
+                                case "red-180": moves.push(RED180); break;
+                                case "red-ccw": moves.push(REDCCW); break;
+                                case "yellow-cw": moves.push(YELLOWCW); break;
+                                case "yellow-180": moves.push(YELLOW180); break;
+                                case "yellow-ccw": moves.push(YELLOWCCW); break;
+                                case "white-cw": moves.push(WHITECW); break;
+                                case "white-180": moves.push(WHITE180); break;
+                                case "white-ccw": moves.push(WHITECCW); break;
+                                case "green-cw": moves.push(GREENCW); break;
+                                case "green-180": moves.push(GREEN180); break;
+                                case "green-ccw": moves.push(GREENCCW); break;
+                                case "blue-cw": moves.push(BLUECW); break;
+                                case "blue-180": moves.push(BLUE180); break;
+                                case "blue-ccw": moves.push(BLUECCW); break;
+                            }
                         }
+                        for(let i = 0; i < moves.length; ++i) {
+                            let btn = document.querySelector(`#movebutton${i}`);
+                            btn.textContent = rotateDirName(moves[i]);
+                        }
+                        moveidxgoal = moves.length - 1;
+                        rewind = 10;
                     }
-                    for(let i = 0; i < moves.length; ++i) {
-                        let btn = document.querySelector(`#movebutton${i}`);
-                        btn.textContent = rotateDirName(moves[i]);
-                    }
-                    moveidxgoal = moves.length - 1;
-                    rewind = 10;
-                }
-            }else if( line.startsWith("progress: ") )
-                dolog('progress', `${line.substring(10)}\n`);
-            else
-                dolog('depth', `${line}\n`);
+                }else if( line.startsWith("progress: ") )
+                    dolog('progress', `${line.substring(10)}\n`);
+                else
+                    dolog('depth', `${line}\n`);
+            }
         }
+    }catch(e) {
+        dolog('depth', e.message);
     }
+    document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = false;});
     startTime = undefined;
 }
  
@@ -1772,8 +1777,10 @@ function searchSolution() {
     localStorage.setItem('cube', `${c.cc.getPerms().getPermVal()} ${c.cc.getOrients().get()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
-    else
+    else{
+        document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = true;});
         searchMoves(c);
+    }
 }
 
 function loadFromFile() {

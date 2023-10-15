@@ -11,14 +11,14 @@
             <div>
                 <div id='saveload'>
                     <div id='loadsavebtns'>
-                        <button id='loadbtn'>Load From file</button>
-                        <button id='savebtn'>Save To File</button>
+                        <button id='loadbtn' class='manipmodeonly'>Load From file</button>
+                        <button id='savebtn' class='manipmodeonly'>Save To File</button>
                     </div>
-                    <div id='loadonlybtn'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
+                    <div id='loadonlybtn' class='manipmodeonly'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
                     <div id='loadlist'>
-                        <button id='cubelistloadbtn'>List</button>
-                        <button id='cubelistitemprev'>&lt;</button>
-                        <button id='cubelistitemnext'>&gt;</button>
+                        <button id='cubelistloadbtn' class='manipmodeonly'>List</button>
+                        <button id='cubelistitemprev' class='manipmodeonly'>&lt;</button>
+                        <button id='cubelistitemnext' class='manipmodeonly'>&gt;</button>
                         <div id='cubelistitemtext'></div>
                     </div>
                 </div>
@@ -28,8 +28,8 @@
                             Mode:
                             <label><input type='radio' name='modebtn' id='manipmodebtn' checked>Manipulate</label>
                             <div></div>
-                            <label><input type='radio' name='modebtn' id='editmodebtn'>Edit</label>
-                            <button id='resetbtn'>Reset</button>
+                            <label><input type='radio' name='modebtn' id='editmodebtn' class='changingcube'>Edit</label>
+                            <button id='resetbtn' class='changingcube'>Reset</button>
                             <button id='applybtn' disabled>Apply</button>
                             <button id='solvebtn' class='manipmodeonly'>Solve</button>
                         </div>
