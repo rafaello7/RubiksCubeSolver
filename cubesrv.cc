@@ -523,6 +523,9 @@ public:
 	}
     static cubeedges compose(cubeedges, cubeedges);
     static cubeedges compose3(cubeedges, cubeedges, cubeedges);
+
+    // the middle cubeedges should be reversed before compose
+    static cubeedges compose3revmid(cubeedges, cubeedges, cubeedges);
     static cubeedges transform(cubeedges, int idx);
     cubeedges symmetric() const {
         cubeedges ceres;
@@ -721,7 +724,18 @@ cubeedges cubeedges::compose3(cubeedges ce1, cubeedges ce2, cubeedges ce3)
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
-    res = cubeedges::compose(cubeedges::compose(ce1, ce2), ce3);
+    //res = compose(compose(ce1, ce2), ce3);
+    for(int i = 0; i < 12; ++i) {
+        unsigned edge3perm = ce3.edges >> 5 * i & 0xf;
+        unsigned long edge2item = ce2.edges >> 5 * edge3perm;
+        unsigned edge2perm = edge2item & 0xf;
+        unsigned edge2orient = edge2item & 0x10;
+        unsigned long edge1item = ce1.edges >> 5 * edge2perm & 0x1f;
+        unsigned long edgemitem = edge1item^edge2orient;
+        res.edges |= edgemitem << 5*i;
+    }
+    unsigned long edge3orients = ce3.edges & 0x842108421084210ul;
+    res.edges ^= edge3orients;
 #endif
 #ifdef ASMCHECK
     if( res.edges != chk.edges ) {
@@ -731,6 +745,186 @@ cubeedges cubeedges::compose3(cubeedges ce1, cubeedges ce2, cubeedges ce3)
         printf("ce2.edges = 0x%lx;\n", ce2.edges);
         printf("exp.edges = 0x%lx;\n", res.edges);
         printf("got.edges = 0x%lx;\n", chk.edges);
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+	return res;
+}
+
+cubeedges cubeedges::compose3revmid(cubeedges ce1, cubeedges ce2, cubeedges ce3)
+{
+	cubeedges res;
+#ifdef USE_ASM
+    unsigned long tmp1;
+
+    // needs: bmi2 (pext, pdep), sse3 (pshufb), sse4.1 (pinsrq, pextrq)
+    asm(
+        // xmm1 := 1
+        "mov $1, %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm1\n"
+        "vpbroadcastb %%xmm1, %%xmm1\n"
+
+        // xmm4 := edgeItem
+        "pdep %[depItem], %[ce2], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm4, %%xmm4\n"
+        "mov %[ce2], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm4, %%xmm4\n"
+
+        // xmm5 := 16
+        "vpsllw $4, %%xmm1, %%xmm5\n"
+        // xmm3 := edgeItem & 0x10
+        "vpand %%xmm4, %%xmm5, %%xmm3\n"
+
+        // xmm5 := 15
+        "vpsubb %%xmm1, %%xmm5, %%xmm5\n"
+
+        // store values b a 9 8 7 6 5 4 3 2 1 0 in xmm1 -> i
+        "mov $0x0706050403020100, %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        "mov $0xb0a0908, %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm1, %%xmm1\n"
+
+        // xmm1 := edgeItem & 0x10 | i
+        "vpor %%xmm3, %%xmm1, %%xmm1\n"
+
+        // xmm3 := edgeItem & 0xf
+        "vpand %%xmm4, %%xmm5, %%xmm3\n"
+        // xmm2 := 8 * (edgeItem & 0xf)
+        "vpsllw $3, %%xmm3, %%xmm2\n"
+
+        // ymm8 := 64
+        "mov $64, %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm8\n"
+        "vpbroadcastq %%xmm8, %%ymm8\n"
+
+        // ymm5,ymm6 = (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=0,1,2,3
+        // ymm5 - values shifthed less than 64, ymm6 - >=64
+        "vpmovzxbq %%xmm1, %%ymm3\n"
+        "vpmovzxbq %%xmm2, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm5\n"
+        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm6\n"
+
+        // ymm5,ymm6 |= (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=4,5,6,7
+        "vpsrldq $4, %%xmm1, %%xmm3\n"
+        "vpmovzxbq %%xmm3, %%ymm3\n"
+        "vpsrldq $4, %%xmm2, %%xmm4\n"
+        "vpmovzxbq %%xmm4, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
+        "vpor %%ymm7, %%ymm5, %%ymm5\n"
+        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
+        "vpor %%ymm7, %%ymm6, %%ymm6\n"
+
+        // ymm5,ymm6 |= (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=8,9,10,11
+        "vpsrldq $8, %%xmm1, %%xmm3\n"
+        "vpmovzxbq %%xmm3, %%ymm3\n"
+        "vpsrldq $8, %%xmm2, %%xmm4\n"
+        "vpmovzxbq %%xmm4, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
+        "vpor %%ymm7, %%ymm5, %%ymm5\n"
+        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
+        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
+        "vpor %%ymm7, %%ymm6, %%ymm6\n"
+
+        // perform horizontal OR on ymm5
+        "vextracti128 $1, %%ymm5, %%xmm7\n"
+        "vpor %%xmm7, %%xmm5, %%xmm5\n"
+        "vpshufd $0x4e, %%xmm5, %%xmm7\n"
+        "vpor %%xmm7, %%xmm5, %%xmm5\n"
+
+        // perform horizontal OR on ymm6
+        "vextracti128 $1, %%ymm6, %%xmm7\n"
+        "vpor %%xmm7, %%xmm6, %%xmm6\n"
+        "vpshufd $0x4e, %%xmm6, %%xmm7\n"
+        "vpor %%xmm7, %%xmm6, %%xmm6\n"
+        // store the reversed ce2 in xmm0
+        "vpblendd $3, %%xmm5, %%xmm6, %%xmm0\n"
+
+        // store 0xf in xmm3
+        "mov $0xf, %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm3\n"
+        "vpbroadcastb %%xmm3, %%xmm3\n"
+
+        // store ce2 perm in xmm2
+        "vpand %%xmm0, %%xmm3, %%xmm2\n"
+        // store ce1 in xmm1
+        "pdep %[depItem], %[ce1], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        "mov %[ce1], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm1, %%xmm1\n"
+        // permute; result in xmm1
+        "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
+        // store ce2 orient im xmm2
+        "vpandn %%xmm0, %%xmm3, %%xmm2\n"
+        // xor the orient
+        "vpxor %%xmm2, %%xmm1, %%xmm1\n"
+        // store ce3 in xmm0
+        "pdep %[depItem], %[ce3], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm0, %%xmm0\n"
+        "mov %[ce3], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm0, %%xmm0\n"
+        // store ce3 perm in xmm2
+        "vpand %%xmm3, %%xmm0, %%xmm2\n"
+        // permute; result in xmm1
+        "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
+        // store ce3 orient in xmm2
+        "vpandn %%xmm0, %%xmm3, %%xmm2\n"
+        // xor the orient
+        "vpxor %%xmm2, %%xmm1, %%xmm1\n"
+        // store xmm1 in res
+        "vpextrq $0, %%xmm1, %[tmp1]\n"
+        "pext %[depItem], %[tmp1], %[tmp1]\n"
+        "vpextrd $2, %%xmm1, %k[res]\n"
+        "pext %[depItem], %[res], %[res]\n"
+        "shl $40, %[res]\n"
+        "or %[tmp1], %[res]\n"
+            : [res]         "=&r"  (res.edges),
+              [tmp1]        "=&r" (tmp1)
+            : [ce1]         "r"   (ce1.edges),
+              [ce2]         "r"   (ce2.edges),
+              [ce3]         "r"   (ce3.edges),
+              [depItem]     "rm"  (0x1f1f1f1f1f1f1f1ful)
+            : "xmm0", "xmm1", "xmm2", "ymm3", "ymm4", "ymm5", "ymm6", "ymm7", "ymm8", "cc"
+       );
+#ifdef ASMCHECK
+    cubeedges chk = res;
+    res.edges = 0;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    unsigned char ce2rperm[12], ce2rorient[12];
+    for(unsigned i = 0; i < 12; ++i) {
+        unsigned long edge2item = ce2.edges >> 5*i;
+        unsigned long edge2perm = edge2item & 0xf;
+        ce2rperm[edge2perm] = i;
+        ce2rorient[edge2perm] = edge2item & 0x10;
+    }
+    for(int i = 0; i < 12; ++i) {
+        unsigned edge3perm = ce3.edges >> 5 * i & 0xf;
+        unsigned long edge1item = ce1.edges >> 5 * ce2rperm[edge3perm] & 0x1f;
+        unsigned long edgemitem = edge1item^ce2rorient[edge3perm];
+        res.edges |= edgemitem << 5*i;
+    }
+    unsigned long edge3orients = ce3.edges & 0x842108421084210ul;
+    res.edges ^= edge3orients;
+#endif
+#ifdef ASMCHECK
+    if( res.edges != chk.edges ) {
+        flockfile(stdout);
+        std::cout << "edges compose3revmid mismatch!\n" << std::endl;
+        std::cout << "ce1.edges = " << dumpedges(ce1.edges) << std::endl;
+        std::cout << "ce2.edges = " << dumpedges(ce2.edges) << std::endl;
+        std::cout << "ce3.edges = " << dumpedges(ce3.edges) << std::endl;
+        std::cout << "exp.edges = " << dumpedges(res.edges) << std::endl;
+        std::cout << "got.edges = " << dumpedges(chk.edges) << std::endl;
         funlockfile(stdout);
         exit(1);
     }
@@ -779,12 +973,12 @@ cubeedges cubeedges::reverse() const {
         "vpsllw $2, %%xmm3, %%xmm2\n"
         "vpaddb %%xmm3, %%xmm2, %%xmm2\n"
 
-        // xmm5 = (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=0,1,2,3
+        // ymm5 = (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=0,1,2,3
         "vpmovzxbq %%xmm1, %%ymm3\n"
         "vpmovzxbq %%xmm2, %%ymm4\n"
         "vpsllvq %%ymm4, %%ymm3, %%ymm5\n"
 
-        // xmm5 |= (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=4,5,6,7
+        // ymm5 |= (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=4,5,6,7
         "vpsrldq $4, %%xmm1, %%xmm3\n"
         "vpmovzxbq %%xmm3, %%ymm3\n"
         "vpsrldq $4, %%xmm2, %%xmm4\n"
@@ -792,7 +986,7 @@ cubeedges cubeedges::reverse() const {
         "vpsllvq %%ymm4, %%ymm3, %%ymm6\n"
         "vpor %%ymm6, %%ymm5, %%ymm5\n"
 
-        // xmm5 |= (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=8,9,10,11
+        // ymm5 |= (edgeItem & 0x10 | i) <<  5*(edgeItem & 0xf) : i=8,9,10,11
         "vpsrldq $8, %%xmm1, %%xmm3\n"
         "vpmovzxbq %%xmm3, %%ymm3\n"
         "vpsrldq $8, %%xmm2, %%xmm4\n"
@@ -811,7 +1005,7 @@ cubeedges cubeedges::reverse() const {
           [tmp1]        "=&r"   (tmp1)
         : [edges]       "r"     (edges),
           [depItem]     "rm"    (0x1f1f1f1f1f1f1f1ful)
-        : "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6"
+        : "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "cc"
         );
 #ifdef ASMCHECK
     cubeedges chk = res;
@@ -2952,9 +3146,15 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
         cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
         cubeedges ceSearchRepr;
         if( erct.reversed ) {
-            ceSearchRepr = cubeedges::compose3(erct.ceTrans, edgeReverse ? ces : ces.reverse(), cetransRev);
+            if( edgeReverse )
+                ceSearchRepr = cubeedges::compose3(erct.ceTrans, ces, cetransRev);
+            else
+                ceSearchRepr = cubeedges::compose3revmid(erct.ceTrans, ces, cetransRev);
         }else{
-            ceSearchRepr = cubeedges::compose3(cetrans, edgeReverse ? ces.reverse() : ces, erct.ceTrans);
+            if( edgeReverse )
+                ceSearchRepr = cubeedges::compose3revmid(cetrans, ces, erct.ceTrans);
+            else
+                ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
         }
         if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
             return edgeReverse ? ce.reverse() : ce;
