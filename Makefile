@@ -1,9 +1,10 @@
 O = -O3
+
 cubesrv: cubesrv.o
 	g++ $O -pthread cubesrv.o -o cubesrv
 
 .cc.o:
-	g++ -pthread $O -c $<
+	g++ -pthread $O -c -Wall -Wno-parentheses -Wno-unused-function $<
 
 clean:
 	rm -f cubesrv.o cubesrv

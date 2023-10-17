@@ -61,7 +61,7 @@ static void sendRespMessage(int fd, const char *fmt, ...)
     va_start(args, fmt);
     vsprintf(message, fmt, args);
     va_end(args);
-    sprintf(respBuf, "%x\r\n%s\r\n", strlen(message), message);
+    sprintf(respBuf, "%lx\r\n%s\r\n", strlen(message), message);
     write(fd, respBuf, strlen(respBuf));
 }
 
@@ -2830,7 +2830,6 @@ struct elemLoc {
 
 static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 {
-	char line[100];
 	int walls[6][3][3];
 	const char colorLetters[] = "YOBRGW";
 	static const elemLoc cornerLocMap[8][3] = {
@@ -2966,7 +2965,7 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 	}
     if( ! isCubeSolvable(reqFd, c) )
         return false;
-	return true;
+    return true;
 }
 
 static cubecorner_perms cornersIdxToPerm(unsigned short idx)
@@ -3193,7 +3192,7 @@ CornerPermReprCubes::~CornerPermReprCubes()
 }
 
 void CornerPermReprCubes::initOccur() {
-    for(int i = 1; i < m_coreprCubes.size(); ++i)
+    for(unsigned i = 1; i < m_coreprCubes.size(); ++i)
         m_coreprCubes[i].second.initOccur();
     m_initOccur = true;
 }
@@ -3229,7 +3228,7 @@ public:
 CubesReprAtDepth::CubesReprAtDepth()
     : m_cornerPermReprCubes(USEREVERSE ? 654 : 984)
 {
-    for(int i = 0; i < m_cornerPermReprCubes.size(); ++i)
+    for(unsigned i = 0; i < m_cornerPermReprCubes.size(); ++i)
         m_cornerPermReprCubes[i].first = gReprPerms[i];
 }
 
@@ -3260,7 +3259,7 @@ static std::string printMoves(const CubesReprAtDepth *cubesByDepth, const cube &
     cube crepr = cubeRepresentative(c);
     unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.cc.getPerms());
     unsigned corientIdx = cornersOrientToIdx(crepr.cc.getOrients());
-	int depth = 0;
+	unsigned depth = 0;
 	while( true ) {
         const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
         const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(corientIdx);
@@ -3372,7 +3371,7 @@ void AddCubesProgress::threadFinished(int reqFd)
 
 static void addCubesT(
         CubesReprAtDepth *cubesReprByDepth,
-		int depth, int threadNo, int threadCount, int reqFd, AddCubesProgress *addCubesProgress)
+		int depth, unsigned threadNo, int threadCount, int reqFd, AddCubesProgress *addCubesProgress)
 {
     std::vector<EdgeReprCandidateTransform> otransformNew;
 
@@ -3813,10 +3812,10 @@ static void printStats(const CubesReprAtDepth *cubesReprByDepth, int depth)
 static void searchMoves(const cube &csearch, int threadCount, int fdReq)
 {
     static CubesReprAtDepth cubesReprByDepth[CSARR_SIZE];
-    static int depthAvailMax = -1;
+    static unsigned depthAvailCount = 0;
 
     sendRespMessage(fdReq, "%s\n", getSetup().c_str());
-    if( depthAvailMax < 0 ) {
+    if( depthAvailCount == 0 ) {
         unsigned cornerPermReprIdx = cubecornerPermRepresentativeIdx(csolved.cc.getPerms());
         CornerPermReprCubes &ccpCubes = cubesReprByDepth[0].add(cornerPermReprIdx);
         std::vector<EdgeReprCandidateTransform> otransform;
@@ -3826,20 +3825,20 @@ static void searchMoves(const cube &csearch, int threadCount, int fdReq)
         CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoIdx);
         cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
         ccoCubes.addCube(ceRepr);
-        depthAvailMax = 0;
+        depthAvailCount = 1;
     }
-    for(unsigned depth = 1; depth <= depthAvailMax; ++depth) {
+    for(unsigned depth = 1; depth < depthAvailCount; ++depth) {
         if( searchMovesA(cubesReprByDepth, csearch, 0, depth, threadCount, fdReq) )
             return;
     }
-    for(unsigned depth = 1; depth <= depthAvailMax; ++depth) {
-        if( searchMovesA(cubesReprByDepth, csearch, depth, depthAvailMax, threadCount, fdReq) )
+    for(unsigned depth = 1; depth < depthAvailCount; ++depth) {
+        if( searchMovesA(cubesReprByDepth, csearch, depth, depthAvailCount-1, threadCount, fdReq) )
             return;
     }
-    for(unsigned depth = depthAvailMax+1; depth <= DEPTH_MAX; ++depth) {
+    for(unsigned depth = depthAvailCount; depth <= DEPTH_MAX; ++depth) {
         addCubes(cubesReprByDepth, depth, threadCount, fdReq);
         //printStats(cubesReprByDepth, depth);
-        depthAvailMax = depth;
+        depthAvailCount = depth+1;
         if( searchMovesA(cubesReprByDepth, csearch, depth-1, depth, threadCount, fdReq) )
             return;
         if( searchMovesA(cubesReprByDepth, csearch, depth, depth, threadCount, fdReq) )
@@ -3930,7 +3929,7 @@ static void processRequest(int fdReq, const char *reqHeader) {
                     char fbuf[32768];
                     long toWr = fsize;
                     while( toWr > 0 ) {
-                        int toRd = toWr > sizeof(fbuf) ? sizeof(fbuf) : toWr;
+                        int toRd = (unsigned)toWr > sizeof(fbuf) ? sizeof(fbuf) : toWr;
                         int rd = fread(fbuf, 1, toRd, fp);
                         if( rd == 0 ) {
                             memset(fbuf, 0, toRd);
