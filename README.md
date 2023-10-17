@@ -26,9 +26,9 @@ To run, go to the directory with sources and invoke `./cubesrv`
 for program is important, because the program reads additional files
 (_cube.html_, _cube.css_ etc.) from the current directory.
 
-The program works as an http server, listening on port 8080. So,
-after starting it, open [http://localhost:8080/](http://localhost:8080/)
-in a browser.
+The program uses a web browser interface. After startup it waits
+for http requests on port 8080. So, after starting it, open
+[http://localhost:8080/](http://localhost:8080/) in a browser.
 
 The page can operate the cube in two modes: _Manipulate_ and _Edit_.
 Initially the _Manipulate_ mode is active, which allows to rotate walls.
@@ -52,14 +52,17 @@ a few seconds to hours. The list of moves to solve the cube appears on
 the right side of the cube. Clicking on an item on the list moves the
 cube to an intermediate state, the one after the selected (clicked) move.
 
-Note that while the program is looking for a solution, does not
+On a modern PC (PassMark ~4000) the typical search time of a randomly mixed
+cube is about 2 minutes.
+
+Note that while the program is looking for a solution, it does not
 dispatch any HTTP requests.
 
 ## Algorithm
 
-The program uses a dumb algorithm, without any heuristics, group theory
-etc.  The algorithm is to form a set of mixed cubes which can be solved in a
-few moves, then attempt to find a cube in the set among all which can be
-reached from the cube to solve with a few moves. The program does it repeatedly
-with more and more moves (on both ends), until found.
+The program uses a dumb algorithm, without any heuristics, group theory,
+prunning tables etc. The algorithm is to build a set of mixed cubes which can
+be solved in a few moves, then attempt to find a cube in the set among all
+which can be reached from the cube to solve with a few moves. The program does
+it repeatedly with more and more moves (on both ends), until found.
 
