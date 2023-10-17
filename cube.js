@@ -123,6 +123,29 @@ function rotateDirReverse(rd) {
 	return RCOUNT;
 }
 
+let rotateMapFromExtFmt = new Map([
+    [ 'L1', ORANGECW ],
+    [ 'L2', ORANGE180],
+    [ 'L3', ORANGECCW],
+    [ 'R1', REDCW    ],
+    [ 'R2', RED180   ],
+    [ 'R3', REDCCW   ],
+    [ 'U1', YELLOWCW ],
+    [ 'U2', YELLOW180],
+    [ 'U3', YELLOWCCW],
+    [ 'D1', WHITECW  ],
+    [ 'D2', WHITE180 ],
+    [ 'D3', WHITECCW ],
+    [ 'B1', GREENCW  ],
+    [ 'B2', GREEN180 ],
+    [ 'B3', GREENCCW ],
+    [ 'F1', BLUECW   ],
+    [ 'F2', BLUE180  ],
+    [ 'F3', BLUECCW  ],
+]);
+
+let rotateMapToExtFmt = new Map([...rotateMapFromExtFmt.entries()].map(([a,b]) => { return [b, a]; }));
+
 class cubecorner_perms {
 	/*unsigned*/ #perms;
 
@@ -536,11 +559,6 @@ struct elemLoc {
 
 function cubeReadFromFile(text)
 {
-	let walls = [ [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []] ]; //[6][3][3];
-	let wno = 0, rno = 0;
-	const colorLetters = "YOBRGW";
-    let textlines = text.split('\n');
-	let lineNo = 0;
 	const /*elemLoc*/ cornerLocMap = [
 		[ { wall: 2, row: 0, col: 0 }, { wall: 1, row: 0, col: 2 }, { wall: 0, row: 2, col: 0 } ],
 		[ { wall: 2, row: 0, col: 2 }, { wall: 0, row: 2, col: 2 }, { wall: 3, row: 0, col: 0 } ],
@@ -570,39 +588,59 @@ function cubeReadFromFile(text)
 		[ { wall: 3, row: 1, col: 2 }, { wall: 4, row: 1, col: 0 } ],
 		[ { wall: 4, row: 2, col: 1 }, { wall: 5, row: 2, col: 1 } ],
 	];
+	const colorLetters = "YOBRGW";
+	let walls = [ [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []] ]; //[6][3][3];
 
-	while( lineNo < textlines.length ) {
-        let line = textlines[lineNo];
-        ++lineNo;
-        let sqcount = 0, cno = 0;
-        while( sqcount < (wno == 1 ? 12 : 3) ) {
-            if( cno == line.length ) {
-                dolog('err', `too few letters at line ${lineNo}\n`);
+    if( text.includes('\n') ) {
+        let wno = 0, rno = 0;
+        let textlines = text.split('\n');
+        let lineNo = 0;
+        while( lineNo < textlines.length ) {
+            let line = textlines[lineNo];
+            ++lineNo;
+            let sqcount = 0, cno = 0;
+            while( sqcount < (wno == 1 ? 12 : 3) ) {
+                if( cno == line.length ) {
+                    dolog('err', `too few letters at line ${lineNo}\n`);
+                    return null;
+                }
+                if( ! /\s/.test(line[cno]) ) {
+                    let lpos = colorLetters.indexOf(line[cno].toUpperCase());
+                    if(lpos < 0) {
+                        dolog('err', `bad letter at line ${lineNo} column ${cno}\nwno=${wno} rno=${rno}\n`);
+                        return null;
+                    }
+                    walls[wno + Math.floor(sqcount / 3)][rno][sqcount % 3] = lpos;
+                    ++sqcount;
+                }
+                ++cno;
+            }
+            if( rno == 2 ) {
+                if( wno == 5 )
+                    break;
+                wno = wno == 0 ? 1 : 5;
+                rno = 0;
+            }else
+                ++rno;
+        }
+        if( lineNo < 9 ) {
+            dolog('err', "not enough values\n");
+            return null;
+        }
+    }else{
+        if( text.length < 54 ) {
+            dolog('err', `too few letters\n`);
+            return null;
+        }
+        for(let cno = 0; cno < 54; ++cno ) {
+            let lpos = colorLetters.indexOf(text[cno].toUpperCase());
+            if(lpos < 0) {
+                dolog('err', `bad letter at column ${cno}\n`);
                 return null;
             }
-            if( ! /\s/.test(line[cno]) ) {
-				let lpos = colorLetters.indexOf(line[cno].toUpperCase());
-				if(lpos < 0) {
-					dolog('err', `bad letter at line ${lineNo} column ${cno}\nwno=${wno} rno=${rno} cno=${cno}\n`);
-					return null;
-				}
-				walls[wno + Math.floor(sqcount / 3)][rno][sqcount % 3] = lpos;
-                ++sqcount;
-			}
-            ++cno;
-		}
-		if( rno == 2 ) {
-			if( wno == 5 )
-				break;
-			wno = wno == 0 ? 1 : 5;
-			rno = 0;
-		}else
-			++rno;
-	}
-	if( lineNo < 9 ) {
-		dolog('err', "not enough values\n");
-		return null;
-	}
+            walls[Math.floor(cno/9)][Math.floor(cno/3) % 3][cno%3] = lpos;
+        }
+    }
 	for(let i = 0; i < 6; ++i) {
 		if( walls[i][1][1] != i ) {
 			dolog('err', `bad orientation: wall=${i} exp=${colorLetters[i]} is=${colorLetters[walls[i][1][1]]}\n`);
@@ -879,30 +917,36 @@ async function searchMoves(c) {
                     dolog('err', `${line.substring(7)}\n`);
                 }else if( line.startsWith("solution: ") ) {
                     dolog('solutions', `${line}\n`);
-                    if( moves.length == 0 ) {
-                        let movesStr = line.split(' ');
-                        for(let i = 1; i < movesStr.length; ++i) {
-                            switch( movesStr[i] ) {
-                                case "orange-cw": moves.push(ORANGECW); break;
-                                case "orange-180": moves.push(ORANGE180); break;
-                                case "orange-ccw": moves.push(ORANGECCW); break;
-                                case "red-cw": moves.push(REDCW); break;
-                                case "red-180": moves.push(RED180); break;
-                                case "red-ccw": moves.push(REDCCW); break;
-                                case "yellow-cw": moves.push(YELLOWCW); break;
-                                case "yellow-180": moves.push(YELLOW180); break;
-                                case "yellow-ccw": moves.push(YELLOWCCW); break;
-                                case "white-cw": moves.push(WHITECW); break;
-                                case "white-180": moves.push(WHITE180); break;
-                                case "white-ccw": moves.push(WHITECCW); break;
-                                case "green-cw": moves.push(GREENCW); break;
-                                case "green-180": moves.push(GREEN180); break;
-                                case "green-ccw": moves.push(GREENCCW); break;
-                                case "blue-cw": moves.push(BLUECW); break;
-                                case "blue-180": moves.push(BLUE180); break;
-                                case "blue-ccw": moves.push(BLUECCW); break;
-                            }
+                    let movesStr = line.split(' ');
+                    let mvs = [];
+                    for(let i = 1; i < movesStr.length; ++i) {
+                        switch( movesStr[i] ) {
+                            case "orange-cw": mvs.push(ORANGECW); break;
+                            case "orange-180": mvs.push(ORANGE180); break;
+                            case "orange-ccw": mvs.push(ORANGECCW); break;
+                            case "red-cw": mvs.push(REDCW); break;
+                            case "red-180": mvs.push(RED180); break;
+                            case "red-ccw": mvs.push(REDCCW); break;
+                            case "yellow-cw": mvs.push(YELLOWCW); break;
+                            case "yellow-180": mvs.push(YELLOW180); break;
+                            case "yellow-ccw": mvs.push(YELLOWCCW); break;
+                            case "white-cw": mvs.push(WHITECW); break;
+                            case "white-180": mvs.push(WHITE180); break;
+                            case "white-ccw": mvs.push(WHITECCW); break;
+                            case "green-cw": mvs.push(GREENCW); break;
+                            case "green-180": mvs.push(GREEN180); break;
+                            case "green-ccw": mvs.push(GREENCCW); break;
+                            case "blue-cw": mvs.push(BLUECW); break;
+                            case "blue-180": mvs.push(BLUE180); break;
+                            case "blue-ccw": mvs.push(BLUECCW); break;
                         }
+                    }
+                    let movesExtFmtStr = mvs.toReversed().map((m) => {
+                        return rotateMapToExtFmt.get(rotateDirReverse(m));
+                    }).join('');
+                    cubelistItemFill(movesExtFmtStr);
+                    if( moves.length == 0 ) {
+                        moves = mvs;
                         for(let i = 0; i < moves.length; ++i) {
                             let btn = document.querySelector(`#movebutton${i}`);
                             btn.textContent = rotateDirName(moves[i]);
@@ -1371,15 +1415,21 @@ function updateStylesTransforms()
         wcolors[i].style.transform = `matrix3d(${curcubemx.middles[i].join()})`;
 }
 
-function cubePrint(c) {
+function cubeToCubeMx(c) {
+    let rescubemx = { corners: [], edges: [], middles: curcubemx.middles };
     for(let i = 0; i < 8; ++i) {
         let cno = c.cc.getPermAt(i);
-        curcubemx.corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
+        rescubemx.corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
     }
     for(let i = 0; i < 12; ++i) {
         let eno = c.ce.edgeN(i);
-        curcubemx.edges[eno] = edgesmx[i][c.ce.edgeR(i)];
+        rescubemx.edges[eno] = edgesmx[i][c.ce.edgeR(i)];
     }
+    return rescubemx;
+}
+
+function cubePrint(c) {
+    curcubemx = cubeToCubeMx(c);
     updateStylesTransforms();
 }
 
@@ -1410,13 +1460,10 @@ function cubeimgToCube() {
 
 const STYLEAPPLY_IMMEDIATE = 1;
 const STYLEAPPLY_DEFER = 2;
-const STYLEAPPLY_SKIP = 3;
 
 function rotateCurWall(rotateDir, styleApply) {
     function rotateCurWallInt(rotateDir, styleApply) {
         curcubemx = rotateWall(curcubemx, rotateDir);
-        if( styleApply === STYLEAPPLY_SKIP )
-            return;
         if( styleApply === STYLEAPPLY_DEFER )
             setTimeout(updateStylesTransforms, 50);
         else
@@ -1455,6 +1502,7 @@ function rotateCurWall(rotateDir, styleApply) {
                 styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
             break;
     }
+    cubelistItemFind();
 }
 
 function rotateBlueWall90() { rotateCurWall(BLUECW); }
@@ -1819,29 +1867,9 @@ function saveToFile() {
 }
 
 function getCubeMxScrambled(s) {
-    let rotateMap = new Map([
-        [ 'L1', ORANGECW ],
-        [ 'L2', ORANGE180],
-        [ 'L3', ORANGECCW],
-        [ 'R1', REDCW    ],
-        [ 'R2', RED180   ],
-        [ 'R3', REDCCW   ],
-        [ 'U1', YELLOWCW ],
-        [ 'U2', YELLOW180],
-        [ 'U3', YELLOWCCW],
-        [ 'D1', WHITECW  ],
-        [ 'D2', WHITE180 ],
-        [ 'D3', WHITECCW ],
-        [ 'B1', GREENCW  ],
-        [ 'B2', GREEN180 ],
-        [ 'B3', GREENCCW ],
-        [ 'F1', BLUECW   ],
-        [ 'F2', BLUE180  ],
-        [ 'F3', BLUECCW  ],
-    ]);
     let rescubemx = cubeMxCopy(solvedcubemx);
     for(let i = 0; i+1 < s.length; i+=2) {
-        let mappedVal = rotateMap.get(s.substring(i, i+2));
+        let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
         if( mappedVal != undefined )
             rescubemx = rotateWall(rescubemx, mappedVal)
         else
@@ -1850,14 +1878,33 @@ function getCubeMxScrambled(s) {
     return rescubemx;
 }
 
-let cubelistval = '', cubelistitemno = -1;
+function cubeMxFromStr(s) {
+    let rescubemx;
+    if( /[Yy]/.test(s) ) {
+        let c = cubeReadFromFile(s);
+        if( c )
+            rescubemx = cubeToCubeMx(c);
+    }else{
+        rescubemx = getCubeMxScrambled(s);
+    }
+    return rescubemx;
+}
+
+let cubefill = '', cubelistval = '', cubelistitemno = -1;
 
 function cubelistItemFind() {
+    if( cubefill.length > 0 && cubeMxEqual(curcubemx, cubeMxFromStr(cubefill), false) ) {
+        cubelistitemtext.textContent = cubefill;
+        cubelistitemno = -1;
+        cubelistiteminsert.disabled = false;
+        return;
+    }
+    cubelistiteminsert.disabled = true;
     if( cubelistval.length > 0 ) {
         let itemsarr = cubelistval.split('\n');
         let curItem = 0;
         while( curItem < itemsarr.length ) {
-            if( cubeMxEqual(curcubemx, getCubeMxScrambled(itemsarr[curItem]), false) )
+            if( cubeMxEqual(curcubemx, cubeMxFromStr(itemsarr[curItem]), false) )
                 break;
             ++curItem;
         }
@@ -1868,6 +1915,13 @@ function cubelistItemFind() {
             cubelistitemtext.textContent = '';
             cubelistitemno = -1;
         }
+    }
+}
+
+function cubelistItemFill(s) {
+    let itemsarr = cubelistval.split('\n');
+    if( ! itemsarr.includes(s) ) {
+        cubefill = s;
     }
 }
 
@@ -1893,7 +1947,7 @@ function cubelistItemNext() {
         let nextItem = cubelistitemno+1;
         if( nextItem < itemsarr.length ) {
             cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
-            curcubemx = getCubeMxScrambled(itemsarr[nextItem]);
+            curcubemx = cubeMxFromStr(itemsarr[nextItem]);
             updateStylesTransforms();
             cubelistitemno = nextItem;
         }
@@ -1906,10 +1960,20 @@ function cubelistItemPrev() {
         let prevItem = cubelistitemno-1;
         if( prevItem >= 0 ) {
             cubelistitemtext.textContent = prevItem + ' ' + itemsarr[prevItem];
-            curcubemx = getCubeMxScrambled(itemsarr[prevItem]);
+            curcubemx = cubeMxFromStr(itemsarr[prevItem]);
             updateStylesTransforms();
             cubelistitemno = prevItem;
         }
+    }
+}
+
+function cubelistItemInsert() {
+    if( cubefill ) {
+        cubelistval = cubefill + '\n' + cubelistval;
+        cubelisttext.value = cubelistval;
+        cubefill = '';
+        localStorage.setItem('cubelist', cubelistval);
+        cubelistItemFind();
     }
 }
 
@@ -1933,6 +1997,7 @@ onload = () => {
     cubelistcancelbtn.addEventListener('click', cubelistCancel);
     cubelistitemprev.addEventListener('click', cubelistItemPrev);
     cubelistitemnext.addEventListener('click', cubelistItemNext);
+    cubelistiteminsert.addEventListener('click', cubelistItemInsert);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
