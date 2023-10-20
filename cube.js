@@ -123,29 +123,6 @@ function rotateDirReverse(rd) {
 	return RCOUNT;
 }
 
-let rotateMapFromExtFmt = new Map([
-    [ 'L1', ORANGECW ],
-    [ 'L2', ORANGE180],
-    [ 'L3', ORANGECCW],
-    [ 'R1', REDCW    ],
-    [ 'R2', RED180   ],
-    [ 'R3', REDCCW   ],
-    [ 'U1', YELLOWCW ],
-    [ 'U2', YELLOW180],
-    [ 'U3', YELLOWCCW],
-    [ 'D1', WHITECW  ],
-    [ 'D2', WHITE180 ],
-    [ 'D3', WHITECCW ],
-    [ 'B1', GREENCW  ],
-    [ 'B2', GREEN180 ],
-    [ 'B3', GREENCCW ],
-    [ 'F1', BLUECW   ],
-    [ 'F2', BLUE180  ],
-    [ 'F3', BLUECCW  ],
-]);
-
-let rotateMapToExtFmt = new Map([...rotateMapFromExtFmt.entries()].map(([a,b]) => { return [b, a]; }));
-
 class cubecorner_perms {
 	/*unsigned*/ #perms;
 
@@ -557,7 +534,7 @@ struct elemLoc {
 };
 */
 
-function cubeReadFromFile(text)
+function cubeFromColorsOnWalls(text)
 {
 	const /*elemLoc*/ cornerLocMap = [
 		[ { wall: 2, row: 0, col: 0 }, { wall: 1, row: 0, col: 2 }, { wall: 0, row: 2, col: 0 } ],
@@ -629,7 +606,7 @@ function cubeReadFromFile(text)
         }
     }else{
         if( text.length < 54 ) {
-            dolog('err', `too few letters\n`);
+            dolog('err', `to few letters\n`);
             return null;
         }
         for(let cno = 0; cno < 54; ++cno ) {
@@ -917,35 +894,31 @@ async function searchMoves(c) {
                     dolog('err', `${line.substring(7)}\n`);
                 }else if( line.startsWith("solution: ") ) {
                     dolog('solutions', `${line}\n`);
-                    let movesStr = line.split(' ');
-                    let mvs = [];
-                    for(let i = 1; i < movesStr.length; ++i) {
-                        switch( movesStr[i] ) {
-                            case "orange-cw": mvs.push(ORANGECW); break;
-                            case "orange-180": mvs.push(ORANGE180); break;
-                            case "orange-ccw": mvs.push(ORANGECCW); break;
-                            case "red-cw": mvs.push(REDCW); break;
-                            case "red-180": mvs.push(RED180); break;
-                            case "red-ccw": mvs.push(REDCCW); break;
-                            case "yellow-cw": mvs.push(YELLOWCW); break;
-                            case "yellow-180": mvs.push(YELLOW180); break;
-                            case "yellow-ccw": mvs.push(YELLOWCCW); break;
-                            case "white-cw": mvs.push(WHITECW); break;
-                            case "white-180": mvs.push(WHITE180); break;
-                            case "white-ccw": mvs.push(WHITECCW); break;
-                            case "green-cw": mvs.push(GREENCW); break;
-                            case "green-180": mvs.push(GREEN180); break;
-                            case "green-ccw": mvs.push(GREENCCW); break;
-                            case "blue-cw": mvs.push(BLUECW); break;
-                            case "blue-180": mvs.push(BLUE180); break;
-                            case "blue-ccw": mvs.push(BLUECCW); break;
-                        }
-                    }
-                    let movesExtFmtStr = mvs.toReversed().map((m) => {
-                        return rotateMapToExtFmt.get(rotateDirReverse(m));
-                    }).join('');
-                    cubelistItemFill(movesExtFmtStr);
                     if( moves.length == 0 ) {
+                        let movesStr = line.split(' ');
+                        let mvs = [];
+                        for(let i = 1; i < movesStr.length; ++i) {
+                            switch( movesStr[i] ) {
+                                case "orange-cw": mvs.push(ORANGECW); break;
+                                case "orange-180": mvs.push(ORANGE180); break;
+                                case "orange-ccw": mvs.push(ORANGECCW); break;
+                                case "red-cw": mvs.push(REDCW); break;
+                                case "red-180": mvs.push(RED180); break;
+                                case "red-ccw": mvs.push(REDCCW); break;
+                                case "yellow-cw": mvs.push(YELLOWCW); break;
+                                case "yellow-180": mvs.push(YELLOW180); break;
+                                case "yellow-ccw": mvs.push(YELLOWCCW); break;
+                                case "white-cw": mvs.push(WHITECW); break;
+                                case "white-180": mvs.push(WHITE180); break;
+                                case "white-ccw": mvs.push(WHITECCW); break;
+                                case "green-cw": mvs.push(GREENCW); break;
+                                case "green-180": mvs.push(GREEN180); break;
+                                case "green-ccw": mvs.push(GREENCCW); break;
+                                case "blue-cw": mvs.push(BLUECW); break;
+                                case "blue-180": mvs.push(BLUE180); break;
+                                case "blue-ccw": mvs.push(BLUECCW); break;
+                            }
+                        }
                         moves = mvs;
                         for(let i = 0; i < moves.length; ++i) {
                             let btn = document.querySelector(`#movebutton${i}`);
@@ -1360,6 +1333,51 @@ class CubeTrMatrix {
         return new cube(cc, ce);
     }
 
+    static fromScrambleStr(s) {
+        const rotateMapFromExtFmt = new Map([
+            [ 'L1', ORANGECW ],
+            [ 'L2', ORANGE180],
+            [ 'L3', ORANGECCW],
+            [ 'R1', REDCW    ],
+            [ 'R2', RED180   ],
+            [ 'R3', REDCCW   ],
+            [ 'U1', YELLOWCW ],
+            [ 'U2', YELLOW180],
+            [ 'U3', YELLOWCCW],
+            [ 'D1', WHITECW  ],
+            [ 'D2', WHITE180 ],
+            [ 'D3', WHITECCW ],
+            [ 'B1', GREENCW  ],
+            [ 'B2', GREEN180 ],
+            [ 'B3', GREENCCW ],
+            [ 'F1', BLUECW   ],
+            [ 'F2', BLUE180  ],
+            [ 'F3', BLUECCW  ],
+        ]);
+
+        let rescubemx = CubeTrMatrix.solved;
+        for(let i = 0; i+1 < s.length; i+=2) {
+            let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
+            if( mappedVal != undefined )
+                rescubemx = rescubemx.rotateWall(mappedVal)
+            else
+                dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
+        }
+        return rescubemx;
+    }
+
+    static fromString(s) {
+        let rescubemx;
+        if( /[Yy]/.test(s) ) {
+            let c = cubeFromColorsOnWalls(s);
+            if( c )
+                rescubemx = CubeTrMatrix.fromCube(c, curcubemx);
+        }else{
+            rescubemx = CubeTrMatrix.fromScrambleStr(s);
+        }
+        return rescubemx;
+    }
+
     #rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor) {
         let rescubemx = new CubeTrMatrix();
         rescubemx.#corners = [];
@@ -1478,11 +1496,6 @@ class CubeTrMatrix {
 
 let curcubemx = CubeTrMatrix.solved;
 
-function cubePrint(c) {
-    curcubemx = CubeTrMatrix.fromCube(c, curcubemx);
-    curcubemx.applyToCubeImg();
-}
-
 const STYLEAPPLY_IMMEDIATE = 1;
 const STYLEAPPLY_DEFER = 2;
 
@@ -1490,7 +1503,7 @@ function rotateCurWall(rotateDir, styleApply) {
     function rotateCurWallInt(rotateDir, styleApply) {
         curcubemx = curcubemx.rotateWall(rotateDir);
         if( styleApply === STYLEAPPLY_DEFER )
-            setTimeout(() => curcubemx.applyToCubeImg, 50);
+            setTimeout(() => curcubemx.applyToCubeImg(), 50);
         else
             curcubemx.applyToCubeImg();
     }
@@ -1528,7 +1541,6 @@ function rotateCurWall(rotateDir, styleApply) {
                 styleApply == undefined ? STYLEAPPLY_IMMEDIATE : styleApply);
             break;
     }
-    cubelistItemFind();
 }
 
 function rotateBlueWall90() { rotateCurWall(BLUECW); }
@@ -1626,7 +1638,6 @@ function getAllowedCornerColors(ccref) {
                         for(let j = 0; j < 3; ++j) {
                             let owall = (orient+j) % 3;
                             if( !allowedCornerColors[i][j].includes(cubeCornerColors[cno][owall]) ) {
-                                //console.log(`add allowed color ${colorClassNames[cubeCornerColors[cno][owall]]} for ${cornerIds[i]} ${cornerSquareClasses[j]}`);
                                 allowedCornerColors[i][j].push(cubeCornerColors[cno][owall]);
                             }
                         }
@@ -1679,8 +1690,6 @@ function getAllowedEdgeColors(ceref) {
         [false, false, false, false, false, false, false, false, false, false, false, false],
         [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1], 0))
     {
-        //console.log(`occupEdges: ${po.occupEdges[0]}, ${po.occupEdges[1]}, ${po.occupEdges[2]}, ${po.occupEdges[3]}, ${po.occupEdges[4]}, ${po.occupEdges[5]}, ${po.occupEdges[6]}, ${po.occupEdges[7]}, ${po.occupEdges[8]}, ${po.occupEdges[9]}, ${po.occupEdges[10]}, ${po.occupEdges[11]}`);
-        //console.log(`perm: ${po.perm[0]}, ${po.perm[1]}, ${po.perm[2]}, ${po.perm[3]}, ${po.perm[4]}, ${po.perm[5]}, ${po.perm[6]}, ${po.perm[7]}, ${po.perm[8]}, ${po.perm[9]}, ${po.perm[10]}, ${po.perm[11]}`);
         for(let i = 0; i < 12; ++i) {
             let eno = po.perm[i];
             if( eno >= 0 ) {
@@ -1699,7 +1708,6 @@ function getAllowedEdgeColors(ceref) {
                         for(let j = 0; j < 2; ++j) {
                             let owall = (orient+j) % 2;
                             if( !allowedEdgeColors[i][j].includes(cubeEdgeColors[eno][owall]) ) {
-                                //console.log(`add allowed edge color ${colorClassNames[cubeEdgeColors[eno][owall]]} for ${edgeIds[i]} ${edgeSquareClasses[j]}`);
                                 allowedEdgeColors[i][j].push(cubeEdgeColors[eno][owall]);
                             }
                         }
@@ -1712,7 +1720,6 @@ function getAllowedEdgeColors(ceref) {
                             for(let j = 0; j < 2; ++j) {
                                 let owall = (orient+j) % 2;
                                 if( !allowedEdgeColors[i][j].includes(cubeEdgeColors[eno][owall]) ) {
-                                    //console.log(`add allowed edge color ${colorClassNames[cubeEdgeColors[eno][owall]]} for ${edgeIds[i]} ${edgeSquareClasses[j]}`);
                                     allowedEdgeColors[i][j].push(cubeEdgeColors[eno][owall]);
                                 }
                             }
@@ -1807,11 +1814,12 @@ function areCubeColorsFilled() {
     return true;
 }
 
-let cmanipulate = csolved;
+let cmanipulate = CubeTrMatrix.solved;
 
 function enterEditMode() {
-    cmanipulate = curcubemx.toCube();
-    cubePrint(csolved);
+    cmanipulate = curcubemx;
+    curcubemx = CubeTrMatrix.solved;
+    curcubemx.applyToCubeImg();
     cubeimg.classList.add('editmode');
     document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = false; });
     document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = true; });
@@ -1824,13 +1832,15 @@ function doReset() {
         fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
         document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
     }else{
-        cubePrint(csolved);
+        curcubemx = CubeTrMatrix.solved;
+        curcubemx.applyToCubeImg();
     }
 }
 
 function enterManipulateMode() {
     cubeimg.classList.remove('editmode');
-    cubePrint(cmanipulate);
+    curcubemx = cmanipulate;
+    curcubemx.applyToCubeImg();
     document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = true; });
     document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = false; });
     applybtn.disabled = true;
@@ -1840,7 +1850,7 @@ function applyEdit() {
     let ccref = [], ceref = [];
     getAllowedCornerColors(ccref);
     getAllowedEdgeColors(ceref);
-	cmanipulate = new cube(ccref[0], ceref[0]);
+	cmanipulate = CubeTrMatrix.fromCube(new cube(ccref[0], ceref[0]), curcubemx);
     manipmodebtn.checked = true;
     enterManipulateMode();
 }
@@ -1866,8 +1876,8 @@ function loadFromFile() {
     }).then(async function ( [fileHandle] ) {
         let file = await fileHandle.getFile();
         let val = await file.text();
-        let c = cubeReadFromFile(val);
-        cubePrint(c);
+        curcubemx = CubeTrMatrix.fromString(val);
+        curcubemx.applyToCubeImg();
     }, function() {});
 }
 
@@ -1892,114 +1902,12 @@ function saveToFile() {
     }, function() {});
 }
 
-function getCubeMxScrambled(s) {
-    let rescubemx = CubeTrMatrix.solved;
-    for(let i = 0; i+1 < s.length; i+=2) {
-        let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
-        if( mappedVal != undefined )
-            rescubemx = rescubemx.rotateWall(mappedVal)
-        else
-            dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
-    }
-    return rescubemx;
-}
-
-function cubeMxFromStr(s) {
-    let rescubemx;
-    if( /[Yy]/.test(s) ) {
-        let c = cubeReadFromFile(s);
-        if( c )
-            rescubemx = CubeTrMatrix.fromCube(c, curcubemx);
-    }else{
-        rescubemx = getCubeMxScrambled(s);
-    }
-    return rescubemx;
-}
-
-let cubefill = '', cubelistval = '', cubelistitemno = -1;
-
-function cubelistItemFind() {
-    if( cubefill.length > 0 && curcubemx.equals(cubeMxFromStr(cubefill), false) ) {
-        cubelistitemtext.textContent = cubefill;
-        cubelistitemno = -1;
-        cubelistiteminsert.disabled = false;
-        return;
-    }
-    cubelistiteminsert.disabled = true;
-    if( cubelistval.length > 0 ) {
-        let itemsarr = cubelistval.split('\n');
-        let curItem = 0;
-        while( curItem < itemsarr.length ) {
-            if( curcubemx.equals(cubeMxFromStr(itemsarr[curItem]), false) )
-                break;
-            ++curItem;
-        }
-        if( curItem < itemsarr.length ) {
-            cubelistitemtext.textContent = curItem + ' ' + itemsarr[curItem];
-            cubelistitemno = curItem;
-        }else{
-            cubelistitemtext.textContent = '';
-            cubelistitemno = -1;
-        }
-    }
-}
-
-function cubelistItemFill(s) {
-    let itemsarr = cubelistval.split('\n');
-    if( ! itemsarr.includes(s) ) {
-        cubefill = s;
-    }
-}
-
-function cubelistLoad() {
-    cubelist.showModal();
-}
-
-function cubelistSave() {
-    cubelistval = cubelisttext.value.trim();
-    localStorage.setItem('cubelist', cubelistval);
-    cubelist.close();
-    cubelistItemFind();
-}
-
-function cubelistCancel() {
-    cubelisttext.value = cubelistval;
-    cubelist.close();
-}
-
-function cubelistItemNext() {
-    if( cubelistval.length > 0 ) {
-        let itemsarr = cubelistval.split('\n');
-        let nextItem = cubelistitemno+1;
-        if( nextItem < itemsarr.length ) {
-            cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
-            curcubemx = cubeMxFromStr(itemsarr[nextItem]);
-            curcubemx.applyToCubeImg();
-            cubelistitemno = nextItem;
-        }
-    }
-}
-
-function cubelistItemPrev() {
-    if( cubelistval.length > 0 ) {
-        let itemsarr = cubelistval.split('\n');
-        let prevItem = cubelistitemno-1;
-        if( prevItem >= 0 ) {
-            cubelistitemtext.textContent = prevItem + ' ' + itemsarr[prevItem];
-            curcubemx = cubeMxFromStr(itemsarr[prevItem]);
-            curcubemx.applyToCubeImg();
-            cubelistitemno = prevItem;
-        }
-    }
-}
-
-function cubelistItemInsert() {
-    if( cubefill ) {
-        cubelistval = cubefill + '\n' + cubelistval;
-        cubelisttext.value = cubelistval;
-        cubefill = '';
-        localStorage.setItem('cubelist', cubelistval);
-        cubelistItemFind();
+function loadFromInput() {
+    err.textContent = '';
+    let cubemx = CubeTrMatrix.fromString(loadinput.value);
+    if( cubemx ) {
+        curcubemx = cubemx;
+        curcubemx.applyToCubeImg();
     }
 }
 
@@ -2009,21 +1917,17 @@ onload = () => {
         document.querySelector('#cubefile').addEventListener('change', (ev) => {
             let file = ev.target.files[0];
             file.text().then((val) => {
-                let c = cubeReadFromFile(val);
-                cubePrint(c);
+                curcubemx = CubeTrMatrix.fromString(val);
+                curcubemx.applyToCubeImg();
             });
         });
     }else{
         loadonlybtn.style.display = 'none';
-        loadbtn.addEventListener('click', loadFromFile);
-        savebtn.addEventListener('click', saveToFile);
+        loadfromfilebtn.addEventListener('click', loadFromFile);
+        savetofilebtn.addEventListener('click', saveToFile);
     }
-    cubelistloadbtn.addEventListener('click', cubelistLoad);
-    cubelistsavebtn.addEventListener('click', cubelistSave);
-    cubelistcancelbtn.addEventListener('click', cubelistCancel);
-    cubelistitemprev.addEventListener('click', cubelistItemPrev);
-    cubelistitemnext.addEventListener('click', cubelistItemNext);
-    cubelistiteminsert.addEventListener('click', cubelistItemInsert);
+    loadfrominputbtn.addEventListener('click', loadFromInput);
+    loadinput.addEventListener('change', loadFromInput);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
@@ -2102,12 +2006,7 @@ onload = () => {
     if( crestore ) {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
-        cubePrint(c);
-    }
-    crestore = localStorage.getItem('cubelist');
-    if( crestore ) {
-        cubelistval = crestore;
-        cubelisttext.value = cubelistval;
-        cubelistItemFind();
+        curcubemx = CubeTrMatrix.fromCube(c, curcubemx);
+        curcubemx.applyToCubeImg();
     }
 }

@@ -11,16 +11,14 @@
             <div>
                 <div id='saveload'>
                     <div id='loadsavebtns'>
-                        <button id='loadbtn' class='manipmodeonly'>Load From file</button>
-                        <button id='savebtn' class='manipmodeonly'>Save To File</button>
+                        <button id='loadfromfilebtn' class='manipmodeonly'>Load From file</button>
+                        <button id='savetofilebtn' class='manipmodeonly'>Save To File</button>
                     </div>
                     <div id='loadonlybtn' class='manipmodeonly'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
-                    <div id='loadlist'>
-                        <button id='cubelistloadbtn' class='manipmodeonly'>List</button>
-                        <button id='cubelistitemprev' class='manipmodeonly'>&lt;</button>
-                        <button id='cubelistitemnext' class='manipmodeonly'>&gt;</button>
-                        <div id='cubelistitemtext'></div>
-                        <button id='cubelistiteminsert' disabled>Insert</button>
+                    <div>
+                        &ensp;
+                        <button id='loadfrominputbtn' class='manipmodeonly'>Load:</button>
+                        <input id='loadinput' type='text'>
                     </div>
                 </div>
                 <div id='cubewithcontrols'>
@@ -549,13 +547,5 @@
                 <p id='solutions' class='log'></p>
             </div>
         </div>
-        <dialog id='cubelist'>
-            Cube List
-            <div>
-                <textarea id='cubelisttext'></textarea>
-            </div>
-            <button id='cubelistsavebtn'>Save</button>
-            <button id='cubelistcancelbtn'>Cancel</button>
-        </dialog>
 	</body>
 </html>
