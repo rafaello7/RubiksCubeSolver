@@ -966,496 +966,521 @@ async function searchMoves(c) {
     document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = false;});
     startTime = undefined;
 }
- 
-let cubeimgmx = [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ];
 
+class TransformMatrix {
+    #x;
+    #y;
+    #z;
+    constructor(x1, x2, x3, y1, y2, y3, z1, z2, z3) {
+        this.#x = [x1, x2, x3];
+        this.#y = [y1, y2, y3];
+        this.#z = [z1, z2, z3];
+    }
+    static multiply(a, b) {
+        return new TransformMatrix(
+            a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0],
+            a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1],
+            a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2],
+            a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0],
+            a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1],
+            a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2],
+            a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0],
+            a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1],
+            a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]);
+    }
+
+    static multiplyRnd(a, b) {
+        return new TransformMatrix(
+            Math.round(a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0]),
+            Math.round(a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1]),
+            Math.round(a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2]),
+            Math.round(a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0]),
+            Math.round(a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1]),
+            Math.round(a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2]),
+            Math.round(a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0]),
+            Math.round(a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1]),
+            Math.round(a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]));
+    }
+
+    multiplyWith(b) { return TransformMatrix.multiply(this, b); }
+    multiplyRndWith(b) { return TransformMatrix.multiplyRnd(this, b); }
+    equals(b) {
+        return this.#x[0] == b.#x[0] && this.#x[1] == b.#x[1] && this.#x[2] == b.#x[2] && 
+            this.#y[0] == b.#y[0] && this.#y[1] == b.#y[1] && this.#y[2] == b.#y[2] && 
+            this.#z[0] == b.#z[0] && this.#z[1] == b.#z[1] && this.#z[2] == b.#z[2];
+    }
+
+    isIn(searchArr) {
+        for(let item of searchArr) {
+            if( item.equals(this) )
+                return true;
+        }
+        return false;
+    }
+
+    toMatrix3dParam() {
+        return this.#x.join() + ',0,' + this.#y.join() + ',0,' +
+            this.#z.join() + ',0,0,0,0,1';
+    }
+}
+ 
+let cubeimgmx = new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1);
+
+// Maps corner permutation + orientation to a transformation matrix
 let cornersmx = [
     [
-        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
     ],[
-        [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
     ],[
-        [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
     ],[
-        [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
     ],[
-        [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
     ],[
-        [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
     ],[
-        [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
     ],[
-        [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
     ]
 ];
 
+// Maps edge permutation + orientation to a transformation matrix
 let edgesmx = [
     [
-        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
     ],[
-        [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
     ],[
-        [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
+        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
     ],[
-        [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-        [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
     ],[
-        [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
     ],[
-        [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
     ],[
-        [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
     ],[
-        [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
     ],[
-        [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
     ],[
-        [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
     ],[
-        [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-        [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
     ],[
-        [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-        [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
     ]
 ];
 
-// corner/edge matrixes on particular walls
+// possible matrix values for corners on blue wall
 let cbluemx = [
-    [ [ 1,  0,  0, 0], [ 0,  1,  0, 0], [ 0,  0,  1, 0], [0, 0, 0, 1] ],
-    [ [ 1,  0,  0, 0], [ 0,  0, -1, 0], [ 0,  1,  0, 0], [0, 0, 0, 1] ],
-    [ [-1,  0,  0, 0], [ 0, -1,  0, 0], [ 0,  0,  1, 0], [0, 0, 0, 1] ],
-    [ [-1,  0,  0, 0], [ 0,  0, -1, 0], [ 0, -1,  0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
 
-    [ [ 0,  1,  0, 0], [-1,  0,  0, 0], [ 0,  0,  1, 0], [0, 0, 0, 1] ],
-    [ [ 0,  1,  0, 0], [ 0,  0, -1, 0], [-1,  0,  0, 0], [0, 0, 0, 1] ],
-    [ [ 0, -1,  0, 0], [ 1,  0,  0, 0], [ 0,  0,  1, 0], [0, 0, 0, 1] ],
-    [ [ 0, -1,  0, 0], [ 0,  0, -1, 0], [ 1,  0,  0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
 
-    [ [ 0,  0, -1, 0], [ 0,  1,  0, 0], [ 1,  0,  0, 0], [0, 0, 0, 1] ],
-    [ [ 0,  0, -1, 0], [ 1,  0,  0, 0], [ 0, -1,  0, 0], [0, 0, 0, 1] ],
-    [ [ 0,  0, -1, 0], [ 0, -1,  0, 0], [-1,  0,  0, 0], [0, 0, 0, 1] ],
-    [ [ 0,  0, -1, 0], [-1,  0,  0, 0], [ 0,  1,  0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
 ];
 
+// possible matrix values for edges on blue wall
 let ebluemx = [
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
 
-    [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
 
-    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
 
-    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ]
+    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0)
 ];
 
+// possible matrix values for corners on red wall
 let credmx = [
-    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
+    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
 ];
 
+// possible matrix values for edges on red wall
 let eredmx = [
-    [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
 ];
 
+// possible matrix values for corners on yellow wall
 let cyellowmx = [
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
 ];
 
+// possible matrix values for edges on yellow wall
 let eyellowmx = [
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, -1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
+    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
 ];
 
+// possible matrix values for corners on green wall
 let cgreenmx = [
-    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
 ];
 
+// possible matrix values for edges on green wall
 let egreenmx = [
-    [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, 1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
 ];
 
+// possible matrix values for corners on white wall
 let cwhitemx = [
-    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, -1, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
 ];
 
+// possible matrix values for edges on white wall
 let ewhitemx = [
-    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [-1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
 ];
 
+// possible matrix values for corners on orange wall
 let corangemx = [
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
 ];
 
+// possible matrix values for edges on orange wall
 let eorangemx = [
-    [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [0, 0, -1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ],
-    [ [0, 0, -1, 0], [0, -1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 0, 1, 0], [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1] ],
-    [ [0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ],
-    [ [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ],
+    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
 ];
 
-function multiplyMatrixes(a, b) {
-    let res = [ [], [], [], [] ];
-    for(let y = 0; y < 4; ++y) {
-        for(let x = 0; x < 4; ++x) {
-            let val = 0;
-            for(let i = 0; i < 4; ++i)
-                val += a[y][i] * b[i][x];
-            res[y][x] = val;
-        }
-    }
-    return res;
-}
+class CubeTrMatrix {
+    #corners;
+    #edges;
+    #middles;
 
-function multiplyMatrixesRnd(a, b) {
-    let res = [ [], [], [], [] ];
-    for(let y = 0; y < 4; ++y) {
-        for(let x = 0; x < 4; ++x) {
-            let val = 0;
-            for(let i = 0; i < 4; ++i)
-                val += a[y][i] * b[i][x];
-            res[y][x] = Math.round(val);
-        }
+    static solved;
+    static {
+        CubeTrMatrix.solved = new CubeTrMatrix();
+        CubeTrMatrix.solved.#corners = [
+            cornersmx[0][0], cornersmx[1][0], cornersmx[2][0], cornersmx[3][0],
+            cornersmx[4][0], cornersmx[5][0], cornersmx[6][0], cornersmx[7][0]
+        ];
+        CubeTrMatrix.solved.#edges = [
+            edgesmx[0][0], edgesmx[1][0], edgesmx[2][0], edgesmx[3][0],
+            edgesmx[4][0], edgesmx[5][0], edgesmx[6][0], edgesmx[7][0],
+            edgesmx[8][0], edgesmx[9][0], edgesmx[10][0], edgesmx[11][0]
+        ];
+        CubeTrMatrix.solved.#middles = [
+            new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), // yellow
+            new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), // orange
+            new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1), // blue
+            new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), // red
+            new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1), // green
+            new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), // white
+        ];
     }
-    return res;
-}
 
-function matrixesEqual(a, b) {
-    for(let y = 0; y < 4; ++y) {
-        for(let x = 0; x < 4; ++x) {
-            if( a[y][x] != b[y][x] )
+    equals(cubemx2, includingMiddle) {
+        for(let i = 0; i < 8; ++i)
+            if( !this.#corners[i].equals(cubemx2.#corners[i] ) )
                 return false;
+        for(let i = 0; i < 12; ++i)
+            if( !this.#edges[i].equals(cubemx2.#edges[i] ) )
+                return false;
+        if( includingMiddle ) {
+            for(let i = 0; i < 6; ++i)
+                if( !this.#middles[i].equals(cubemx2.#middles[i] ) )
+                    return false;
         }
+        return true;
     }
-    return true;
-}
 
-function hasMatrix(toFind, searchArr) {
-    for(let i = 0; i < searchArr.length; ++i) {
-        let isEqual = true;
-        for(let y = 0; y < 4 && isEqual; ++y) {
-            for(let x = 0; x < 4 && isEqual; ++x) {
-                if( toFind[y][x] != searchArr[i][y][x] )
-                    isEqual = false;
+    static fromCube(c, cubemxmid) {
+        let rescubemx = new CubeTrMatrix();
+        rescubemx.#corners = [];
+        for(let i = 0; i < 8; ++i) {
+            let cno = c.cc.getPermAt(i);
+            rescubemx.#corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
+        }
+        rescubemx.#edges = [];
+        for(let i = 0; i < 12; ++i) {
+            let eno = c.ce.edgeN(i);
+            rescubemx.#edges[eno] = edgesmx[i][c.ce.edgeR(i)];
+        }
+        rescubemx.#middles = cubemxmid.#middles;
+        return rescubemx;
+    }
+
+    toCube() {
+        let cc = new cubecorners();
+        for(let i = 0; i < 8; ++i) {
+            for(let cno = 0; cno < 8; ++cno) {
+                for(let orient = 0; orient < 3; ++orient) {
+                    if( this.#corners[cno].equals(cornersmx[i][orient]) ) {
+                        cc.setPermAt(i, cno);
+                        cc.setOrientAt(i, orient);
+                    }
+                }
             }
         }
-        if( isEqual )
-            return true;
-    }
-    return false;
-}
-
-function cubeMxEqual(cubemx1, cubemx2, includingMiddle) {
-    for(let i = 0; i < 8; ++i)
-        if( !matrixesEqual(cubemx1.corners[i], cubemx2.corners[i] ) )
-            return false;
-    for(let i = 0; i < 12; ++i)
-        if( !matrixesEqual(cubemx1.edges[i], cubemx2.edges[i] ) )
-            return false;
-    if( includingMiddle ) {
-        for(let i = 0; i < 6; ++i)
-            if( !matrixesEqual(cubemx1.middles[i], cubemx2.middles[i] ) )
-                return false;
-    }
-    return true;
-}
-
-function cubeMxCopy(cubemx) {
-    let rescubemx = {
-        corners: [],
-        edges: [],
-        middles: [],
-    };
-    for(let i = 0; i < 8; ++i)
-        rescubemx.corners[i] = cubemx.corners[i];
-    for(let i = 0; i < 12; ++i)
-        rescubemx.edges[i] = cubemx.edges[i];
-    for(let i = 0; i < 6; ++i)
-        rescubemx.middles[i] = cubemx.middles[i];
-    return rescubemx;
-}
-
-function rotateWall(cubemx, rotateDir) {
-    let rescubemx = cubemx;
-    function rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor) {
-        rescubemx = cubeMxCopy(cubemx);
-        for(let i = 0; i < 8; ++i) {
-            if( hasMatrix(cubemx.corners[i], ccolormx) )
-                rescubemx.corners[i] = multiplyMatrixesRnd(cubemx.corners[i], transform);
-        }
+        let ce = new cubeedges();
         for(let i = 0; i < 12; ++i) {
-            if( hasMatrix(cubemx.edges[i], ecolormx) )
-                rescubemx.edges[i] = multiplyMatrixesRnd(cubemx.edges[i], transform);
+            for(let eno = 0; eno < 12; ++eno) {
+                for(let orient = 0; orient < 2; ++orient) {
+                    if( this.#edges[eno].equals(edgesmx[i][orient]) ) {
+                        ce.set(i, eno, orient);
+                    }
+                }
+            }
         }
-        rescubemx.middles[colornum] = multiplyMatrixesRnd(cubemx.middles[colornum], transform);
+        return new cube(cc, ce);
     }
 
-    switch( rotateDir ) {
-        case ORANGECW:
-            rotateWallInt(corangemx, eorangemx, 1,
-                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], worange);
-            break;
-        case ORANGE180:
-            rotateWallInt(corangemx, eorangemx, 1,
-                [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], worange);
-            break;
-        case ORANGECCW:
-            rotateWallInt(corangemx, eorangemx, 1,
-                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], worange);
-            break;
-        case REDCW:
-            rotateWallInt(credmx, eredmx, 3,
-                [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], wred);
-            break;
-        case RED180:
-            rotateWallInt(credmx, eredmx, 3,
-                [ [1, 0, 0, 0], [0, -1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wred);
-            break;
-        case REDCCW:
-            rotateWallInt(credmx, eredmx, 3,
-                [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], wred);
-            break;
-        case YELLOWCW:
-            rotateWallInt(cyellowmx, eyellowmx, 0,
-                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
-            break;
-        case YELLOW180:
-            rotateWallInt(cyellowmx, eyellowmx, 0,
-                [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wyellow);
-            break;
-        case YELLOWCCW:
-            rotateWallInt(cyellowmx, eyellowmx, 0,
-                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wyellow);
-            break;
-        case WHITECW:
-            rotateWallInt(cwhitemx, ewhitemx, 5,
-                [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
-            break;
-        case WHITE180:
-            rotateWallInt(cwhitemx, ewhitemx, 5,
-                [ [-1, 0, 0, 0], [0, 1, 0, 0], [0, 0, -1, 0], [0, 0, 0, 1] ], wwhite);
-            break;
-        case WHITECCW:
-            rotateWallInt(cwhitemx, ewhitemx, 5,
-                [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], wwhite);
-            break;
-        case GREENCW:
-            rotateWallInt(cgreenmx, egreenmx, 4,
-                [ [0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
-            break;
-        case GREEN180:
-            rotateWallInt(cgreenmx, egreenmx, 4,
-                [ [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
-            break;
-        case GREENCCW:
-            rotateWallInt(cgreenmx, egreenmx, 4,
-                [ [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], wgreen);
-            break;
-        case BLUECW:
-            rotateWallInt(cbluemx, ebluemx, 2,
-                [[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-            break;
-        case BLUE180:
-            rotateWallInt(cbluemx, ebluemx, 2,
-                [[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-            break;
-        case BLUECCW:
-            rotateWallInt(cbluemx, ebluemx, 2,
-                [[0, -1, 0, 0], [1, 0, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], wblue);
-            break;
+    #rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor) {
+        let rescubemx = new CubeTrMatrix();
+        rescubemx.#corners = [];
+        for(let i = 0; i < 8; ++i) {
+            if( this.#corners[i].isIn(ccolormx) )
+                rescubemx.#corners[i] = this.#corners[i].multiplyRndWith(transform);
+            else
+                rescubemx.#corners[i] = this.#corners[i];
+        }
+        rescubemx.#edges = [];
+        for(let i = 0; i < 12; ++i) {
+            if( this.#edges[i].isIn(ecolormx) )
+                rescubemx.#edges[i] = this.#edges[i].multiplyRndWith(transform);
+            else
+                rescubemx.#edges[i] = this.#edges[i];
+        }
+        rescubemx.#middles = [];
+        for(let i = 0; i < 6; ++i)
+            rescubemx.#middles[i] = this.#middles[i];
+        rescubemx.#middles[colornum] = this.#middles[colornum].multiplyRndWith(transform);
+        return rescubemx;
     }
-    return rescubemx;
+
+    rotateWall(rotateDir) {
+        let rescubemx = this;
+
+        switch( rotateDir ) {
+            case ORANGECW:
+                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
+                    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), worange);
+                break;
+            case ORANGE180:
+                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
+                    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1), worange);
+                break;
+            case ORANGECCW:
+                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
+                    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), worange);
+                break;
+            case REDCW:
+                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
+                    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), wred);
+                break;
+            case RED180:
+                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
+                    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1), wred);
+                break;
+            case REDCCW:
+                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
+                    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), wred);
+                break;
+            case YELLOWCW:
+                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
+                    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), wyellow);
+                break;
+            case YELLOW180:
+                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
+                    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1), wyellow);
+                break;
+            case YELLOWCCW:
+                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
+                    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), wyellow);
+                break;
+            case WHITECW:
+                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
+                    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), wwhite);
+                break;
+            case WHITE180:
+                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
+                    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1), wwhite);
+                break;
+            case WHITECCW:
+                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
+                    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), wwhite);
+                break;
+            case GREENCW:
+                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
+                    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1), wgreen);
+                break;
+            case GREEN180:
+                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
+                    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1), wgreen);
+                break;
+            case GREENCCW:
+                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
+                    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1), wgreen);
+                break;
+            case BLUECW:
+                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
+                    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1), wblue);
+                break;
+            case BLUE180:
+                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
+                    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1), wblue);
+                break;
+            case BLUECCW:
+                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
+                    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1), wblue);
+                break;
+        }
+        return rescubemx;
+    }
+
+    applyToCubeImg() {
+        let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
+        let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
+        let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
+        for(let i = 0; i < 8; ++i)
+            corners[i].style.transform = `matrix3d(${this.#corners[i].toMatrix3dParam()})`;
+        for(let i = 0; i < 12; ++i)
+            edges[i].style.transform = `matrix3d(${this.#edges[i].toMatrix3dParam()})`;
+        for(let i = 0; i < 6; ++i)
+            wcolors[i].style.transform = `matrix3d(${this.#middles[i].toMatrix3dParam()})`;
+    }
 }
 
-let solvedcubemx = {
-    corners: [
-        cornersmx[0][0], cornersmx[1][0], cornersmx[2][0], cornersmx[3][0],
-        cornersmx[4][0], cornersmx[5][0], cornersmx[6][0], cornersmx[7][0]
-    ],
-    edges: [
-        edgesmx[0][0], edgesmx[1][0], edgesmx[2][0], edgesmx[3][0],
-        edgesmx[4][0], edgesmx[5][0], edgesmx[6][0], edgesmx[7][0],
-        edgesmx[8][0], edgesmx[9][0], edgesmx[10][0], edgesmx[11][0]
-    ],
-    middles: [
-        [ [1, 0, 0, 0], [0, 0, 1, 0], [0, -1, 0, 0], [0, 0, 0, 1] ], // yellow
-        [ [0, 0, 1, 0], [0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1] ], // orange
-        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // blue
-        [ [0, 0, -1, 0], [0, 1, 0, 0], [1, 0, 0, 0], [0, 0, 0, 1] ], // red
-        [ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1] ], // green
-        [ [1, 0, 0, 0], [0, 0, -1, 0], [0, 1, 0, 0], [0, 0, 0, 1] ], // white
-    ]
-};
-
-let curcubemx = cubeMxCopy(solvedcubemx);
-
-function updateStylesTransforms()
-{
-    let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
-    let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
-    let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
-    for(let i = 0; i < 8; ++i)
-        corners[i].style.transform = `matrix3d(${curcubemx.corners[i].join()})`;
-    for(let i = 0; i < 12; ++i)
-        edges[i].style.transform = `matrix3d(${curcubemx.edges[i].join()})`;
-    for(let i = 0; i < 6; ++i)
-        wcolors[i].style.transform = `matrix3d(${curcubemx.middles[i].join()})`;
-}
-
-function cubeToCubeMx(c) {
-    let rescubemx = { corners: [], edges: [], middles: curcubemx.middles };
-    for(let i = 0; i < 8; ++i) {
-        let cno = c.cc.getPermAt(i);
-        rescubemx.corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
-    }
-    for(let i = 0; i < 12; ++i) {
-        let eno = c.ce.edgeN(i);
-        rescubemx.edges[eno] = edgesmx[i][c.ce.edgeR(i)];
-    }
-    return rescubemx;
-}
+let curcubemx = CubeTrMatrix.solved;
 
 function cubePrint(c) {
-    curcubemx = cubeToCubeMx(c);
-    updateStylesTransforms();
-}
-
-function cubeimgToCube() {
-    let cc = new cubecorners();
-    for(let i = 0; i < 8; ++i) {
-        for(let cno = 0; cno < 8; ++cno) {
-            for(let orient = 0; orient < 3; ++orient) {
-                if( matrixesEqual(curcubemx.corners[cno], cornersmx[i][orient]) ) {
-                    cc.setPermAt(i, cno);
-                    cc.setOrientAt(i, orient);
-                }
-            }
-        }
-    }
-    let ce = new cubeedges();
-    for(let i = 0; i < 12; ++i) {
-        for(let eno = 0; eno < 12; ++eno) {
-            for(let orient = 0; orient < 2; ++orient) {
-                if( matrixesEqual(curcubemx.edges[eno], edgesmx[i][orient]) ) {
-                    ce.set(i, eno, orient);
-                }
-            }
-        }
-    }
-    return new cube(cc, ce);
+    curcubemx = CubeTrMatrix.fromCube(c, curcubemx);
+    curcubemx.applyToCubeImg();
 }
 
 const STYLEAPPLY_IMMEDIATE = 1;
@@ -1463,14 +1488,15 @@ const STYLEAPPLY_DEFER = 2;
 
 function rotateCurWall(rotateDir, styleApply) {
     function rotateCurWallInt(rotateDir, styleApply) {
-        curcubemx = rotateWall(curcubemx, rotateDir);
+        curcubemx = curcubemx.rotateWall(rotateDir);
         if( styleApply === STYLEAPPLY_DEFER )
-            setTimeout(updateStylesTransforms, 50);
+            setTimeout(() => curcubemx.applyToCubeImg, 50);
         else
-            updateStylesTransforms();
+            curcubemx.applyToCubeImg();
     }
     function rotateCurWallInt180(rotateDirCW) {
         if( styleApply === undefined ) {
+            // minimize split rotation of pieces
             rotateCurWallInt(rotateDirCW, STYLEAPPLY_IMMEDIATE);
             rotateCurWallInt(rotateDirCW, STYLEAPPLY_DEFER);
         }else{
@@ -1784,7 +1810,7 @@ function areCubeColorsFilled() {
 let cmanipulate = csolved;
 
 function enterEditMode() {
-    cmanipulate = cubeimgToCube();
+    cmanipulate = curcubemx.toCube();
     cubePrint(csolved);
     cubeimg.classList.add('editmode');
     document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = false; });
@@ -1821,7 +1847,7 @@ function applyEdit() {
 
 function searchSolution() {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
-    let c = cubeimgToCube();
+    let c = curcubemx.toCube();
     localStorage.setItem('cube', `${c.cc.getPerms().getPermVal()} ${c.cc.getOrients().get()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
@@ -1858,7 +1884,7 @@ function saveToFile() {
         } ]
     }).then(async function(fileHandle) {
         const fout = await fileHandle.createWritable();
-        let c = cubeimgToCube();
+        let c = curcubemx.toCube();
         let saveText = cubeToSaveText(c);
         await fout.write(saveText);
         await fout.close();
@@ -1867,11 +1893,11 @@ function saveToFile() {
 }
 
 function getCubeMxScrambled(s) {
-    let rescubemx = cubeMxCopy(solvedcubemx);
+    let rescubemx = CubeTrMatrix.solved;
     for(let i = 0; i+1 < s.length; i+=2) {
         let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
         if( mappedVal != undefined )
-            rescubemx = rotateWall(rescubemx, mappedVal)
+            rescubemx = rescubemx.rotateWall(mappedVal)
         else
             dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
     }
@@ -1883,7 +1909,7 @@ function cubeMxFromStr(s) {
     if( /[Yy]/.test(s) ) {
         let c = cubeReadFromFile(s);
         if( c )
-            rescubemx = cubeToCubeMx(c);
+            rescubemx = CubeTrMatrix.fromCube(c, curcubemx);
     }else{
         rescubemx = getCubeMxScrambled(s);
     }
@@ -1893,7 +1919,7 @@ function cubeMxFromStr(s) {
 let cubefill = '', cubelistval = '', cubelistitemno = -1;
 
 function cubelistItemFind() {
-    if( cubefill.length > 0 && cubeMxEqual(curcubemx, cubeMxFromStr(cubefill), false) ) {
+    if( cubefill.length > 0 && curcubemx.equals(cubeMxFromStr(cubefill), false) ) {
         cubelistitemtext.textContent = cubefill;
         cubelistitemno = -1;
         cubelistiteminsert.disabled = false;
@@ -1904,7 +1930,7 @@ function cubelistItemFind() {
         let itemsarr = cubelistval.split('\n');
         let curItem = 0;
         while( curItem < itemsarr.length ) {
-            if( cubeMxEqual(curcubemx, cubeMxFromStr(itemsarr[curItem]), false) )
+            if( curcubemx.equals(cubeMxFromStr(itemsarr[curItem]), false) )
                 break;
             ++curItem;
         }
@@ -1948,7 +1974,7 @@ function cubelistItemNext() {
         if( nextItem < itemsarr.length ) {
             cubelistitemtext.textContent = nextItem + ' ' + itemsarr[nextItem];
             curcubemx = cubeMxFromStr(itemsarr[nextItem]);
-            updateStylesTransforms();
+            curcubemx.applyToCubeImg();
             cubelistitemno = nextItem;
         }
     }
@@ -1961,7 +1987,7 @@ function cubelistItemPrev() {
         if( prevItem >= 0 ) {
             cubelistitemtext.textContent = prevItem + ' ' + itemsarr[prevItem];
             curcubemx = cubeMxFromStr(itemsarr[prevItem]);
-            updateStylesTransforms();
+            curcubemx.applyToCubeImg();
             cubelistitemno = prevItem;
         }
     }
@@ -2002,43 +2028,43 @@ onload = () => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[1, 0, 0, 0], [0, c, s, 0], [0, -s, c, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(1, 0, 0,  0, c, s,  0, -s, c));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     document.querySelector('#rxdbutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[1, 0, 0, 0], [0, c, -s, 0], [0, s, c, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(1, 0, 0,  0, c, -s,  0, s, c));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     document.querySelector('#rylbutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[c, 0, s, 0], [0, 1, 0, 0], [-s, 0, c, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(c, 0, s,  0, 1, 0,  -s, 0, c));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     document.querySelector('#ryrbutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[c, 0, -s, 0], [0, 1, 0, 0], [s, 0, c, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(c, 0, -s,  0, 1, 0,  s, 0, c));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     document.querySelector('#rzlbutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[c, -s, 0, 0], [s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(c, -s, 0,  s, c, 0,  0, 0, 1));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     document.querySelector('#rzrbutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
         let s = Math.sin(angle);
-        cubeimgmx = multiplyMatrixes(cubeimgmx, [[c, s, 0, 0], [-s, c, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]);
-        cubeimg.style.transform = `matrix3d(${cubeimgmx.join()})`;
+        cubeimgmx = cubeimgmx.multiplyWith(new TransformMatrix(c, s, 0,  -s, c, 0,  0, 0, 1));
+        cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     movebuttonini.addEventListener('click', () => { moveidxgoal = -1; });
     for(let i = 0; i < 20; ++i)
