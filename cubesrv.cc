@@ -3853,25 +3853,41 @@ static void searchMoves(const cube &csearch, int threadCount, int fdReq)
 
 static void processCubeReq(int fdReq, const char *squareColors)
 {
-    char respHeader[] =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-type: text/plain\r\n"
-        "Transfer-encoding: chunked\r\n"
-        "Connection: close\r\n"
-        "\r\n"; 
-    write(fdReq, respHeader, strlen(respHeader));
-    cube c;
-	if( cubeRead(fdReq, squareColors, c) ) {
-        int threadCount = sysconf(_SC_NPROCESSORS_ONLN);
-        sendRespMessage(fdReq, "thread count: %d\n", threadCount);
-        if( threadCount <= 0 )
-            threadCount = 4;
-        if( c == csolved )
-            sendRespMessage(fdReq, "already solved\n");
-        else
-            searchMoves(c, threadCount, fdReq);
+    static std::mutex solverMutex;
+
+    if( solverMutex.try_lock() ) {
+        char respHeader[] =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-type: text/plain\r\n"
+            "Transfer-encoding: chunked\r\n"
+            "Connection: keep-alive\r\n"
+            "\r\n"; 
+        write(fdReq, respHeader, strlen(respHeader));
+        cube c;
+        if( cubeRead(fdReq, squareColors, c) ) {
+            int threadCount = sysconf(_SC_NPROCESSORS_ONLN);
+            sendRespMessage(fdReq, "thread count: %d\n", threadCount);
+            if( threadCount <= 0 )
+                threadCount = 4;
+            if( c == csolved )
+                sendRespMessage(fdReq, "already solved\n");
+            else
+                searchMoves(c, threadCount, fdReq);
+        }
+        write(fdReq, "0\r\n\r\n", 5);
+        solverMutex.unlock();
+        printf("%d solver end\n", fdReq);
+    }else{
+        char respHeader[] =
+                "HTTP/1.1 200 OK\r\n"
+                "Content-type: text/plain\r\n"
+                "Content-length: 26\r\n"
+                "Connection: keep-alive\r\n"
+                "\r\n"
+                "setup: the solver is busy\n";
+        write(fdReq, respHeader, strlen(respHeader));
+        printf("%d solver busy\n", fdReq);
     }
-    write(fdReq, "0\r\n\r\n", 5);
 }
 
 static void processRequest(int fdReq, const char *reqHeader) {
@@ -3880,7 +3896,7 @@ static void processRequest(int fdReq, const char *reqHeader) {
             "HTTP/1.1 405 Method Not Allowed\r\n"
             "Content-length: 0\r\n"
             "Allow: GET\r\n"
-            "Connection: close\r\n"
+            "Connection: keep-alive\r\n"
             "\r\n"; 
         write(fdReq, respHeader, strlen(respHeader));
         return;
@@ -3922,7 +3938,7 @@ static void processRequest(int fdReq, const char *reqHeader) {
                         "HTTP/1.1 200 OK\r\n"
                         "Content-type: %s\r\n"
                         "Content-length: %ld\r\n"
-                        "Connection: close\r\n"
+                        "Connection: keep-alive\r\n"
                         "\r\n", contentType, fsize); 
                     write(fdReq, respHeader, strlen(respHeader));
                     rewind(fp);
@@ -3955,38 +3971,43 @@ static void processRequest(int fdReq, const char *reqHeader) {
         char respHeader[] =
             "HTTP/1.1 404 Not Found\r\n"
             "Content-length: 0\r\n"
-            "Connection: close\r\n"
+            "Connection: keep-alive\r\n"
             "\r\n"; 
         write(fdReq, respHeader, strlen(respHeader));
     }
 }
 
 static void processConnection(int fdConn) {
-    char reqHeaderBuf[16385] = { 0 }, *reqHeaderEnd;
+    char reqHeaderBuf[16385], *reqHeaderEnd;
     int rdTot = 0;
     while( true ) {
         int rd = read(fdConn, reqHeaderBuf + rdTot, sizeof(reqHeaderBuf) - rdTot - 1);
         if( rd < 0 ) {
             perror("read");
-            return;
+            break;
         }
         if( rd == 0 ) {
-            printf("connection closed by peer\n");
-            return;
+            printf("%d closed\n", fdConn);
+            break;
         }
-        write(STDOUT_FILENO, reqHeaderBuf+rdTot, rd);
+        //write(STDOUT_FILENO, reqHeaderBuf+rdTot, rd);
         rdTot += rd;
+        reqHeaderBuf[rdTot] = '\0';
         if( (reqHeaderEnd = strstr(reqHeaderBuf, "\r\n\r\n")) != NULL ) {
-            printf("---- sending response ----\n");
+            printf("%d %.*s\n", fdConn,
+                    (unsigned)(strchr(reqHeaderBuf, '\n') - reqHeaderBuf), reqHeaderBuf);
             reqHeaderEnd[2] = '\0';
             processRequest(fdConn, reqHeaderBuf);
-            return;
+            unsigned reqHeaderSize = reqHeaderEnd - reqHeaderBuf + 4;
+            memmove(reqHeaderBuf, reqHeaderEnd+4, rdTot - reqHeaderSize);
+            rdTot -= reqHeaderSize;
         }
         if( rdTot == sizeof(reqHeaderBuf)-1 ) {
-            fprintf(stderr, "request header too long\n");
-            return;
+            fprintf(stderr, "%d request header too long\n", fdConn);
+            break;
         }
     }
+    close(fdConn);
 }
 
 int main(int argc, char *argv[]) {
@@ -4023,8 +4044,8 @@ int main(int argc, char *argv[]) {
     permReprInit();
     while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
         //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
-        processConnection(acceptfd);
-        close(acceptfd);
+        std::thread t = std::thread(processConnection, acceptfd);
+        t.detach();
     }
     perror("accept");
 	return 1;

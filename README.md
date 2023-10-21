@@ -55,9 +55,6 @@ cube to an intermediate state, the one after the selected (clicked) move.
 On a modern PC (PassMark ~4000) the typical search time of a randomly mixed
 cube is about 2 minutes.
 
-Note that while the program is looking for a solution, it does not
-dispatch any HTTP requests.
-
 ## Algorithm
 
 The program uses a dumb algorithm, without any heuristics, group theory,
