@@ -124,42 +124,26 @@ function rotateDirReverse(rd) {
 }
 
 class cubecorner_perms {
-	/*unsigned*/ #perms;
+	#perms;
 
-	constructor(/*unsigned*/ corner0perm, /*unsigned*/ corner1perm, /*unsigned*/ corner2perm,
-			/*unsigned*/ corner3perm, /*unsigned*/ corner4perm, /*unsigned*/ corner5perm,
-			/*unsigned*/ corner6perm, /*unsigned*/ corner7perm)
+	constructor(corner0perm = 0, corner1perm = 0, corner2perm = 0,
+			corner3perm = 0, corner4perm = 0, corner5perm = 0,
+			corner6perm = 0, corner7perm = 0)
     {
         if( corner0perm instanceof cubecorner_perms ) {
             this.#perms = corner0perm.#perms;
         }else{
-            if( corner0perm == undefined )
-                corner0perm = 0;
-            if( corner1perm == undefined )
-                corner1perm = 0;
-            if( corner2perm == undefined )
-                corner2perm = 0;
-            if( corner3perm == undefined )
-                corner3perm = 0;
-            if( corner4perm == undefined )
-                corner4perm = 0;
-            if( corner5perm == undefined )
-                corner5perm = 0;
-            if( corner6perm == undefined )
-                corner6perm = 0;
-            if( corner7perm == undefined )
-                corner7perm = 0;
             this.#perms = corner0perm | corner1perm << 3 | corner2perm << 6 |
                 corner3perm << 9 | corner4perm << 12 | corner5perm << 15 |
                 corner6perm << 18 | corner7perm << 21;
         }
     }
 
-	setAt(/*unsigned*/ idx, /*unsigned char*/ perm) {
+	setAt(idx, perm) {
         this.#perms &= ~(7 << 3*idx);
         this.#perms |= perm << 3*idx;
 	}
-	getAt(/*unsigned*/ idx) { return this.#perms >>> 3*idx & 7; }
+	getAt(idx) { return this.#perms >>> 3*idx & 7; }
     equals(ccp) {
         return this.#perms == ccp.#perms;
     }
@@ -170,32 +154,15 @@ class cubecorner_perms {
 }
 
 class cubecorner_orients {
-	/*unsigned short*/ #orients;
+	#orients;
 
-	constructor(/*unsigned*/ corner0orient, /*unsigned*/ corner1orient,
-			/*unsigned*/ corner2orient, /*unsigned*/ corner3orient,
-			/*unsigned*/ corner4orient, /*unsigned*/ corner5orient,
-			/*unsigned*/ corner6orient, /*unsigned*/ corner7orient)
+	constructor(corner0orient = 0, corner1orient = 0, corner2orient = 0,
+        corner3orient = 0, corner4orient = 0, corner5orient = 0,
+        corner6orient = 0, corner7orient = 0)
     {
         if( corner0orient instanceof cubecorner_orients ) {
             this.#orients = corner0orient.#orients;
         }else{
-            if( corner0orient == undefined )
-                corner0orient = 0;
-            if( corner1orient == undefined )
-                corner1orient = 0;
-            if( corner2orient == undefined )
-                corner2orient = 0;
-            if( corner3orient == undefined )
-                corner3orient = 0;
-            if( corner4orient == undefined )
-                corner4orient = 0;
-            if( corner5orient == undefined )
-                corner5orient = 0;
-            if( corner6orient == undefined )
-                corner6orient = 0;
-            if( corner7orient == undefined )
-                corner7orient = 0;
             this.#orients = corner0orient | corner1orient << 2 | corner2orient << 4 |
                 corner3orient << 6 | corner4orient << 8 | corner5orient << 10 |
                 corner6orient << 12 | corner7orient << 14;
@@ -216,14 +183,10 @@ class cubecorner_orients {
 class cubecorners {
     #perms;
     #orients;
-	constructor(/*unsigned*/ corner0perm, /*unsigned*/ corner0orient,
-			/*unsigned*/ corner1perm, /*unsigned*/ corner1orient,
-			/*unsigned*/ corner2perm, /*unsigned*/ corner2orient,
-			/*unsigned*/ corner3perm, /*unsigned*/ corner3orient,
-			/*unsigned*/ corner4perm, /*unsigned*/ corner4orient,
-			/*unsigned*/ corner5perm, /*unsigned*/ corner5orient,
-			/*unsigned*/ corner6perm, /*unsigned*/ corner6orient,
-			/*unsigned*/ corner7perm, /*unsigned*/ corner7orient)
+	constructor(corner0perm, corner0orient, corner1perm, corner1orient,
+			corner2perm, corner2orient, corner3perm, corner3orient,
+			corner4perm, corner4orient, corner5perm, corner5orient,
+			corner6perm, corner6orient, corner7perm, corner7orient)
     {
         if( corner0orient instanceof cubecorner_orients ) {
             this.#perms = new cubecorner_perms(corner0perm);
@@ -252,71 +215,17 @@ class cubecorners {
 }
 
 class cubeedges {
-	/*unsigned long*/ #edges;
-	constructor(/*unsigned*/ edge0perm, /*unsigned*/ edge0orient,
-			/*unsigned*/ edge1perm, /*unsigned*/ edge1orient,
-			/*unsigned*/ edge2perm, /*unsigned*/ edge2orient,
-			/*unsigned*/ edge3perm, /*unsigned*/ edge3orient,
-			/*unsigned*/ edge4perm, /*unsigned*/ edge4orient,
-			/*unsigned*/ edge5perm, /*unsigned*/ edge5orient,
-			/*unsigned*/ edge6perm, /*unsigned*/ edge6orient,
-			/*unsigned*/ edge7perm, /*unsigned*/ edge7orient,
-			/*unsigned*/ edge8perm, /*unsigned*/ edge8orient,
-			/*unsigned*/ edge9perm, /*unsigned*/ edge9orient,
-			/*unsigned*/ edge10perm, /*unsigned*/ edge10orient,
-			/*unsigned*/ edge11perm, /*unsigned*/ edge11orient)
+	#edges;
+	constructor(edge0perm = 0, edge0orient = 0, edge1perm = 0, edge1orient = 0,
+			edge2perm = 0, edge2orient = 0, edge3perm = 0, edge3orient = 0,
+			edge4perm = 0, edge4orient = 0, edge5perm = 0, edge5orient = 0,
+			edge6perm = 0, edge6orient = 0, edge7perm = 0, edge7orient = 0,
+			edge8perm = 0, edge8orient = 0, edge9perm = 0, edge9orient = 0,
+			edge10perm = 0, edge10orient = 0, edge11perm = 0, edge11orient = 0)
     {
         if( edge0perm instanceof cubeedges ) {
             this.#edges = edge0perm.#edges;
         }else{
-            if( edge0perm == undefined )
-                edge0perm = 0;
-            if( edge0orient == undefined )
-                edge0orient = 0;
-            if( edge1perm == undefined )
-                edge1perm = 0;
-            if( edge1orient == undefined )
-                edge1orient = 0;
-            if( edge2perm == undefined )
-                edge2perm = 0;
-            if( edge2orient == undefined )
-                edge2orient = 0;
-            if( edge3perm == undefined )
-                edge3perm = 0;
-            if( edge3orient == undefined )
-                edge3orient = 0;
-            if( edge4perm == undefined )
-                edge4perm = 0;
-            if( edge4orient == undefined )
-                edge4orient = 0;
-            if( edge5perm == undefined )
-                edge5perm = 0;
-            if( edge5orient == undefined )
-                edge5orient = 0;
-            if( edge6perm == undefined )
-                edge6perm = 0;
-            if( edge6orient == undefined )
-                edge6orient = 0;
-            if( edge7perm == undefined )
-                edge7perm = 0;
-            if( edge7orient == undefined )
-                edge7orient = 0;
-            if( edge8perm == undefined )
-                edge8perm = 0;
-            if( edge8orient == undefined )
-                edge8orient = 0;
-            if( edge9perm == undefined )
-                edge9perm = 0;
-            if( edge9orient == undefined )
-                edge9orient = 0;
-            if( edge10perm == undefined )
-                edge10perm = 0;
-            if( edge10orient == undefined )
-                edge10orient = 0;
-            if( edge11perm == undefined )
-                edge11perm = 0;
-            if( edge11orient == undefined )
-                edge11orient = 0;
             this.#edges = BigInt(edge0perm)    | BigInt(edge0orient) << 4n |
                 BigInt(edge1perm) << 5n   | BigInt(edge1orient) << 9n |
                 BigInt(edge2perm) << 10n  | BigInt(edge2orient) << 14n |
@@ -332,7 +241,7 @@ class cubeedges {
         }
     }
 
-	set(/*unsigned*/ idx, /*unsigned char*/ perm, /*unsigned char*/ orient) {
+	set(idx, perm, orient) {
 		this.#edges &= ~(0x1Fn << BigInt(5*idx));
 		this.#edges |= BigInt(orient<<4 | perm) << BigInt(5*idx);
 	}
@@ -1250,6 +1159,7 @@ let eorangemx = [
     new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
 ];
 
+// The cube in corner/edge transformation matrixes format
 class CubeTrMatrix {
     #corners;
     #edges;
@@ -1597,11 +1507,20 @@ setInterval(function () {
     }
 }, 100);
 
-let fixedCornerColors = [ [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1] ];
-let fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
+let fixedCornerColors = [
+    [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1],
+    [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1]
+];
+let fixedEdgeColors = [
+    [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1],
+    [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
+];
 
 function getAllowedCornerColors(ccref) {
-    let allowedCornerColors = [ [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []], [[], [], []] ];
+    let allowedCornerColors = [
+        [[], [], []], [[], [], []], [[], [], []], [[], [], []],
+        [[], [], []], [[], [], []], [[], [], []], [[], [], []]
+    ];
     let ccpres = null, ccores = new cubecorner_orients();
     for(let perm = 0; perm < 40320; ++perm) {
         let ccp = cornersIdxToPerm(perm);
@@ -1666,7 +1585,8 @@ function *edgePermOnFixedColors(occupEdges, perm, filledCount) {
                     let isMatching = true;
                     for(let j = 0; j < 2; ++j) {
                         let owall = (orient+j) % 2;
-                        if( fixedEdgeColors[filledCount][j] != -1 && fixedEdgeColors[filledCount][j] != cubeEdgeColors[eno][owall] )
+                        if( fixedEdgeColors[filledCount][j] != -1 &&
+                                fixedEdgeColors[filledCount][j] != cubeEdgeColors[eno][owall] )
                             isMatching = false;
                     }
                     if( isMatching )
@@ -1684,7 +1604,10 @@ function *edgePermOnFixedColors(occupEdges, perm, filledCount) {
 }
 
 function getAllowedEdgeColors(ceref) {
-    let allowedEdgeColors = [ [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []], [[], []] ];
+    let allowedEdgeColors = [
+        [[], []], [[], []], [[], []], [[], []], [[], []], [[], []],
+        [[], []], [[], []], [[], []], [[], []], [[], []], [[], []]
+    ];
     let ceres = null, ce = new cubeedges();
     for(let po of edgePermOnFixedColors(
         [false, false, false, false, false, false, false, false, false, false, false, false],
@@ -1774,7 +1697,8 @@ function selectColors(ev) {
     for(let cno = 0; cno < 8; ++cno) {
         for(let sqno = 0; sqno < 3; ++sqno) {
             for( let colorNo = 0; colorNo < allowedCornerColors[cno][sqno].length; ++colorNo ) {
-                let cselElem = document.querySelector(`#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[allowedCornerColors[cno][sqno][colorNo]]}`);
+                let cselElem = document.querySelector(
+                    `#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[allowedCornerColors[cno][sqno][colorNo]]}`);
                 cselElem.classList.remove('cnone');
             }
             if( allowedCornerColors[cno][sqno].length > 1 )
@@ -1828,8 +1752,14 @@ function enterEditMode() {
 
 function doReset() {
     if( cubeimg.classList.contains('editmode') ) {
-        fixedCornerColors = [ [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1] ];
-        fixedEdgeColors = [ [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1] ];
+        fixedCornerColors = [
+            [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1],
+            [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1]
+        ];
+        fixedEdgeColors = [
+            [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1],
+            [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
+        ];
         document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
     }else{
         curcubemx = CubeTrMatrix.solved;
