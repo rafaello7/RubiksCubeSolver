@@ -1516,44 +1516,65 @@ let fixedEdgeColors = [
     [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
 ];
 
+function *cornerPermOnFixedColors(occupCorners, perm, filledCount) {
+    while( filledCount < 8 && fixedCornerColors[filledCount][0] == -1 &&
+            fixedCornerColors[filledCount][1] == -1 &&
+            fixedCornerColors[filledCount][2] == -1)
+        ++filledCount;
+    if( filledCount == 8 ) {
+        yield { perm: perm, occupCorners: occupCorners };
+    }else{
+        for(let cno = 0; cno < 8; ++cno) {
+            if( !occupCorners[cno] ) {
+                let hasMatchingOrient = false;
+                for(let orient = 0; orient < 3 && !hasMatchingOrient; ++orient) {
+                    let isMatching = true;
+                    for(let j = 0; j < 3; ++j) {
+                        let owall = (orient+j) % 3;
+                        if( fixedCornerColors[filledCount][j] != -1 &&
+                                fixedCornerColors[filledCount][j] != cubeCornerColors[cno][owall] )
+                            isMatching = false;
+                    }
+                    if( isMatching )
+                        hasMatchingOrient = true;
+                }
+                if( hasMatchingOrient ) {
+                    occupCorners[cno] = true;
+                    perm[filledCount] = cno;
+                    yield *cornerPermOnFixedColors(occupCorners, perm, filledCount+1);
+                    occupCorners[cno] = false;
+                }
+            }
+        }
+    }
+}
+
 function getAllowedCornerColors(ccref) {
     let allowedCornerColors = [
         [[], [], []], [[], [], []], [[], [], []], [[], [], []],
         [[], [], []], [[], [], []], [[], [], []], [[], [], []]
     ];
-    let ccpres = null, ccores = new cubecorner_orients();
-    for(let perm = 0; perm < 40320; ++perm) {
-        let ccp = cornersIdxToPerm(perm);
-        let isPermAllowed = true;
-        for(let i = 0; i < 8 && isPermAllowed; ++i) {
-            let cno = ccp.getAt(i);
-            let hasAllowedOrient = false;
-            for(let orient = 0; orient < 3 && !hasAllowedOrient; ++orient) {
-                let isAllowed = true;
-                for(let j = 0; j < 3; ++j) {
-                    let owall = (orient+j) % 3;
-                    if( fixedCornerColors[i][j] != -1 && fixedCornerColors[i][j] != cubeCornerColors[cno][owall] )
-                        isAllowed = false;
-                }
-                if( isAllowed )
-                    hasAllowedOrient = true;
-            }
-            if( !hasAllowedOrient )
-                isPermAllowed = false;
-        }
-        if( isPermAllowed ) {
-            for(let i = 0; i < 8; ++i) {
-                let cno = ccp.getAt(i);
+    let ccres = null, cc = new cubecorners();
+    for(let po of cornerPermOnFixedColors(
+        [false, false, false, false, false, false, false, false],
+        [-1, -1, -1, -1, -1, -1, -1, -1], 0))
+    {
+        for(let i = 0; i < 8; ++i) {
+            let cno = po.perm[i];
+            if( cno >= 0 ) {
+                if( ccres == null )
+                    cc.setPermAt(i, cno);
                 for(let orient = 0; orient < 3; ++orient) {
                     let isAllowed = true;
                     for(let j = 0; j < 3; ++j) {
                         let owall = (orient+j) % 3;
-                        if( fixedCornerColors[i][j] != -1 && fixedCornerColors[i][j] != cubeCornerColors[cno][owall] )
+                        if( fixedCornerColors[i][j] != -1 &&
+                                fixedCornerColors[i][j] != cubeCornerColors[cno][owall] )
                             isAllowed = false;
                     }
                     if( isAllowed ) {
-                        if( ccpres == null )
-                            ccores.setAt(i, orient);
+                        if( ccres == null )
+                            cc.setOrientAt(i, orient);
                         for(let j = 0; j < 3; ++j) {
                             let owall = (orient+j) % 3;
                             if( !allowedCornerColors[i][j].includes(cubeCornerColors[cno][owall]) ) {
@@ -1562,18 +1583,33 @@ function getAllowedCornerColors(ccref) {
                         }
                     }
                 }
+            }else{
+                for(let cno = 0; cno < 8; ++cno) {
+                    if( !po.occupCorners[cno] ) {
+                        for(let orient = 0; orient < 3; ++orient) {
+                            for(let j = 0; j < 3; ++j) {
+                                let owall = (orient+j) % 3;
+                                if( !allowedCornerColors[i][j].includes(cubeCornerColors[cno][owall]) ) {
+                                    allowedCornerColors[i][j].push(cubeCornerColors[cno][owall]);
+                                }
+                            }
+                        }
+                    }
+                }
             }
-            if( ccpres == null )
-                ccpres = ccp;
+        }
+        if( ccres == null ) {
+            ccres = cc;
         }
     }
     if( ccref != undefined )
-        ccref[0] = new cubecorners(ccpres, ccores);
+        ccref[0] = ccres;
     return allowedCornerColors;
 }
 
 function *edgePermOnFixedColors(occupEdges, perm, filledCount) {
-    while( filledCount < 12 && fixedEdgeColors[filledCount][0] == -1 && fixedEdgeColors[filledCount][1] == -1 )
+    while( filledCount < 12 && fixedEdgeColors[filledCount][0] == -1 &&
+            fixedEdgeColors[filledCount][1] == -1 )
         ++filledCount;
     if( filledCount == 12 ) {
         yield { perm: perm, occupEdges: occupEdges };
@@ -1622,7 +1658,8 @@ function getAllowedEdgeColors(ceref) {
                     let isAllowed = true;
                     for(let j = 0; j < 2; ++j) {
                         let owall = (orient+j) % 2;
-                        if( fixedEdgeColors[i][j] != -1 && fixedEdgeColors[i][j] != cubeEdgeColors[eno][owall] )
+                        if( fixedEdgeColors[i][j] != -1 &&
+                                fixedEdgeColors[i][j] != cubeEdgeColors[eno][owall] )
                             isAllowed = false;
                     }
                     if( isAllowed ) {
