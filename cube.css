@@ -1,3 +1,7 @@
+body {
+    color-scheme: dark light;
+}
+
 h3 {
     background-image: linear-gradient(to right, aliceblue, white);
     padding: 2px;
@@ -465,5 +469,28 @@ h3 {
 
 #cubeimg:not(.editmode) > .edge > .square > .csel, #cubeimg:not(.editmode) > .corner > .square  > .csel {
     display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #330;
+        color: #eff;
+    }
+    h3 {
+        background-image: linear-gradient(to right, cornflowerblue, black);
+    }
+    #rotatewalls,#rotatecube {
+        background-color: cornflowerblue;
+    }
+    .currentmv {
+        background-color: #a95;
+    }
+    .cyellow {
+        background-color: #cc0;
+    }
+    .cwhite {
+        background-color: #ccc;
+    }
+
 }
 
