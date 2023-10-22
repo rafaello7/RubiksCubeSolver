@@ -1516,18 +1516,212 @@ let fixedEdgeColors = [
     [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
 ];
 
-function *cornerPermOnFixedColors(occupCorners, perm, filledCount) {
+class AllowedPerm {
+    perm = -1;
+    orients = [];
+
+    copy() {
+        let res = new AllowedPerm();
+        res.perm = this.perm;
+        res.orients = this.orients.slice();
+        return res;
+    }
+}
+
+const PERMPARITY_ODD = 1;
+const PERMPARITY_EVEN = 2;
+
+class AllowedCornerColors {
+    permParity = 0;
+    parityOdd = [
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+    ];
+    parityEven = [
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+    ];
+    parityAny = [
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+        [new Set(), new Set(), new Set()],
+    ];
+    sampleCubes = [];
+
+    add(cornerNo, squareNo, permParity, color) {
+        this.permParity |= permParity;
+        this.parityAny[cornerNo][squareNo].add(color);
+        if( permParity & PERMPARITY_ODD )
+            this.parityOdd[cornerNo][squareNo].add(color);
+        if( permParity & PERMPARITY_EVEN )
+            this.parityEven[cornerNo][squareNo].add(color);
+    }
+    get(cornerNo, squareNo, permParity) {
+        let rset = permParity == PERMPARITY_EVEN ? this.parityEven :
+            permParity == PERMPARITY_ODD ? this.parityOdd : this.parityAny;
+        return rset[cornerNo][squareNo];
+    }
+}
+
+class AllowedEdgeColors {
+    permParity = 0;
+    parityOdd = [
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()]
+    ];
+    parityEven = [
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()]
+    ];
+    parityAny = [
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()],
+        [new Set(), new Set()], [new Set(), new Set()]
+    ];
+    sampleCubes = [];
+
+    add(cornerNo, squareNo, permParity, color) {
+        this.permParity |= permParity;
+        this.parityAny[cornerNo][squareNo].add(color);
+        if( permParity & PERMPARITY_ODD )
+            this.parityOdd[cornerNo][squareNo].add(color);
+        if( permParity & PERMPARITY_EVEN )
+            this.parityEven[cornerNo][squareNo].add(color);
+    }
+    get(edgeNo, squareNo, permParity) {
+        let rset = permParity == PERMPARITY_EVEN ? this.parityEven :
+            permParity == PERMPARITY_ODD ? this.parityOdd : this.parityAny;
+        return rset[edgeNo][squareNo];
+    }
+}
+
+function *cornerPermOnFixedColors(
+    occupCorners = [false, false, false, false, false, false, false, false],
+    perm = [new AllowedPerm(), new AllowedPerm(), new AllowedPerm(), new AllowedPerm(),
+            new AllowedPerm(), new AllowedPerm(), new AllowedPerm(), new AllowedPerm()],
+    filledCount = 0)
+{
     while( filledCount < 8 && fixedCornerColors[filledCount][0] == -1 &&
             fixedCornerColors[filledCount][1] == -1 &&
             fixedCornerColors[filledCount][2] == -1)
         ++filledCount;
     if( filledCount == 8 ) {
-        yield { perm: perm, occupCorners: occupCorners };
+        let yieldOccupCorners = occupCorners;
+        let yieldPerm = perm.slice();
+        // constrain by sum of corner orientations
+        let twoOrientPerms = [];
+        let unsetPerms = [];
+        let singleOrientPermSum = 0;
+        for(let cno = 0; cno < 8; ++cno) {
+            let allowedPerm = yieldPerm[cno] = yieldPerm[cno].copy();
+            if( allowedPerm.perm >= 0 ) {
+                switch( allowedPerm.orients.length ) {
+                    case 1:
+                        singleOrientPermSum += allowedPerm.orients[0];
+                        break;
+                    case 2:
+                        twoOrientPerms.push(allowedPerm);
+                        break;
+                }
+            }else
+                unsetPerms.push(allowedPerm);
+        }
+        if( unsetPerms.length == 1 && twoOrientPerms.length == 0 ) {
+            yieldOccupCorners = occupCorners.slice();
+            let freeVal = 0;
+            while( occupCorners[freeVal] )
+                ++freeVal;
+            yieldOccupCorners[freeVal] = true;
+            let allowedPerm = unsetPerms[0];
+            allowedPerm.perm = freeVal;
+            allowedPerm.orients.push((15-singleOrientPermSum)%3);
+            unsetPerms.length = 0;
+        }else if( unsetPerms.length == 0 ) {
+            if( twoOrientPerms.length == 1 ) {
+                let orients = twoOrientPerms[0].orients;
+                if( (singleOrientPermSum + orients[1]) % 3 != 0 )
+                    orients.splice(1, 1);
+                if( (singleOrientPermSum + orients[0]) % 3 != 0 )
+                    orients.splice(0, 1);
+                // only one orient should remain
+                twoOrientPerms.length = 0;
+            }else if( twoOrientPerms.length == 2 ) {
+                let orients1 = twoOrientPerms[0].orients;
+                let orients2 = twoOrientPerms[1].orients;
+                if( (singleOrientPermSum + orients1[1] + orients2[0]) % 3 != 0 &&
+                        (singleOrientPermSum + orients1[1] + orients2[1]) % 3 != 0)
+                    orients1.splice(1, 1);
+                if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 &&
+                        (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0)
+                    orients1.splice(0, 1);
+                if( orients1.length == 1 ) {    // if one orient was removed
+                    if( (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0 )
+                        orients2.splice(1, 1);
+                    if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 )
+                        orients2.splice(0, 1);
+                    // only one orient should remain
+                    twoOrientPerms.length = 0;
+                }
+            }else if( twoOrientPerms.length == 0 ) {
+                if( singleOrientPermSum % 3 )
+                    return;
+            }
+        }
+        let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
+        if( unsetPerms.length == 0 && twoOrientPerms.length == 0 ) {
+            isPermSwapsOdd = false;
+            let permsScanned = [];
+            for(let i = 0; i < 8; ++i) {
+                if( !permsScanned[i] ) {
+                    permsScanned[i] = true;
+                    let p = i;
+                    while( (p = yieldPerm[p].perm) != i ) {
+                        permsScanned[p] = true;
+                        isPermSwapsOdd = !isPermSwapsOdd;
+                    }
+                }
+            }
+            permParity = isPermSwapsOdd ? PERMPARITY_ODD : PERMPARITY_EVEN;
+        }
+        yield {
+            perm: yieldPerm,
+            occupCorners: yieldOccupCorners,
+            permParity
+        };
     }else{
+        let allowedPerm = perm[filledCount];
         for(let cno = 0; cno < 8; ++cno) {
             if( !occupCorners[cno] ) {
-                let hasMatchingOrient = false;
-                for(let orient = 0; orient < 3 && !hasMatchingOrient; ++orient) {
+                allowedPerm.perm = cno;
+                for(let orient = 0; orient < 3; ++orient) {
                     let isMatching = true;
                     for(let j = 0; j < 3; ++j) {
                         let owall = (orient+j) % 3;
@@ -1536,51 +1730,37 @@ function *cornerPermOnFixedColors(occupCorners, perm, filledCount) {
                             isMatching = false;
                     }
                     if( isMatching )
-                        hasMatchingOrient = true;
+                        allowedPerm.orients.push(orient);
                 }
-                if( hasMatchingOrient ) {
+                if( allowedPerm.orients.length > 0 ) {
                     occupCorners[cno] = true;
-                    perm[filledCount] = cno;
                     yield *cornerPermOnFixedColors(occupCorners, perm, filledCount+1);
                     occupCorners[cno] = false;
+                    allowedPerm.orients.length = 0;
                 }
             }
         }
+        allowedPerm.perm = -1;
     }
 }
 
-function getAllowedCornerColors(ccref) {
-    let allowedCornerColors = [
-        [[], [], []], [[], [], []], [[], [], []], [[], [], []],
-        [[], [], []], [[], [], []], [[], [], []], [[], [], []]
-    ];
-    let ccres = null, cc = new cubecorners();
-    for(let po of cornerPermOnFixedColors(
-        [false, false, false, false, false, false, false, false],
-        [-1, -1, -1, -1, -1, -1, -1, -1], 0))
-    {
+function getAllowedCornerColors() {
+    let allowedCornerColors = new AllowedCornerColors();
+    for(let po of cornerPermOnFixedColors()) {
+        let cc = null;
+        if( allowedCornerColors.sampleCubes[po.permParity] == undefined )
+            allowedCornerColors.sampleCubes[po.permParity] = cc = new cubecorners();
         for(let i = 0; i < 8; ++i) {
-            let cno = po.perm[i];
-            if( cno >= 0 ) {
-                if( ccres == null )
-                    cc.setPermAt(i, cno);
-                for(let orient = 0; orient < 3; ++orient) {
-                    let isAllowed = true;
+            let allowedPerm = po.perm[i];
+            if( allowedPerm.perm >= 0 ) {
+                if( cc )
+                    cc.setPermAt(i, allowedPerm.perm);
+                for(let orient of allowedPerm.orients) {
+                    if( cc )
+                        cc.setOrientAt(i, orient);
                     for(let j = 0; j < 3; ++j) {
                         let owall = (orient+j) % 3;
-                        if( fixedCornerColors[i][j] != -1 &&
-                                fixedCornerColors[i][j] != cubeCornerColors[cno][owall] )
-                            isAllowed = false;
-                    }
-                    if( isAllowed ) {
-                        if( ccres == null )
-                            cc.setOrientAt(i, orient);
-                        for(let j = 0; j < 3; ++j) {
-                            let owall = (orient+j) % 3;
-                            if( !allowedCornerColors[i][j].includes(cubeCornerColors[cno][owall]) ) {
-                                allowedCornerColors[i][j].push(cubeCornerColors[cno][owall]);
-                            }
-                        }
+                        allowedCornerColors.add(i, j, po.permParity, cubeCornerColors[allowedPerm.perm][owall]);
                     }
                 }
             }else{
@@ -1589,35 +1769,81 @@ function getAllowedCornerColors(ccref) {
                         for(let orient = 0; orient < 3; ++orient) {
                             for(let j = 0; j < 3; ++j) {
                                 let owall = (orient+j) % 3;
-                                if( !allowedCornerColors[i][j].includes(cubeCornerColors[cno][owall]) ) {
-                                    allowedCornerColors[i][j].push(cubeCornerColors[cno][owall]);
-                                }
+                                allowedCornerColors.add(i, j, po.permParity, cubeCornerColors[cno][owall]);
                             }
                         }
                     }
                 }
             }
         }
-        if( ccres == null ) {
-            ccres = cc;
-        }
     }
-    if( ccref != undefined )
-        ccref[0] = ccres;
     return allowedCornerColors;
 }
 
-function *edgePermOnFixedColors(occupEdges, perm, filledCount) {
+function *edgePermOnFixedColors(
+    occupEdges = [false, false, false, false, false, false, false, false, false, false, false, false],
+    perm = [new AllowedPerm(), new AllowedPerm(), new AllowedPerm(), new AllowedPerm(),
+            new AllowedPerm(), new AllowedPerm(), new AllowedPerm(), new AllowedPerm(),
+            new AllowedPerm(), new AllowedPerm(), new AllowedPerm(), new AllowedPerm()],
+    filledCount = 0)
+{
     while( filledCount < 12 && fixedEdgeColors[filledCount][0] == -1 &&
             fixedEdgeColors[filledCount][1] == -1 )
         ++filledCount;
     if( filledCount == 12 ) {
-        yield { perm: perm, occupEdges: occupEdges };
+        let yieldOccupEdges = occupEdges;
+        let yieldPerm = perm.slice();
+        // constrain by sum of edge orientations
+        let unsetPerms = [];
+        let orientSum = 0;
+        for(let eno = 0; eno < 12; ++eno) {
+            let allowedPerm = yieldPerm[eno] = yieldPerm[eno].copy();
+            if( allowedPerm.perm >= 0 )
+                orientSum += allowedPerm.orients[0];
+            else
+                unsetPerms.push(allowedPerm);
+        }
+        if( unsetPerms.length == 1 ) {
+            yieldOccupEdges = occupEdges.slice();
+            let freeVal = 0;
+            while( occupEdges[freeVal] )
+                ++freeVal;
+            yieldOccupEdges[freeVal] = true;
+            let allowedPerm = unsetPerms[0];
+            allowedPerm.perm = freeVal;
+            allowedPerm.orients.push(orientSum % 2);
+            unsetPerms.length = 0;
+        }else if( unsetPerms.length == 0 ) {
+            if( orientSum % 2 )
+                return;
+        }
+        let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
+        if( unsetPerms.length == 0 ) {
+            isPermSwapsOdd = false;
+            let permsScanned = [];
+            for(let i = 0; i < 12; ++i) {
+                if( !permsScanned[i] ) {
+                    permsScanned[i] = true;
+                    let p = i;
+                    while( (p = yieldPerm[p].perm) != i ) {
+                        permsScanned[p] = true;
+                        isPermSwapsOdd = !isPermSwapsOdd;
+                    }
+                }
+            }
+            permParity = isPermSwapsOdd ? PERMPARITY_ODD : PERMPARITY_EVEN;
+        }
+        yield {
+            perm: yieldPerm,
+            occupEdges: yieldOccupEdges,
+            permParity
+        };
     }else{
+        let allowedPerm = perm[filledCount];
         for(let eno = 0; eno < 12; ++eno) {
             if( !occupEdges[eno] ) {
-                let hasMatchingOrient = false;
-                for(let orient = 0; orient < 2 && !hasMatchingOrient; ++orient) {
+                allowedPerm.perm = eno;
+                for(let orient = 0; orient < 2; ++orient) {
                     let isMatching = true;
                     for(let j = 0; j < 2; ++j) {
                         let owall = (orient+j) % 2;
@@ -1626,51 +1852,37 @@ function *edgePermOnFixedColors(occupEdges, perm, filledCount) {
                             isMatching = false;
                     }
                     if( isMatching )
-                        hasMatchingOrient = true;
+                        allowedPerm.orients.push(orient);
                 }
-                if( hasMatchingOrient ) {
+                if( allowedPerm.orients.length > 0 ) {
                     occupEdges[eno] = true;
-                    perm[filledCount] = eno;
                     yield *edgePermOnFixedColors(occupEdges, perm, filledCount+1);
                     occupEdges[eno] = false;
+                    allowedPerm.orients.length = 0;
                 }
             }
         }
+        allowedPerm.perm = -1;
     }
 }
 
-function getAllowedEdgeColors(ceref) {
-    let allowedEdgeColors = [
-        [[], []], [[], []], [[], []], [[], []], [[], []], [[], []],
-        [[], []], [[], []], [[], []], [[], []], [[], []], [[], []]
-    ];
-    let ceres = null, ce = new cubeedges();
-    for(let po of edgePermOnFixedColors(
-        [false, false, false, false, false, false, false, false, false, false, false, false],
-        [-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1], 0))
-    {
+function getAllowedEdgeColors() {
+    let allowedEdgeColors = new AllowedEdgeColors();
+    for(let po of edgePermOnFixedColors()) {
+        let ce = null;
+        if( allowedEdgeColors.sampleCubes[po.permParity] == undefined )
+            allowedEdgeColors.sampleCubes[po.permParity] = ce = new cubeedges();
         for(let i = 0; i < 12; ++i) {
-            let eno = po.perm[i];
-            if( eno >= 0 ) {
-                if( ceres == null )
-                    ce.setPermAt(i, eno);
-                for(let orient = 0; orient < 2; ++orient) {
-                    let isAllowed = true;
+            let allowedPerm = po.perm[i];
+            if( allowedPerm.perm >= 0 ) {
+                if( ce )
+                    ce.setPermAt(i, allowedPerm.perm);
+                for(let orient of allowedPerm.orients) {
+                    if( ce )
+                        ce.setOrientAt(i, orient);
                     for(let j = 0; j < 2; ++j) {
                         let owall = (orient+j) % 2;
-                        if( fixedEdgeColors[i][j] != -1 &&
-                                fixedEdgeColors[i][j] != cubeEdgeColors[eno][owall] )
-                            isAllowed = false;
-                    }
-                    if( isAllowed ) {
-                        if( ceres == null )
-                            ce.setOrientAt(i, orient);
-                        for(let j = 0; j < 2; ++j) {
-                            let owall = (orient+j) % 2;
-                            if( !allowedEdgeColors[i][j].includes(cubeEdgeColors[eno][owall]) ) {
-                                allowedEdgeColors[i][j].push(cubeEdgeColors[eno][owall]);
-                            }
-                        }
+                        allowedEdgeColors.add(i, j, po.permParity, cubeEdgeColors[allowedPerm.perm][owall]);
                     }
                 }
             }else{
@@ -1679,21 +1891,14 @@ function getAllowedEdgeColors(ceref) {
                         for(let orient = 0; orient < 2; ++orient) {
                             for(let j = 0; j < 2; ++j) {
                                 let owall = (orient+j) % 2;
-                                if( !allowedEdgeColors[i][j].includes(cubeEdgeColors[eno][owall]) ) {
-                                    allowedEdgeColors[i][j].push(cubeEdgeColors[eno][owall]);
-                                }
+                                allowedEdgeColors.add(i, j, po.permParity, cubeEdgeColors[eno][owall]);
                             }
                         }
                     }
                 }
             }
         }
-        if( ceres == null ) {
-            ceres = ce;
-        }
     }
-    if( ceref != undefined )
-        ceref[0] = ceres;
     return allowedEdgeColors;
 }
 
@@ -1704,12 +1909,12 @@ function selectColors(ev) {
     const cornerSquareClasses = [ 'csq1', 'csq2', 'csq3' ];
     const edgeSquareClasses = [ 'esq1', 'esq2' ];
     let thisElem = ev.target;
-    let wallColor = -1;
     if( thisElem.parentElement.parentElement.classList.contains('corner') ) {
         let cornerNo = cornerIds.indexOf(thisElem.parentElement.parentElement.id);
         let squareNo = 0;
         while( !thisElem.parentElement.classList.contains(cornerSquareClasses[squareNo]) )
             ++squareNo;
+        let wallColor = -1;
         if( fixedCornerColors[cornerNo][squareNo] == -1 ) {
             wallColor = 0;
             while( !thisElem.classList.contains(colorClassNames[wallColor]) )
@@ -1721,6 +1926,7 @@ function selectColors(ev) {
         let squareNo = 0;
         while( !thisElem.parentElement.classList.contains(edgeSquareClasses[squareNo]) )
             ++squareNo;
+        let wallColor = -1;
         if( fixedEdgeColors[edgeNo][squareNo] == -1 ) {
             wallColor = 0;
             while( !thisElem.classList.contains(colorClassNames[wallColor]) )
@@ -1731,26 +1937,29 @@ function selectColors(ev) {
     document.querySelectorAll('.csel').forEach( (el) => { el.classList.add('cnone'); } );
     let isFilled = true;
     let allowedCornerColors = getAllowedCornerColors();
+    let allowedEdgeColors = getAllowedEdgeColors();
+    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
     for(let cno = 0; cno < 8; ++cno) {
         for(let sqno = 0; sqno < 3; ++sqno) {
-            for( let colorNo = 0; colorNo < allowedCornerColors[cno][sqno].length; ++colorNo ) {
+            let colorSet = allowedCornerColors.get(cno, sqno, permParity);
+            for(let colorVal of colorSet) {
                 let cselElem = document.querySelector(
-                    `#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[allowedCornerColors[cno][sqno][colorNo]]}`);
+                    `#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[colorVal]}`);
                 cselElem.classList.remove('cnone');
             }
-            if( allowedCornerColors[cno][sqno].length > 1 )
+            if( colorSet.size > 1 )
                 isFilled = false;
         }
     }
-    let allowedEdgeColors = getAllowedEdgeColors();
     for(let eno = 0; eno < 12; ++eno) {
         for(let sqno = 0; sqno < 2; ++sqno) {
-            for( let colorNo = 0; colorNo < allowedEdgeColors[eno][sqno].length; ++colorNo ) {
-                let selector = `#${edgeIds[eno]} > .${edgeSquareClasses[sqno]} > .${colorClassNames[allowedEdgeColors[eno][sqno][colorNo]]}`;
+            let colorSet = allowedEdgeColors.get(eno, sqno, permParity);
+            for(let colorVal of colorSet) {
+                let selector = `#${edgeIds[eno]} > .${edgeSquareClasses[sqno]} > .${colorClassNames[colorVal]}`;
                 let cselElem = document.querySelector(selector);
                 cselElem.classList.remove('cnone');
             }
-            if( allowedEdgeColors[eno][sqno].length > 1 )
+            if( colorSet.size > 1 )
                 isFilled = false;
         }
     }
@@ -1759,16 +1968,17 @@ function selectColors(ev) {
 
 function areCubeColorsFilled() {
     let allowedCornerColors = getAllowedCornerColors();
+    let allowedEdgeColors = getAllowedEdgeColors();
+    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
     for(let cno = 0; cno < 8; ++cno) {
         for(let sqno = 0; sqno < 3; ++sqno) {
-            if( allowedCornerColors[cno][sqno].length > 1 )
+            if( allowedCornerColors.get(cno, sqno, permParity).size > 1 )
                 return false;
         }
     }
-    let allowedEdgeColors = getAllowedEdgeColors();
     for(let eno = 0; eno < 12; ++eno) {
         for(let sqno = 0; sqno < 2; ++sqno) {
-            if( allowedEdgeColors[eno][sqno].length > 1 )
+            if( allowedEdgeColors.get(eno, sqno, permParity).size > 1 )
                 return false;
         }
     }
@@ -1814,10 +2024,12 @@ function enterManipulateMode() {
 }
 
 function applyEdit() {
-    let ccref = [], ceref = [];
-    getAllowedCornerColors(ccref);
-    getAllowedEdgeColors(ceref);
-	cmanipulate = CubeTrMatrix.fromCube(new cube(ccref[0], ceref[0]), curcubemx);
+    let allowedCornerColors = getAllowedCornerColors();
+    let allowedEdgeColors = getAllowedEdgeColors();
+    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
+    let cc = allowedCornerColors.sampleCubes[permParity];
+    let ce = allowedEdgeColors.sampleCubes[permParity];
+	cmanipulate = CubeTrMatrix.fromCube(new cube(cc, ce), curcubemx);
     manipmodebtn.checked = true;
     enterManipulateMode();
 }
