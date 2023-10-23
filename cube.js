@@ -1531,6 +1531,22 @@ class AllowedPerm {
 const PERMPARITY_ODD = 1;
 const PERMPARITY_EVEN = 2;
 
+function getPermArrParity(allowedPermArr) {
+    isPermSwapsOdd = false;
+    let permsScanned = [];
+    for(let i = 0; i < allowedPermArr.length; ++i) {
+        if( !permsScanned[i] ) {
+            permsScanned[i] = true;
+            let p = i;
+            while( (p = allowedPermArr[p].perm) != i ) {
+                permsScanned[p] = true;
+                isPermSwapsOdd = !isPermSwapsOdd;
+            }
+        }
+    }
+    return isPermSwapsOdd ? PERMPARITY_ODD : PERMPARITY_EVEN;
+}
+
 class AllowedCornerColors {
     permParity = 0;
     parityOdd = [
@@ -1634,14 +1650,13 @@ function *cornerPermOnFixedColors(
             fixedCornerColors[filledCount][2] == -1)
         ++filledCount;
     if( filledCount == 8 ) {
-        let yieldOccupCorners = occupCorners;
-        let yieldPerm = perm.slice();
-        // constrain by sum of corner orientations
+        let yieldPerm = [];
         let twoOrientPerms = [];
         let unsetPerms = [];
         let singleOrientPermSum = 0;
+        let freeCorners = [];
         for(let cno = 0; cno < 8; ++cno) {
-            let allowedPerm = yieldPerm[cno] = yieldPerm[cno].copy();
+            let allowedPerm = yieldPerm[cno] = perm[cno].copy();
             if( allowedPerm.perm >= 0 ) {
                 switch( allowedPerm.orients.length ) {
                     case 1:
@@ -1653,69 +1668,75 @@ function *cornerPermOnFixedColors(
                 }
             }else
                 unsetPerms.push(allowedPerm);
+            if( !occupCorners[cno] )
+                freeCorners.push(cno);
         }
-        if( unsetPerms.length == 1 && twoOrientPerms.length == 0 ) {
-            yieldOccupCorners = occupCorners.slice();
-            let freeVal = 0;
-            while( occupCorners[freeVal] )
-                ++freeVal;
-            yieldOccupCorners[freeVal] = true;
-            let allowedPerm = unsetPerms[0];
-            allowedPerm.perm = freeVal;
-            allowedPerm.orients.push((15-singleOrientPermSum)%3);
-            unsetPerms.length = 0;
-        }else if( unsetPerms.length == 0 ) {
-            if( twoOrientPerms.length == 1 ) {
-                let orients = twoOrientPerms[0].orients;
-                if( (singleOrientPermSum + orients[1]) % 3 != 0 )
-                    orients.splice(1, 1);
-                if( (singleOrientPermSum + orients[0]) % 3 != 0 )
-                    orients.splice(0, 1);
-                // only one orient should remain
-                twoOrientPerms.length = 0;
-            }else if( twoOrientPerms.length == 2 ) {
-                let orients1 = twoOrientPerms[0].orients;
-                let orients2 = twoOrientPerms[1].orients;
-                if( (singleOrientPermSum + orients1[1] + orients2[0]) % 3 != 0 &&
-                        (singleOrientPermSum + orients1[1] + orients2[1]) % 3 != 0)
-                    orients1.splice(1, 1);
-                if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 &&
-                        (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0)
-                    orients1.splice(0, 1);
-                if( orients1.length == 1 ) {    // if one orient was removed
-                    if( (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0 )
-                        orients2.splice(1, 1);
-                    if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 )
-                        orients2.splice(0, 1);
+        if( unsetPerms.length == 2 && twoOrientPerms.length == 0 ) {
+            let allowedPerm1 = unsetPerms[0];
+            let allowedPerm2 = unsetPerms[1];
+            allowedPerm1.orients = allowedPerm2.orients = [ 0, 1, 2 ];
+            allowedPerm1.perm = freeCorners[0];
+            allowedPerm2.perm = freeCorners[1];
+            yield {
+                perm: yieldPerm,
+                freeCorners: [],
+                permParity: getPermArrParity(yieldPerm)
+            };
+            allowedPerm1.perm = freeCorners[1];
+            allowedPerm2.perm = freeCorners[0];
+            yield {
+                perm: yieldPerm,
+                freeCorners: [],
+                permParity: getPermArrParity(yieldPerm)
+            };
+        }else{
+            if( unsetPerms.length == 1 && twoOrientPerms.length == 0 ) {
+                let freeVal = freeCorners[0];
+                freeCorners.splice(0, 1);
+                let allowedPerm = unsetPerms[0];
+                allowedPerm.perm = freeVal;
+                allowedPerm.orients.push((15-singleOrientPermSum)%3);
+                unsetPerms.length = 0;
+            }else if( unsetPerms.length == 0 ) {
+                if( twoOrientPerms.length == 1 ) {
+                    let orients = twoOrientPerms[0].orients;
+                    if( (singleOrientPermSum + orients[1]) % 3 != 0 )
+                        orients.splice(1, 1);
+                    if( (singleOrientPermSum + orients[0]) % 3 != 0 )
+                        orients.splice(0, 1);
                     // only one orient should remain
                     twoOrientPerms.length = 0;
-                }
-            }else if( twoOrientPerms.length == 0 ) {
-                if( singleOrientPermSum % 3 )
-                    return;
-            }
-        }
-        let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
-        if( unsetPerms.length == 0 && twoOrientPerms.length == 0 ) {
-            isPermSwapsOdd = false;
-            let permsScanned = [];
-            for(let i = 0; i < 8; ++i) {
-                if( !permsScanned[i] ) {
-                    permsScanned[i] = true;
-                    let p = i;
-                    while( (p = yieldPerm[p].perm) != i ) {
-                        permsScanned[p] = true;
-                        isPermSwapsOdd = !isPermSwapsOdd;
+                }else if( twoOrientPerms.length == 2 ) {
+                    let orients1 = twoOrientPerms[0].orients;
+                    let orients2 = twoOrientPerms[1].orients;
+                    if( (singleOrientPermSum + orients1[1] + orients2[0]) % 3 != 0 &&
+                            (singleOrientPermSum + orients1[1] + orients2[1]) % 3 != 0)
+                        orients1.splice(1, 1);
+                    if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 &&
+                            (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0)
+                        orients1.splice(0, 1);
+                    if( orients1.length == 1 ) {    // if one orient was removed
+                        if( (singleOrientPermSum + orients1[0] + orients2[1]) % 3 != 0 )
+                            orients2.splice(1, 1);
+                        if( (singleOrientPermSum + orients1[0] + orients2[0]) % 3 != 0 )
+                            orients2.splice(0, 1);
+                        // only one orient should remain
+                        twoOrientPerms.length = 0;
                     }
+                }else if( twoOrientPerms.length == 0 ) {
+                    if( singleOrientPermSum % 3 )
+                        return;
                 }
             }
-            permParity = isPermSwapsOdd ? PERMPARITY_ODD : PERMPARITY_EVEN;
+            let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
+            if( unsetPerms.length == 0 && twoOrientPerms.length == 0 )
+                permParity = getPermArrParity(yieldPerm);
+            yield {
+                perm: yieldPerm,
+                freeCorners,
+                permParity
+            };
         }
-        yield {
-            perm: yieldPerm,
-            occupCorners: yieldOccupCorners,
-            permParity
-        };
     }else{
         let allowedPerm = perm[filledCount];
         for(let cno = 0; cno < 8; ++cno) {
@@ -1764,13 +1785,11 @@ function getAllowedCornerColors() {
                     }
                 }
             }else{
-                for(let cno = 0; cno < 8; ++cno) {
-                    if( !po.occupCorners[cno] ) {
-                        for(let orient = 0; orient < 3; ++orient) {
-                            for(let j = 0; j < 3; ++j) {
-                                let owall = (orient+j) % 3;
-                                allowedCornerColors.add(i, j, po.permParity, cubeCornerColors[cno][owall]);
-                            }
+                for(let cno of po.freeCorners) {
+                    for(let orient = 0; orient < 3; ++orient) {
+                        for(let j = 0; j < 3; ++j) {
+                            let owall = (orient+j) % 3;
+                            allowedCornerColors.add(i, j, po.permParity, cubeCornerColors[cno][owall]);
                         }
                     }
                 }
@@ -1791,53 +1810,58 @@ function *edgePermOnFixedColors(
             fixedEdgeColors[filledCount][1] == -1 )
         ++filledCount;
     if( filledCount == 12 ) {
-        let yieldOccupEdges = occupEdges;
-        let yieldPerm = perm.slice();
-        // constrain by sum of edge orientations
+        let yieldPerm = [];
         let unsetPerms = [];
         let orientSum = 0;
+        let freeEdges = [];
         for(let eno = 0; eno < 12; ++eno) {
-            let allowedPerm = yieldPerm[eno] = yieldPerm[eno].copy();
+            let allowedPerm = yieldPerm[eno] = perm[eno].copy();
             if( allowedPerm.perm >= 0 )
                 orientSum += allowedPerm.orients[0];
             else
                 unsetPerms.push(allowedPerm);
+            if( !occupEdges[eno] )
+                freeEdges.push(eno);
         }
-        if( unsetPerms.length == 1 ) {
-            yieldOccupEdges = occupEdges.slice();
-            let freeVal = 0;
-            while( occupEdges[freeVal] )
-                ++freeVal;
-            yieldOccupEdges[freeVal] = true;
-            let allowedPerm = unsetPerms[0];
-            allowedPerm.perm = freeVal;
-            allowedPerm.orients.push(orientSum % 2);
-            unsetPerms.length = 0;
-        }else if( unsetPerms.length == 0 ) {
-            if( orientSum % 2 )
-                return;
-        }
-        let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
-        if( unsetPerms.length == 0 ) {
-            isPermSwapsOdd = false;
-            let permsScanned = [];
-            for(let i = 0; i < 12; ++i) {
-                if( !permsScanned[i] ) {
-                    permsScanned[i] = true;
-                    let p = i;
-                    while( (p = yieldPerm[p].perm) != i ) {
-                        permsScanned[p] = true;
-                        isPermSwapsOdd = !isPermSwapsOdd;
-                    }
-                }
+        if( unsetPerms.length == 2 ) {
+            let allowedPerm1 = unsetPerms[0];
+            let allowedPerm2 = unsetPerms[1];
+            allowedPerm1.orients = allowedPerm2.orients = [ 0, 1 ];
+            allowedPerm1.perm = freeEdges[0];
+            allowedPerm2.perm = freeEdges[1];
+            yield {
+                perm: yieldPerm,
+                freeEdges: [],
+                permParity: getPermArrParity(yieldPerm)
+            };
+            allowedPerm1.perm = freeEdges[1];
+            allowedPerm2.perm = freeEdges[0];
+            yield {
+                perm: yieldPerm,
+                freeEdges: [],
+                permParity: getPermArrParity(yieldPerm)
+            };
+        }else{
+            if( unsetPerms.length == 1 ) {
+                let freeVal = freeEdges[0];
+                freeEdges.splice(0, 1);
+                let allowedPerm = unsetPerms[0];
+                allowedPerm.perm = freeVal;
+                allowedPerm.orients.push(orientSum % 2);
+                unsetPerms.length = 0;
+            }else if( unsetPerms.length == 0 ) {
+                if( orientSum % 2 )
+                    return;
             }
-            permParity = isPermSwapsOdd ? PERMPARITY_ODD : PERMPARITY_EVEN;
+            let permParity = PERMPARITY_ODD | PERMPARITY_EVEN;
+            if( unsetPerms.length == 0 )
+                permParity = getPermArrParity(yieldPerm);
+            yield {
+                perm: yieldPerm,
+                freeEdges,
+                permParity
+            };
         }
-        yield {
-            perm: yieldPerm,
-            occupEdges: yieldOccupEdges,
-            permParity
-        };
     }else{
         let allowedPerm = perm[filledCount];
         for(let eno = 0; eno < 12; ++eno) {
@@ -1886,13 +1910,11 @@ function getAllowedEdgeColors() {
                     }
                 }
             }else{
-                for(let eno = 0; eno < 12; ++eno) {
-                    if( !po.occupEdges[eno] ) {
-                        for(let orient = 0; orient < 2; ++orient) {
-                            for(let j = 0; j < 2; ++j) {
-                                let owall = (orient+j) % 2;
-                                allowedEdgeColors.add(i, j, po.permParity, cubeEdgeColors[eno][owall]);
-                            }
+                for(let eno of po.freeEdges) {
+                    for(let orient = 0; orient < 2; ++orient) {
+                        for(let j = 0; j < 2; ++j) {
+                            let owall = (orient+j) % 2;
+                            allowedEdgeColors.add(i, j, po.permParity, cubeEdgeColors[eno][owall]);
                         }
                     }
                 }
