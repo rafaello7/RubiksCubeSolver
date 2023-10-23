@@ -1909,30 +1909,43 @@ function selectColors(ev) {
     const cornerSquareClasses = [ 'csq1', 'csq2', 'csq3' ];
     const edgeSquareClasses = [ 'esq1', 'esq2' ];
     let thisElem = ev.target;
-    if( thisElem.parentElement.parentElement.classList.contains('corner') ) {
-        let cornerNo = cornerIds.indexOf(thisElem.parentElement.parentElement.id);
-        let squareNo = 0;
-        while( !thisElem.parentElement.classList.contains(cornerSquareClasses[squareNo]) )
-            ++squareNo;
-        let wallColor = -1;
-        if( fixedCornerColors[cornerNo][squareNo] == -1 ) {
-            wallColor = 0;
-            while( !thisElem.classList.contains(colorClassNames[wallColor]) )
-                ++wallColor;
+    if( ev.ctrlKey ) {
+        if( thisElem.parentElement.parentElement.classList.contains('corner') ) {
+            let cornerNo = cornerIds.indexOf(thisElem.parentElement.parentElement.id);
+            fixedCornerColors[cornerNo][0] = -1;
+            fixedCornerColors[cornerNo][1] = -1;
+            fixedCornerColors[cornerNo][2] = -1;
+        }else{
+            let edgeNo = edgeIds.indexOf(thisElem.parentElement.parentElement.id);
+            fixedEdgeColors[edgeNo][0] = -1;
+            fixedEdgeColors[edgeNo][1] = -1;
         }
-        fixedCornerColors[cornerNo][squareNo] = wallColor;
     }else{
-        let edgeNo = edgeIds.indexOf(thisElem.parentElement.parentElement.id);
-        let squareNo = 0;
-        while( !thisElem.parentElement.classList.contains(edgeSquareClasses[squareNo]) )
-            ++squareNo;
-        let wallColor = -1;
-        if( fixedEdgeColors[edgeNo][squareNo] == -1 ) {
-            wallColor = 0;
-            while( !thisElem.classList.contains(colorClassNames[wallColor]) )
-                ++wallColor;
+        if( thisElem.parentElement.parentElement.classList.contains('corner') ) {
+            let cornerNo = cornerIds.indexOf(thisElem.parentElement.parentElement.id);
+            let squareNo = 0;
+            while( !thisElem.parentElement.classList.contains(cornerSquareClasses[squareNo]) )
+                ++squareNo;
+            let wallColor = -1;
+            if( fixedCornerColors[cornerNo][squareNo] == -1 ) {
+                wallColor = 0;
+                while( !thisElem.classList.contains(colorClassNames[wallColor]) )
+                    ++wallColor;
+            }
+            fixedCornerColors[cornerNo][squareNo] = wallColor;
+        }else{
+            let edgeNo = edgeIds.indexOf(thisElem.parentElement.parentElement.id);
+            let squareNo = 0;
+            while( !thisElem.parentElement.classList.contains(edgeSquareClasses[squareNo]) )
+                ++squareNo;
+            let wallColor = -1;
+            if( fixedEdgeColors[edgeNo][squareNo] == -1 ) {
+                wallColor = 0;
+                while( !thisElem.classList.contains(colorClassNames[wallColor]) )
+                    ++wallColor;
+            }
+            fixedEdgeColors[edgeNo][squareNo] = wallColor;
         }
-        fixedEdgeColors[edgeNo][squareNo] = wallColor;
     }
     document.querySelectorAll('.csel').forEach( (el) => { el.classList.add('cnone'); } );
     let isFilled = true;

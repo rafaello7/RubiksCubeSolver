@@ -39,7 +39,8 @@ If you want to solve a physical cube, start _Edit_ mode (select the
 Click the appropriate colors on all walls and then click the `Apply` button.
 
 Clicking on an already selected color deselects that color as selected
-and returns to the list of colors in that square to choose from.
+and returns to the list of colors in that square to choose from. Clicking
+with Ctrl key pressed deselects colors on whole clicked edge or corner.
 
 Until the colors on all faces are selected, the `Apply` button remains
 greyed out. Clicking `Apply` confirms the appearance of the cube and
