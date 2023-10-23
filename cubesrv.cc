@@ -1105,7 +1105,7 @@ struct cube {
 };
 
 bool cube::operator==(const cube &c) const
-{ 
+{
 	return cc == c.cc && ce == c.ce;
 }
 
@@ -3314,8 +3314,53 @@ static std::string printMoves(const CubesReprAtDepth *cubesByDepth, const cube &
     return res;
 }
 
-class AddCubesProgress {
+class ProgressBase {
     static std::mutex m_progressMutex;
+    static bool m_isCancelRequested;
+protected:
+    static void mutexLock();
+    static bool isCancelRequestedNoLock() { return m_isCancelRequested; }
+    static void mutexUnlock();
+public:
+    static void requestCancel();
+    static void requestUncancel();
+    static bool isCancelRequested();
+};
+
+std::mutex ProgressBase::m_progressMutex;
+bool ProgressBase::m_isCancelRequested;
+
+void ProgressBase::mutexLock() {
+    m_progressMutex.lock();
+}
+
+void ProgressBase::mutexUnlock() {
+    m_progressMutex.unlock();
+}
+
+void ProgressBase::requestCancel()
+{
+    mutexLock();
+    m_isCancelRequested = true;
+    mutexUnlock();
+}
+
+void ProgressBase::requestUncancel()
+{
+    mutexLock();
+    m_isCancelRequested = false;
+    mutexUnlock();
+}
+
+bool ProgressBase::isCancelRequested()
+{
+    mutexLock();
+    bool res = m_isCancelRequested;
+    mutexUnlock();
+    return res;
+}
+
+class AddCubesProgress : public ProgressBase {
     unsigned long m_cubeCount;
     const unsigned m_depth;
     const unsigned m_processCount;
@@ -3330,23 +3375,23 @@ public:
     {
     }
 
-    void inc(int reqFd, unsigned long cubeCount);
+    bool inc(int reqFd, unsigned long cubeCount);
     void threadFinished(int reqFd);
     unsigned long cubeCount() const { return m_cubeCount; }
 };
 
-std::mutex AddCubesProgress::m_progressMutex;
-
-void AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
+bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
 {
     unsigned long cubeCountTot;
     unsigned processedCount;
     bool isFinish;
-    m_progressMutex.lock();
+    bool isCancelRequested;
+    mutexLock();
     cubeCountTot = m_cubeCount += cubeCount;
     processedCount = ++m_processedCount;
     isFinish = m_isFinish;
-    m_progressMutex.unlock();
+    isCancelRequested = isCancelRequestedNoLock();
+    mutexUnlock();
     if( m_depth >= 9 && !isFinish ) {
         unsigned procCountNext = 100 * (processedCount+1) / m_processCount;
         unsigned procCountCur = 100 * processedCount / m_processCount;
@@ -3354,15 +3399,16 @@ void AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
             sendRespMessage(reqFd, "progress: depth %u cubes %llu, %u%%\n",
                     m_depth, cubeCountTot, 100 * processedCount / m_processCount);
     }
+    return isCancelRequested;
 }
 
 void AddCubesProgress::threadFinished(int reqFd)
 {
     unsigned runningThreadCount;
-    m_progressMutex.lock();
+    mutexLock();
     runningThreadCount = --m_runningThreadCount;
     m_isFinish = true;
-    m_progressMutex.unlock();
+    mutexUnlock();
     if( m_depth >= 9 ) {
         sendRespMessage(reqFd, "progress: depth %d cubes %d threads still running\n",
                 m_depth, runningThreadCount);
@@ -3379,10 +3425,10 @@ static void addCubesT(
     for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccpReprCubesC.ccpCubesBegin();
             ccpCubesIt != ccpReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
-        unsigned long cubeCount = 0;
         const CornerPermReprCubes &cpermReprCubesC = ccpCubesIt->second;
         cubecorner_perms ccp = ccpCubesIt->first;
         if( !cpermReprCubesC.empty() ) {
+            unsigned long cubeCount = 0;
             for(int rd = 0; rd < RCOUNT; ++rd) {
                 for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
                     cubecorner_perms ccpNew = reversed ?
@@ -3431,13 +3477,14 @@ static void addCubesT(
                     }
                 }
             }
-            addCubesProgress->inc(reqFd, cubeCount);
+            if( addCubesProgress->inc(reqFd, cubeCount) )
+                break;
         }
     }
     addCubesProgress->threadFinished(reqFd);
 }
 
-static void addCubes(
+static bool addCubes(
         CubesReprAtDepth *cubesReprByDepth,
         int depth, int threadCount, int reqFd)
 {
@@ -3455,11 +3502,15 @@ static void addCubes(
     addCubesT(cubesReprByDepth, depth, 0, threadCount, reqFd, &addCubesProgress);
     for(int t = 1; t < threadCount; ++t)
         threads[t].join();
-    sendRespMessage(reqFd, "depth %d cubes=%lu\n", depth, addCubesProgress.cubeCount());
+    bool isCancelRequested = ProgressBase::isCancelRequested();
+    if( isCancelRequested )
+        sendRespMessage(reqFd, "canceled\n");
+    else
+        sendRespMessage(reqFd, "depth %d cubes=%lu\n", depth, addCubesProgress.cubeCount());
+    return isCancelRequested;
 }
 
-class SearchProgress {
-    static std::mutex m_progressMutex;
+class SearchProgress : public ProgressBase {
     const CubesReprAtDepth::ccpcubes_iter m_ccpItBeg;
     const CubesReprAtDepth::ccpcubes_iter m_ccpItEnd;
     CubesReprAtDepth::ccpcubes_iter m_ccpItNext;
@@ -3481,21 +3532,19 @@ public:
     std::string progressStr();
 };
 
-std::mutex SearchProgress::m_progressMutex;
-
 bool SearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf)
 {
     bool res;
     CubesReprAtDepth::ccpcubes_iter cornerPermIt;
-    m_progressMutex.lock();
+    mutexLock();
     if( ccpItBuf == NULL )
         m_isFinish = true;
-    res = !m_isFinish && m_ccpItNext != m_ccpItEnd;
+    res = !m_isFinish && m_ccpItNext != m_ccpItEnd && !isCancelRequestedNoLock();
     if( res )
         cornerPermIt = m_ccpItNext++;
     else
         --m_runningThreadCount;
-    m_progressMutex.unlock();
+    mutexUnlock();
     if( res ) {
         *ccpItBuf = cornerPermIt;
         if( m_depth >= 17 ) {
@@ -3639,8 +3688,12 @@ static bool searchMovesA(const CubesReprAtDepth *cubesReprByDepth,
         sendRespMessage(fdReq, "-- %d moves --\n", depth+depthMax);
         return true;
     }
-    sendRespMessage(fdReq, "depth %d end\n", depth+depthMax);
-    return false;
+    bool isCancelRequested = ProgressBase::isCancelRequested();
+    if( isCancelRequested )
+        sendRespMessage(fdReq, "canceled\n");
+    else
+        sendRespMessage(fdReq, "depth %d end\n", depth+depthMax);
+    return isCancelRequested;
 }
 
 static void searchMovesTb(const CubesReprAtDepth *cubesReprByDepth,
@@ -3769,8 +3822,12 @@ static bool searchMovesB(const CubesReprAtDepth *cubesReprByDepth,
         sendRespMessage(fdReq, "-- %d moves --\n", 2*DEPTH_MAX+depth);
         return true;
     }
-    sendRespMessage(fdReq, "depth %d end\n", 2*DEPTH_MAX+depth);
-    return false;
+    bool isCancelRequested = ProgressBase::isCancelRequested();
+    if( isCancelRequested )
+        sendRespMessage(fdReq, "canceled\n");
+    else
+        sendRespMessage(fdReq, "depth %d end\n", 2*DEPTH_MAX+depth);
+    return isCancelRequested;
 }
 
 static void printStats(const CubesReprAtDepth *cubesReprByDepth, int depth)
@@ -3836,7 +3893,8 @@ static void searchMoves(const cube &csearch, int threadCount, int fdReq)
             return;
     }
     for(unsigned depth = depthAvailCount; depth <= DEPTH_MAX; ++depth) {
-        addCubes(cubesReprByDepth, depth, threadCount, fdReq);
+        if( addCubes(cubesReprByDepth, depth, threadCount, fdReq) )
+            return;
         //printStats(cubesReprByDepth, depth);
         depthAvailCount = depth+1;
         if( searchMovesA(cubesReprByDepth, csearch, depth-1, depth, threadCount, fdReq) )
@@ -3855,13 +3913,24 @@ static void processCubeReq(int fdReq, const char *squareColors)
 {
     static std::mutex solverMutex;
 
+    if( !strncmp(squareColors, "cancel", 6) ) {
+        ProgressBase::requestCancel();
+        char respHeader[] =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-length: 0\r\n"
+            "Connection: keep-alive\r\n"
+            "\r\n";
+        write(fdReq, respHeader, strlen(respHeader));
+        return;
+    }
     if( solverMutex.try_lock() ) {
+        ProgressBase::requestUncancel();
         char respHeader[] =
             "HTTP/1.1 200 OK\r\n"
             "Content-type: text/plain\r\n"
             "Transfer-encoding: chunked\r\n"
             "Connection: keep-alive\r\n"
-            "\r\n"; 
+            "\r\n";
         write(fdReq, respHeader, strlen(respHeader));
         cube c;
         if( cubeRead(fdReq, squareColors, c) ) {
@@ -3890,6 +3959,72 @@ static void processCubeReq(int fdReq, const char *squareColors)
     }
 }
 
+static void getFile(int fdReq, const char *fnameBeg) {
+    const char *fnameEnd = strchr(fnameBeg, ' ');
+    if( fnameEnd != NULL ) {
+        std::string fname;
+        fname.assign(fnameBeg, fnameEnd - fnameBeg);
+        if( fname.empty())
+            fname = "cube.html";
+        FILE *fp = fopen(fname.c_str(), "r");
+        if( fp != NULL ) {
+            fseek(fp, 0, SEEK_END);
+            long fsize = ftell(fp);
+            const char *fnameExt = strrchr(fname.c_str(), '.');
+            if( fnameExt == NULL )
+                fnameExt = "txt";
+            else
+                ++fnameExt;
+            const char *contentType = "application/octet-stream";
+            if( !strcasecmp(fnameExt, "html") )
+                contentType = "text/html; charset=utf-8";
+            else if( !strcasecmp(fnameExt, "css") )
+                contentType = "text/css";
+            else if( !strcasecmp(fnameExt, "js") )
+                contentType = "text/javascript";
+            else if( !strcasecmp(fnameExt, "txt") )
+                contentType = "text/plain";
+            char respHeader[4096];
+            sprintf(respHeader,
+                "HTTP/1.1 200 OK\r\n"
+                "Content-type: %s\r\n"
+                "Content-length: %ld\r\n"
+                "Connection: keep-alive\r\n"
+                "\r\n", contentType, fsize);
+            write(fdReq, respHeader, strlen(respHeader));
+            rewind(fp);
+            char fbuf[32768];
+            long toWr = fsize;
+            while( toWr > 0 ) {
+                int toRd = (unsigned)toWr > sizeof(fbuf) ? sizeof(fbuf) : toWr;
+                int rd = fread(fbuf, 1, toRd, fp);
+                if( rd == 0 ) {
+                    memset(fbuf, 0, toRd);
+                    rd = toRd;
+                }
+                int wrTot = 0;
+                while( wrTot < rd ) {
+                    int wr = write(fdReq, fbuf + wrTot, rd - wrTot);
+                    if( wr < 0 ) {
+                        perror("socket write");
+                        return;
+                    }
+                    wrTot += wr;
+                }
+                toWr -= rd;
+            }
+            fclose(fp);
+            return;
+        }
+    }
+    char respHeader[] =
+        "HTTP/1.1 404 Not Found\r\n"
+        "Content-length: 0\r\n"
+        "Connection: keep-alive\r\n"
+        "\r\n";
+    write(fdReq, respHeader, strlen(respHeader));
+}
+
 static void processRequest(int fdReq, const char *reqHeader) {
     if( strncasecmp(reqHeader, "get ", 4) ) {
         char respHeader[] =
@@ -3897,82 +4032,21 @@ static void processRequest(int fdReq, const char *reqHeader) {
             "Content-length: 0\r\n"
             "Allow: GET\r\n"
             "Connection: keep-alive\r\n"
-            "\r\n"; 
+            "\r\n";
         write(fdReq, respHeader, strlen(respHeader));
         return;
     }
-    bool resourceFound = false;
     if( reqHeader[4] == '/' ) {
-        if( reqHeader[5] == '?' ) {
-            resourceFound = true;
+        if( reqHeader[5] == '?' )
             processCubeReq(fdReq, reqHeader+6);
-        }else{
-            const char *fnameBeg = reqHeader + 5;
-            const char *fnameEnd = strchr(fnameBeg, ' ');
-            if( fnameEnd != NULL ) {
-                std::string fname;
-                fname.assign(fnameBeg, fnameEnd - fnameBeg);
-                if( fname.empty() )
-                    fname = "cube.html";
-                FILE *fp = fopen(fname.c_str(), "r");
-                if( fp != NULL ) {
-                    resourceFound = true;
-                    fseek(fp, 0, SEEK_END);
-                    long fsize = ftell(fp);
-                    const char *fnameExt = strrchr(fname.c_str(), '.');
-                    if( fnameExt == NULL )
-                        fnameExt = "txt";
-                    else
-                        ++fnameExt;
-                    const char *contentType = "application/octet-stream";
-                    if( !strcasecmp(fnameExt, "html") )
-                        contentType = "text/html; charset=utf-8";
-                    else if( !strcasecmp(fnameExt, "css") )
-                        contentType = "text/css";
-                    else if( !strcasecmp(fnameExt, "js") )
-                        contentType = "text/javascript";
-                    else if( !strcasecmp(fnameExt, "txt") )
-                        contentType = "text/plain";
-                    char respHeader[4096];
-                    sprintf(respHeader,
-                        "HTTP/1.1 200 OK\r\n"
-                        "Content-type: %s\r\n"
-                        "Content-length: %ld\r\n"
-                        "Connection: keep-alive\r\n"
-                        "\r\n", contentType, fsize); 
-                    write(fdReq, respHeader, strlen(respHeader));
-                    rewind(fp);
-                    char fbuf[32768];
-                    long toWr = fsize;
-                    while( toWr > 0 ) {
-                        int toRd = (unsigned)toWr > sizeof(fbuf) ? sizeof(fbuf) : toWr;
-                        int rd = fread(fbuf, 1, toRd, fp);
-                        if( rd == 0 ) {
-                            memset(fbuf, 0, toRd);
-                            rd = toRd;
-                        }
-                        int wrTot = 0;
-                        while( wrTot < rd ) {
-                            int wr = write(fdReq, fbuf + wrTot, rd - wrTot);
-                            if( wr < 0 ) {
-                                perror("socket write");
-                                return;
-                            }
-                            wrTot += wr;
-                        }
-                        toWr -= rd;
-                    }
-                    fclose(fp);
-                }
-            }
-        }
-    }
-    if( ! resourceFound ) {
+        else
+            getFile(fdReq, reqHeader+5);
+    }else{
         char respHeader[] =
             "HTTP/1.1 404 Not Found\r\n"
             "Content-length: 0\r\n"
             "Connection: keep-alive\r\n"
-            "\r\n"; 
+            "\r\n";
         write(fdReq, respHeader, strlen(respHeader));
     }
 }

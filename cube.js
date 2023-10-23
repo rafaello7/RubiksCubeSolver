@@ -846,6 +846,8 @@ async function searchMoves(c) {
         dolog('depth', e.message);
     }
     document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = false;});
+    solvebtn.style.display = '';
+    cancelbtn.style.display = '';
     startTime = undefined;
 }
 
@@ -2077,8 +2079,14 @@ function searchSolution() {
         dolog('err', "already solved\n");
     else{
         document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = true;});
+        solvebtn.style.display = 'none';
+        cancelbtn.style.display = 'initial';
         searchMoves(c);
     }
+}
+
+function searchCancel() {
+    fetch('/?cancel');
 }
 
 function loadFromFile() {
@@ -2216,6 +2224,7 @@ onload = () => {
     applybtn.addEventListener('click', applyEdit);
     manipmodebtn.addEventListener('change', enterManipulateMode);
     solvebtn.addEventListener('click', searchSolution);
+    cancelbtn.addEventListener('click', searchCancel);
     let crestore = localStorage.getItem('cube');
     if( crestore ) {
         let cr = crestore.split(' ');
