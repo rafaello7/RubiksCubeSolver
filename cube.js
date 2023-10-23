@@ -1563,7 +1563,7 @@ class AllowedCornerColors {
         [new Set(), new Set(), new Set()],
         [new Set(), new Set(), new Set()],
     ];
-    sampleCubes = [];
+    sampleCubecorners = [];
 
     add(cornerNo, squareNo, permParity, color) {
         this.permParity |= permParity;
@@ -1606,7 +1606,7 @@ class AllowedEdgeColors {
         [new Set(), new Set()], [new Set(), new Set()],
         [new Set(), new Set()], [new Set(), new Set()]
     ];
-    sampleCubes = [];
+    sampleCubeedges = [];
 
     add(cornerNo, squareNo, permParity, color) {
         this.permParity |= permParity;
@@ -1748,8 +1748,8 @@ function getAllowedCornerColors() {
     let allowedCornerColors = new AllowedCornerColors();
     for(let po of cornerPermOnFixedColors()) {
         let cc = null;
-        if( allowedCornerColors.sampleCubes[po.permParity] == undefined )
-            allowedCornerColors.sampleCubes[po.permParity] = cc = new cubecorners();
+        if( allowedCornerColors.sampleCubecorners[po.permParity] == undefined )
+            allowedCornerColors.sampleCubecorners[po.permParity] = cc = new cubecorners();
         for(let i = 0; i < 8; ++i) {
             let allowedPerm = po.perm[i];
             if( allowedPerm.perm >= 0 ) {
@@ -1870,8 +1870,8 @@ function getAllowedEdgeColors() {
     let allowedEdgeColors = new AllowedEdgeColors();
     for(let po of edgePermOnFixedColors()) {
         let ce = null;
-        if( allowedEdgeColors.sampleCubes[po.permParity] == undefined )
-            allowedEdgeColors.sampleCubes[po.permParity] = ce = new cubeedges();
+        if( allowedEdgeColors.sampleCubeedges[po.permParity] == undefined )
+            allowedEdgeColors.sampleCubeedges[po.permParity] = ce = new cubeedges();
         for(let i = 0; i < 12; ++i) {
             let allowedPerm = po.perm[i];
             if( allowedPerm.perm >= 0 ) {
@@ -2040,8 +2040,8 @@ function applyEdit() {
     let allowedCornerColors = getAllowedCornerColors();
     let allowedEdgeColors = getAllowedEdgeColors();
     let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
-    let cc = allowedCornerColors.sampleCubes[permParity];
-    let ce = allowedEdgeColors.sampleCubes[permParity];
+    let cc = allowedCornerColors.sampleCubecorners[permParity];
+    let ce = allowedEdgeColors.sampleCubeedges[permParity];
 	cmanipulate = CubeTrMatrix.fromCube(new cube(cc, ce), curcubemx);
     manipmodebtn.checked = true;
     enterManipulateMode();
