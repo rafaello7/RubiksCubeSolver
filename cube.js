@@ -2122,7 +2122,9 @@ function saveToFile() {
     }, function() {});
 }
 
-function loadFromInput() {
+function loadFromInput(ev) {
+    if( ev.type == 'keydown' && ev.key != 'Enter' )
+        return;
     err.textContent = '';
     let cubemx = CubeTrMatrix.fromString(loadinput.value);
     if( cubemx ) {
@@ -2147,7 +2149,7 @@ onload = () => {
         savetofilebtn.addEventListener('click', saveToFile);
     }
     loadfrominputbtn.addEventListener('click', loadFromInput);
-    loadinput.addEventListener('change', loadFromInput);
+    loadinput.addEventListener('keydown', loadFromInput);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);

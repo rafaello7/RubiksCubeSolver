@@ -18,6 +18,10 @@ h3 {
     display: flex;
 }
 
+#loadinput:invalid {
+    background-color: #ffe8eb;
+}
+
 #cubewithcontrols {
     display: grid;
     grid-template-columns: min-content 1fr min-content;
@@ -478,6 +482,9 @@ h3 {
     }
     h3 {
         background-image: linear-gradient(to right, cornflowerblue, black);
+    }
+    #loadinput:invalid {
+        background-color: rebeccapurple;
     }
     #rotatewalls,#rotatecube {
         background-color: cornflowerblue;
