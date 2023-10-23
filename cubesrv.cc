@@ -3055,6 +3055,7 @@ public:
 	bool addCube(cubeedges);
 	bool containsCubeEdges(cubeedges) const;
     bool empty() const { return m_items.empty(); }
+    size_t size() const { return m_items.size(); }
     edges_iter edgeBegin() const { return m_items.begin(); }
     edges_iter edgeEnd() const { return m_items.end(); }
     static cubeedges findSolutionEdge(
@@ -3170,8 +3171,9 @@ public:
     typedef std::vector<std::pair<cubecorner_orients, CornerOrientReprCubes>>::const_iterator ccocubes_iter;
 	CornerPermReprCubes();
 	~CornerPermReprCubes();
-    void initOccur();
     bool empty() const { return m_coreprCubes.size() == 1; }
+    size_t size() const;
+    void initOccur();
 	const CornerOrientReprCubes &cornerOrientCubesAt(unsigned corientIdx) const {
         return m_coreprCubes[m_idxmap[corientIdx]].second;
     }
@@ -3189,6 +3191,13 @@ CornerPermReprCubes::CornerPermReprCubes()
 
 CornerPermReprCubes::~CornerPermReprCubes()
 {
+}
+
+size_t CornerPermReprCubes::size() const {
+    size_t res = 0;
+    for(ccocubes_iter it = ccoCubesBegin(); it != ccoCubesEnd(); ++it)
+        res += it->second.size();
+    return res;
 }
 
 void CornerPermReprCubes::initOccur() {
@@ -3216,6 +3225,7 @@ public:
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
     ~CubesReprAtDepth();
     bool empty() const;
+    size_t size() const;
     void initOccur();
     CornerPermReprCubes &add(unsigned idx);
     const CornerPermReprCubes &getAt(unsigned idx) const {
@@ -3240,6 +3250,13 @@ bool CubesReprAtDepth::empty() const {
         if( !reprCube.second.empty() )
             return false;
     return true;
+}
+
+size_t CubesReprAtDepth::size() const {
+    size_t res = 0;
+    for(const std::pair<cubecorner_perms, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
+        res += reprCube.second.size();
+    return res;
 }
 
 void CubesReprAtDepth::initOccur()
@@ -3377,7 +3394,6 @@ public:
 
     bool inc(int reqFd, unsigned long cubeCount);
     void threadFinished(int reqFd);
-    unsigned long cubeCount() const { return m_cubeCount; }
 };
 
 bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
@@ -3506,7 +3522,7 @@ static bool addCubes(
     if( isCancelRequested )
         sendRespMessage(reqFd, "canceled\n");
     else
-        sendRespMessage(reqFd, "depth %d cubes=%lu\n", depth, addCubesProgress.cubeCount());
+        sendRespMessage(reqFd, "depth %d cubes=%lu\n", depth, cubesReprByDepth[depth].size());
     return isCancelRequested;
 }
 

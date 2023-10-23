@@ -38,14 +38,10 @@ h3 {
     padding-top: 1em;
 }
 
-#solvebtn,#cancelbtn {
-    grid-row: 3/5;
+#solvebtn {
+    grid-row: 3/6;
     grid-column: 2/3;
     align-self: stretch;
-}
-
-#cancelbtn {
-    display: none;
 }
 
 #rotatewalls {
