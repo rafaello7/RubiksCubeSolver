@@ -19,4 +19,4 @@ perf9r:
 	sudo perf stat -e 'assists.sse_avx_mix' ./cubesrv 9r
 
 pkg: cubesrv
-	d=$${PWD##*/}; cd .. && tar czf $$d.tar.gz $$d/cube.* $$d/favicon.ico $$d/cubesrv
+	d=$${PWD##*/}; cd .. && tar czf $$d-$$(uname -m).tar.gz $$d/cube.* $$d/favicon.ico $$d/cubesrv
