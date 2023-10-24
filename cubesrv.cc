@@ -1086,8 +1086,8 @@ unsigned short cubeedges::getOrientIdx() const {
 }
 
 struct cube {
-	struct cubecorners cc;
-	struct cubeedges ce;
+	cubecorners cc;
+	cubeedges ce;
 
     static cube compose(const cube &c1, const cube &c2) {
         return { .cc = cubecorners::compose(c1.cc, c2.cc),
