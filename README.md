@@ -53,8 +53,11 @@ a few seconds to hours. The list of moves to solve the cube appears on
 the right side of the cube. Clicking on an item on the list moves the
 cube to an intermediate state, the one after the selected (clicked) move.
 
-On a modern PC (PassMark ~4000) the typical search time of a randomly mixed
-cube is about 2 minutes.
+On a modern PC (PassMark ~4000) the solution search of a randomly mixed cube
+(typically requiring 17-18 moves) takes about 1-2 minutes.  Solving the first
+cube (since program startup) takes longer due to data structures
+initialization. Note that the program does not build any persistent data
+structures on disk. All the data structures are kept in memory.
 
 ## Algorithm
 
