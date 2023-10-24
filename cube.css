@@ -14,14 +14,6 @@ h3 {
     gap: 1em;
 }
 
-#saveload,#loadsavebtns {
-    display: flex;
-}
-
-#loadinput:invalid {
-    background-color: #ffe8eb;
-}
-
 #cubewithcontrols {
     display: grid;
     grid-template-columns: min-content 1fr min-content;
@@ -39,7 +31,6 @@ h3 {
     gap: 5px 2px;
     align-items: start;
     justify-content: start;
-    padding-top: 1em;
 }
 
 #solvebtn {
@@ -85,40 +76,6 @@ h3 {
 
 #angle {
     width: 5ex;
-}
-
-#movebuttons {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-}
-
-#movebuttons > button {
-    height: 1.5em;
-    width: 7em;
-}
-
-.currentmv {
-    background-color: khaki;
-}
-
-#logarea {
-    width: 100%;
-}
-
-#err {
-    font-weight: bold;
-    padding: 1ex 0px;
-}
-
-#depth {
-    height: 16em;
-    overflow-y: scroll;
-}
-
-#solutions {
-    height: 10em;
-    overflow-y: scroll;
 }
 
 #container {
@@ -475,6 +432,53 @@ h3 {
     display: none;
 }
 
+#movebuttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+#movebuttons > button {
+    height: 1.5em;
+    width: 7em;
+}
+
+.currentmv {
+    background-color: khaki;
+}
+
+#logarea {
+    width: 100%;
+}
+
+#err {
+    font-weight: bold;
+    padding: 1ex 0px;
+}
+
+#depth {
+    height: 14em;
+    overflow-y: scroll;
+}
+
+#solutions {
+    height: 8em;
+    overflow-y: scroll;
+}
+
+#loadsavebtns {
+    display: flex;
+    gap: 1ex;
+}
+
+#loadinput {
+    width: 52em;
+}
+
+#loadinput:invalid {
+    background-color: #ffe8eb;
+}
+
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #330;
@@ -483,8 +487,11 @@ h3 {
     h3 {
         background-image: linear-gradient(to right, cornflowerblue, black);
     }
-    #loadinput:invalid {
-        background-color: rebeccapurple;
+    .cyellow {
+        background-color: #cc0;
+    }
+    .cwhite {
+        background-color: #ccc;
     }
     #rotatewalls,#rotatecube {
         background-color: cornflowerblue;
@@ -492,12 +499,8 @@ h3 {
     .currentmv {
         background-color: #a95;
     }
-    .cyellow {
-        background-color: #cc0;
+    #loadinput:invalid {
+        background-color: rebeccapurple;
     }
-    .cwhite {
-        background-color: #ccc;
-    }
-
 }
 

@@ -20,7 +20,8 @@ function dolog(section, text) {
         let d = document.createElement('div');
         d.textContent =  text;
         document.querySelector(`#${section}`).append(d);
-        d.scrollIntoView();
+        if( section == 'depth' || section == 'solutions' )
+            d.scrollIntoView(false);
     }
 }
 
