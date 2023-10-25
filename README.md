@@ -30,28 +30,31 @@ The program uses a web browser interface. After startup it waits
 for http requests on port 8080. So, after starting it, open
 [http://localhost:8080/](http://localhost:8080/) in a browser.
 
-The page can operate the cube in two modes: _Manipulate_ and _Edit_.
-Initially the _Manipulate_ mode is active, which allows to rotate walls.
-In _Edit_ mode, it is possible to select colors of squares.
+The cube can be modified in two ways. The first way is to rotate walls using
+buttons in the _Rotate Wall_ section. The second way is to set/adjust colors of
+particular squares.
 
-If you want to solve a physical cube, start _Edit_ mode (select the
-`Edit` radio button). Each square shows 6 colors to choose from.
-Click the appropriate colors on all walls and then click the `Apply` button.
+If you want to solve a physical cube, click the _New_ button.  Each square will
+show 6 colors to choose from. Clicking on a color on the square selects the
+color for square. Clicking on an already selected color deselects that color as
+selected and returns to the list of colors to choose from.
+Clicking with Ctrl key deselects colors on whole clicked edge or corner.
 
-Clicking on an already selected color deselects that color as selected
-and returns to the list of colors in that square to choose from. Clicking
-with Ctrl key pressed deselects colors on whole clicked edge or corner.
+Until the colors on all faces are selected, the `Solve` button will remain
+greyed out.
 
-Until the colors on all faces are selected, the `Apply` button remains
-greyed out. Clicking `Apply` confirms the appearance of the cube and
-returns to `Manipulate` mode.
+This method works also when the _New_ button is nbt pressed. Initially the
+colors on all squares are selected. To change the colors, first deselect the
+colors on at least two edges or two corners.
 
-In `Manipulate` mode, clicking the `Solve` button starts searching for
-moves to solve the cube. Depending on the layout of the cube and the
-power of the computer, searching for a solution may take from
-a few seconds to hours. The list of moves to solve the cube appears on
-the right side of the cube. Clicking on an item on the list moves the
-cube to an intermediate state, the one after the selected (clicked) move.
+Clicking the _New_ button twice resets the cube to solved state.
+
+Clicking the `Solve` button starts searching for moves to solve the cube.
+Depending on the layout of the cube and the power of the computer, searching
+for a solution may take from a few seconds to hours. The list of moves to solve
+the cube appears on the right side of the cube. Clicking on an item on the list
+moves the cube to an intermediate state, the one after the selected (clicked)
+move.
 
 On a modern PC (PassMark ~4000) the solution search of a randomly mixed cube
 (typically requiring 17-18 moves) takes about 1-2 minutes.  Solving the first

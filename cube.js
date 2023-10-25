@@ -35,21 +35,17 @@ const CWHITE = 5;
 const CCOUNT = 6;
 
 const cubeCornerColors = [
-  [ CBLUE,   CORANGE, CYELLOW ], [ CBLUE,  CYELLOW, CRED ],
-  [ CBLUE,   CWHITE,  CORANGE ], [ CBLUE,  CRED,    CWHITE ],
+  [ CBLUE,   CORANGE, CYELLOW ], [ CBLUE,  CYELLOW, CRED    ],
+  [ CBLUE,   CWHITE,  CORANGE ], [ CBLUE,  CRED,    CWHITE  ],
   [ CGREEN,  CYELLOW, CORANGE ], [ CGREEN, CRED,    CYELLOW ],
-  [ CGREEN,  CORANGE, CWHITE  ], [ CGREEN, CWHITE,  CRED ]
+  [ CGREEN,  CORANGE, CWHITE  ], [ CGREEN, CWHITE,  CRED    ]
 ];
 
 const cubeEdgeColors = [
-  [ CBLUE,   CYELLOW ],
-  [ CORANGE, CBLUE   ], [ CRED,    CBLUE ],
-  [ CBLUE,   CWHITE  ],
-  [ CYELLOW, CORANGE ], [ CYELLOW, CRED ],
-  [ CWHITE,  CORANGE ], [ CWHITE,  CRED ],
-  [ CGREEN,  CYELLOW ],
-  [ CORANGE, CGREEN  ], [ CRED,    CGREEN ],
-  [ CGREEN,  CWHITE ]
+  [ CBLUE,   CYELLOW ], [ CORANGE, CBLUE   ], [ CRED,    CBLUE   ],
+  [ CBLUE,   CWHITE  ], [ CYELLOW, CORANGE ], [ CYELLOW, CRED    ],
+  [ CWHITE,  CORANGE ], [ CWHITE,  CRED    ], [ CGREEN,  CYELLOW ],
+  [ CORANGE, CGREEN  ], [ CRED,    CGREEN  ], [ CGREEN,  CWHITE  ]
 ];
 
 const R120 = [ 1, 2, 0 ];
@@ -1731,14 +1727,15 @@ setInterval(function () {
     }
 }, 100);
 
-let fixedCornerColors = [
-    [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1],
-    [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1]
-];
-let fixedEdgeColors = [
-    [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1],
-    [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
-];
+function copy2DArr(arr) {
+    let res = [];
+    for(let i = 0; i < arr.length; ++i)
+        res[i] = arr[i].slice();
+    return res;
+}
+
+let fixedCornerColors = copy2DArr(cubeCornerColors);
+let fixedEdgeColors = copy2DArr(cubeEdgeColors);
 
 class AllowedPerm {
     perm = -1;
@@ -2148,12 +2145,47 @@ function getAllowedEdgeColors() {
     return allowedEdgeColors;
 }
 
+const colorClassNames = [ 'cyellow', 'corange', 'cblue', 'cred', 'cgreen', 'cwhite' ];
+const cornerIds = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
+const edgeIds = [ 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e9', 'ea', 'eb', 'ec' ];
+const cornerSquareClasses = [ 'csq1', 'csq2', 'csq3' ];
+const edgeSquareClasses = [ 'esq1', 'esq2' ];
+
+function applyFixedColorsToImg()
+{
+    document.querySelectorAll('.csel').forEach( (el) => { el.classList.add('cnone'); } );
+    let isFilled = true;
+    let allowedCornerColors = getAllowedCornerColors();
+    let allowedEdgeColors = getAllowedEdgeColors();
+    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
+    for(let cno = 0; cno < 8; ++cno) {
+        for(let sqno = 0; sqno < 3; ++sqno) {
+            let colorSet = allowedCornerColors.get(cno, sqno, permParity);
+            for(let colorVal of colorSet) {
+                let cselElem = document.querySelector(
+                    `#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[colorVal]}`);
+                cselElem.classList.remove('cnone');
+            }
+            if( colorSet.size > 1 )
+                isFilled = false;
+        }
+    }
+    for(let eno = 0; eno < 12; ++eno) {
+        for(let sqno = 0; sqno < 2; ++sqno) {
+            let colorSet = allowedEdgeColors.get(eno, sqno, permParity);
+            for(let colorVal of colorSet) {
+                let selector = `#${edgeIds[eno]} > .${edgeSquareClasses[sqno]} > .${colorClassNames[colorVal]}`;
+                let cselElem = document.querySelector(selector);
+                cselElem.classList.remove('cnone');
+            }
+            if( colorSet.size > 1 )
+                isFilled = false;
+        }
+    }
+    solvebtn.disabled = ! isFilled;
+}
+
 function selectColors(ev) {
-    const colorClassNames = [ 'cyellow', 'corange', 'cblue', 'cred', 'cgreen', 'cwhite' ];
-    const cornerIds = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
-    const edgeIds = [ 'e1', 'e2', 'e3', 'e4', 'e5', 'e6', 'e7', 'e8', 'e9', 'ea', 'eb', 'ec' ];
-    const cornerSquareClasses = [ 'csq1', 'csq2', 'csq3' ];
-    const edgeSquareClasses = [ 'esq1', 'esq2' ];
     let thisElem = ev.target;
     if( ev.ctrlKey ) {
         if( thisElem.parentElement.parentElement.classList.contains('corner') ) {
@@ -2193,71 +2225,23 @@ function selectColors(ev) {
             fixedEdgeColors[edgeNo][squareNo] = wallColor;
         }
     }
-    document.querySelectorAll('.csel').forEach( (el) => { el.classList.add('cnone'); } );
-    let isFilled = true;
-    let allowedCornerColors = getAllowedCornerColors();
-    let allowedEdgeColors = getAllowedEdgeColors();
-    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
-    for(let cno = 0; cno < 8; ++cno) {
-        for(let sqno = 0; sqno < 3; ++sqno) {
-            let colorSet = allowedCornerColors.get(cno, sqno, permParity);
-            for(let colorVal of colorSet) {
-                let cselElem = document.querySelector(
-                    `#${cornerIds[cno]} > .${cornerSquareClasses[sqno]} > .${colorClassNames[colorVal]}`);
-                cselElem.classList.remove('cnone');
-            }
-            if( colorSet.size > 1 )
-                isFilled = false;
-        }
-    }
-    for(let eno = 0; eno < 12; ++eno) {
-        for(let sqno = 0; sqno < 2; ++sqno) {
-            let colorSet = allowedEdgeColors.get(eno, sqno, permParity);
-            for(let colorVal of colorSet) {
-                let selector = `#${edgeIds[eno]} > .${edgeSquareClasses[sqno]} > .${colorClassNames[colorVal]}`;
-                let cselElem = document.querySelector(selector);
-                cselElem.classList.remove('cnone');
-            }
-            if( colorSet.size > 1 )
-                isFilled = false;
-        }
-    }
-    applybtn.disabled = ! isFilled;
+    applyFixedColorsToImg();
 }
 
-function areCubeColorsFilled() {
-    let allowedCornerColors = getAllowedCornerColors();
-    let allowedEdgeColors = getAllowedEdgeColors();
-    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
-    for(let cno = 0; cno < 8; ++cno) {
-        for(let sqno = 0; sqno < 3; ++sqno) {
-            if( allowedCornerColors.get(cno, sqno, permParity).size > 1 )
-                return false;
-        }
-    }
-    for(let eno = 0; eno < 12; ++eno) {
-        for(let sqno = 0; sqno < 2; ++sqno) {
-            if( allowedEdgeColors.get(eno, sqno, permParity).size > 1 )
-                return false;
-        }
-    }
-    return true;
-}
-
-let cmanipulate = csolved;
-
-function enterEditMode() {
-    cmanipulate = curcube;
-    curcube = csolved;
-    curcube.applyToCubeImg();
-    cubeimg.classList.add('editmode');
-    document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = false; });
-    document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = true; });
-    applybtn.disabled = ! areCubeColorsFilled();
-}
-
-function doReset() {
-    if( cubeimg.classList.contains('editmode') ) {
+function doNew() {
+    let isEmpty = true;
+    for(let cno = 0; cno < 8 && isEmpty; ++cno)
+        for(let cwall = 0; cwall < 3 && isEmpty; ++cwall)
+            isEmpty = fixedCornerColors[cno][cwall] == -1;
+    for(let eno = 0; eno < 8 && isEmpty; ++eno)
+        for(let ewall = 0; ewall < 3 && isEmpty; ++ewall)
+            isEmpty = fixedCornerColors[eno][ewall] == -1;
+    if( isEmpty ) {
+        fixedCornerColors = copy2DArr(cubeCornerColors);
+        fixedEdgeColors = copy2DArr(cubeEdgeColors);
+        curcube = csolved;
+        curcube.applyToCubeImg();
+    }else{
         fixedCornerColors = [
             [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1],
             [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1]
@@ -2267,35 +2251,18 @@ function doReset() {
             [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
         ];
         document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
-    }else{
-        curcube = csolved;
-        curcube.applyToCubeImg();
     }
+    applyFixedColorsToImg();
 }
 
-function enterManipulateMode() {
-    cubeimg.classList.remove('editmode');
-    curcube = cmanipulate;
-    curcube.applyToCubeImg();
-    document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = true; });
-    document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = false; });
-    applybtn.disabled = true;
-}
-
-function applyEdit() {
+function searchSolution() {
+    document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
     let allowedCornerColors = getAllowedCornerColors();
     let allowedEdgeColors = getAllowedEdgeColors();
     let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
     let cc = allowedCornerColors.sampleCubecorners[permParity];
     let ce = allowedEdgeColors.sampleCubeedges[permParity];
-	cmanipulate = new cube(cc, ce);
-    manipmodebtn.checked = true;
-    enterManipulateMode();
-}
-
-function searchSolution() {
-    document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
-    let c = curcube;
+	let c = cube.compose(new cube(cc, ce), curcube);
     localStorage.setItem('cube', `${c.cc.getPerms()} ${c.cc.getOrients()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
@@ -2319,6 +2286,9 @@ function loadFromFile() {
     }).then(async function ( [fileHandle] ) {
         let file = await fileHandle.getFile();
         let val = await file.text();
+        fixedCornerColors = copy2DArr(cubeCornerColors);
+        fixedEdgeColors = copy2DArr(cubeEdgeColors);
+        applyFixedColorsToImg();
         curcube = cubeFromString(val);
         curcube.applyToCubeImg();
     }, function() {});
@@ -2350,6 +2320,9 @@ function loadFromInput(ev) {
     err.textContent = '';
     let c = cubeFromString(loadinput.value);
     if( c ) {
+        fixedCornerColors = copy2DArr(cubeCornerColors);
+        fixedEdgeColors = copy2DArr(cubeEdgeColors);
+        applyFixedColorsToImg();
         curcube = c;
         curcube.applyToCubeImg();
     }
@@ -2363,6 +2336,9 @@ onload = () => {
             file.text().then((val) => {
                 let c = cubeFromString(val);
                 if( c ) {
+                    fixedCornerColors = copy2DArr(cubeCornerColors);
+                    fixedEdgeColors = copy2DArr(cubeEdgeColors);
+                    applyFixedColorsToImg();
                     curcube = c;
                     curcube.applyToCubeImg();
                 }
@@ -2444,10 +2420,7 @@ onload = () => {
     rwhitewall180.addEventListener('click', rotateWhiteWall180);
     rwhitewall270.addEventListener('click', rotateWhiteWall270);
     document.querySelectorAll('.csel').forEach( (elem) => { elem.addEventListener('click', selectColors); });
-    editmodebtn.addEventListener('change', enterEditMode);
-    resetbtn.addEventListener('click', doReset);
-    applybtn.addEventListener('click', applyEdit);
-    manipmodebtn.addEventListener('change', enterManipulateMode);
+    btnnew.addEventListener('click', doNew);
     solvebtn.addEventListener('click', searchSolution);
     cancelbtn.addEventListener('click', searchCancel);
     let crestore = localStorage.getItem('cube');
