@@ -38,18 +38,18 @@ If you want to solve a physical cube, click the _New_ button.  Each square will
 show 6 colors to choose from. Clicking on a color on the square selects the
 color for square. Clicking on an already selected color deselects that color as
 selected and returns to the list of colors to choose from.
-Clicking with Ctrl key deselects colors on whole clicked edge or corner.
+Clicking with Ctrl key deselects colors on the whole clicked edge or corner.
 
-Until the colors on all faces are selected, the `Solve` button will remain
-greyed out.
+Until the colors on all faces are selected, the `Solve` button remain greyed
+out.
 
-This method works also when the _New_ button is nbt pressed. Initially the
+This method works also when the _New_ button is not pressed. Initially the
 colors on all squares are selected. To change the colors, first deselect the
 colors on at least two edges or two corners.
 
 Clicking the _New_ button twice resets the cube to solved state.
 
-Clicking the `Solve` button starts searching for moves to solve the cube.
+Clicking the `Solve` button starts searching for moves to solve.
 Depending on the layout of the cube and the power of the computer, searching
 for a solution may take from a few seconds to hours. The list of moves to solve
 the cube appears on the right side of the cube. Clicking on an item on the list
