@@ -124,94 +124,216 @@ function rotateDirReverse(rd) {
 	return RCOUNT;
 }
 
-class cubecorner_perms {
-	#perms;
-
-	constructor(corner0perm = 0, corner1perm = 0, corner2perm = 0,
-			corner3perm = 0, corner4perm = 0, corner5perm = 0,
-			corner6perm = 0, corner7perm = 0)
-    {
-        if( corner0perm instanceof cubecorner_perms ) {
-            this.#perms = corner0perm.#perms;
-        }else{
-            this.#perms = corner0perm | corner1perm << 3 | corner2perm << 6 |
-                corner3perm << 9 | corner4perm << 12 | corner5perm << 15 |
-                corner6perm << 18 | corner7perm << 21;
-        }
+class TransformMatrix {
+    #x;
+    #y;
+    #z;
+    constructor(x1, x2, x3, y1, y2, y3, z1, z2, z3) {
+        this.#x = [x1, x2, x3];
+        this.#y = [y1, y2, y3];
+        this.#z = [z1, z2, z3];
+    }
+    static multiply(a, b) {
+        return new TransformMatrix(
+            a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0],
+            a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1],
+            a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2],
+            a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0],
+            a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1],
+            a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2],
+            a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0],
+            a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1],
+            a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]);
     }
 
-	setAt(idx, perm) {
-        this.#perms &= ~(7 << 3*idx);
-        this.#perms |= perm << 3*idx;
-	}
-	getAt(idx) { return this.#perms >>> 3*idx & 7; }
-    equals(ccp) {
-        return this.#perms == ccp.#perms;
+    static multiplyRnd(a, b) {
+        return new TransformMatrix(
+            Math.round(a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0]),
+            Math.round(a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1]),
+            Math.round(a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2]),
+            Math.round(a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0]),
+            Math.round(a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1]),
+            Math.round(a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2]),
+            Math.round(a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0]),
+            Math.round(a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1]),
+            Math.round(a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]));
     }
-    isLessThan(ccp) {
-        return this.#perms < ccp.#perms;
+
+    multiplyWith(b) { return TransformMatrix.multiply(this, b); }
+    multiplyRndWith(b) { return TransformMatrix.multiplyRnd(this, b); }
+    equals(b) {
+        return this.#x[0] == b.#x[0] && this.#x[1] == b.#x[1] && this.#x[2] == b.#x[2] &&
+            this.#y[0] == b.#y[0] && this.#y[1] == b.#y[1] && this.#y[2] == b.#y[2] &&
+            this.#z[0] == b.#z[0] && this.#z[1] == b.#z[1] && this.#z[2] == b.#z[2];
     }
-    getPermVal() { return this.#perms; }
+
+    toString() {
+        return `TransformMatrix(${this.#x[0]}, ${this.#x[1]}, ${this.#x[2]}, ${this.#y[0]}, ${this.#y[1]}, ${this.#y[2]}, ${this.#z[0]}, ${this.#z[1]}, ${this.#z[2]})`;
+    }
+
+    toMatrix3dParam() {
+        return this.#x.join() + ',0,' + this.#y.join() + ',0,' +
+            this.#z.join() + ',0,0,0,0,1';
+    }
 }
 
-class cubecorner_orients {
-	#orients;
+// Maps corner permutation + orientation to a transformation matrix
+let cornersmx = [
+    [
+        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+    ],[
+        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
+    ],[
+        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    ],[
+        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
+    ],[
+        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    ],[
+        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+    ],[
+        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    ],[
+        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    ]
+];
 
-	constructor(corner0orient = 0, corner1orient = 0, corner2orient = 0,
-        corner3orient = 0, corner4orient = 0, corner5orient = 0,
-        corner6orient = 0, corner7orient = 0)
-    {
-        if( corner0orient instanceof cubecorner_orients ) {
-            this.#orients = corner0orient.#orients;
-        }else{
-            this.#orients = corner0orient | corner1orient << 2 | corner2orient << 4 |
-                corner3orient << 6 | corner4orient << 8 | corner5orient << 10 |
-                corner6orient << 12 | corner7orient << 14;
-        }
-    }
+// Maps edge permutation + orientation to a transformation matrix
+let edgesmx = [
+    [
+        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
+        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
+    ],[
+        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
+    ],[
+        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
+        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
+    ],[
+        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
+        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
+    ],[
+        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+    ],[
+        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
+        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
+    ],[
+        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+    ],[
+        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
+        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
+    ],[
+        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
+        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+    ],[
+        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
+    ],[
+        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
+        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
+    ],[
+        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
+        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
+    ]
+];
 
-	setAt(/*unsigned*/ idx, /*unsigned char*/ orient) {
-		this.#orients &= ~(3 << 2*idx);
-		this.#orients |= orient << 2*idx;
-	}
-	getAt(idx) { return this.#orients >> 2*idx & 3; }
-	get() { return this.#orients; }
-	set(orts) { this.#orients = orts; }
-	equals(cco) { return this.#orients == cco.#orients; }
-	isLessThan(cco) { return this.#orients < cco.#orients; }
-};
+// Maps middle square rotation to a transformation matrix
+let middlesmx = [
+    [   // yellow - applying TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0)
+        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
+        new TransformMatrix(0, 0, 1, -1, 0, 0, 0, -1, 0),
+        new TransformMatrix(-1, 0, 0, 0, 0, -1, 0, -1, 0),
+        new TransformMatrix(0, 0, -1, 1, 0, 0, 0, -1, 0)
+    ],[ // orange - applying TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0)
+        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
+        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
+        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
+        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
+    ],[ // blue TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1)
+        new TransformMatrix(1, 0, 0, 0, 1, 0, 0, 0, 1),
+        new TransformMatrix(0, 1, 0, -1, 0, 0, 0, 0, 1),
+        new TransformMatrix(-1, 0, 0, 0, -1, 0, 0, 0, 1),
+        new TransformMatrix(0, -1, 0, 1, 0, 0, 0, 0, 1)
+    ],[ // red TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0)
+        new TransformMatrix(0, 0, -1, 0, 1, 0, 1, 0, 0),
+        new TransformMatrix(0, 1, 0, 0, 0, 1, 1, 0, 0),
+        new TransformMatrix(0, 0, 1, 0, -1, 0, 1, 0, 0),
+        new TransformMatrix(0, -1, 0, 0, 0, -1, 1, 0, 0)
+    ],[ // green TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1)
+        new TransformMatrix(1, 0, 0, 0, 1, 0, 0, 0, 1),
+        new TransformMatrix(0, -1, 0, 1, 0, 0, 0, 0, 1),
+        new TransformMatrix(-1, 0, 0, 0, -1, 0, 0, 0, 1),
+        new TransformMatrix(0, 1, 0, -1, 0, 0, 0, 0, 1)
+    ],[ // white TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0)
+        new TransformMatrix(1, 0, 0, 0, 0, -1, 0, 1, 0),
+        new TransformMatrix(0, 0, -1, -1, 0, 0, 0, 1, 0),
+        new TransformMatrix(-1, 0, 0, 0, 0, 1, 0, 1, 0),
+        new TransformMatrix(0, 0, 1, 1, 0, 0, 0, 1, 0)
+    ]
+];
 
 class cubecorners {
-    #perms;
-    #orients;
-	constructor(corner0perm, corner0orient, corner1perm, corner1orient,
-			corner2perm, corner2orient, corner3perm, corner3orient,
-			corner4perm, corner4orient, corner5perm, corner5orient,
-			corner6perm, corner6orient, corner7perm, corner7orient)
+    #cperms;
+    #corients;
+	constructor(corner0perm = 0, corner0orient = 0, corner1perm = 0, corner1orient = 0,
+			corner2perm = 0, corner2orient = 0, corner3perm = 0, corner3orient = 0,
+			corner4perm = 0, corner4orient = 0, corner5perm = 0, corner5orient = 0,
+			corner6perm = 0, corner6orient = 0, corner7perm = 0, corner7orient = 0)
     {
-        if( corner0orient instanceof cubecorner_orients ) {
-            this.#perms = new cubecorner_perms(corner0perm);
-            this.#orients = new cubecorner_orients(corner0orient);
-        }else{
-            this.#perms = new cubecorner_perms(corner0perm, corner1perm, corner2perm,
-                corner3perm, corner4perm, corner5perm, corner6perm, corner7perm);
-	        this.#orients = new cubecorner_orients(corner0orient, corner1orient, corner2orient,
-			corner3orient, corner4orient, corner5orient, corner6orient, corner7orient);
-        }
+        this.#cperms = corner0perm | corner1perm << 3 | corner2perm << 6 |
+            corner3perm << 9 | corner4perm << 12 | corner5perm << 15 |
+            corner6perm << 18 | corner7perm << 21;
+        this.#corients = corner0orient | corner1orient << 2 | corner2orient << 4 |
+            corner3orient << 6 | corner4orient << 8 | corner5orient << 10 |
+            corner6orient << 12 | corner7orient << 14;
     }
 
-	getPermAt(idx) { return this.#perms.getAt(idx); }
-	setPermAt(idx, perm) { this.#perms.setAt(idx, perm); }
-	getOrientAt(idx) { return this.#orients.getAt(idx); }
-	setOrientAt(idx, orient) { this.#orients.setAt(idx, orient); }
-	getPerms() { return this.#perms; }
-	getOrients() { return this.#orients; }
-	setOrients(orts) { this.#orients.set(orts); }
-	equals(cc) {
-		return this.#perms.equals(cc.#perms) && this.#orients.equals(cc.#orients);
+	getPermAt(idx) { return this.#cperms >>> 3*idx & 7; }
+	getOrientAt(idx) { return this.#corients >> 2*idx & 3; }
+	setPermAt(idx, perm) {
+        this.#cperms &= ~(7 << 3*idx);
+        this.#cperms |= perm << 3*idx;
 	}
-	isLessThan(cc) {
-		return this.#perms.isLessThan(cc.#perms) || this.#perms.equals(cc.#perms) && this.#orients.isLessThan(cc.#orients);
+	setOrientAt(idx, orient) {
+		this.#corients &= ~(3 << 2*idx);
+		this.#corients |= orient << 2*idx;
+	}
+
+    static compose(cc1, cc2) {
+        let res = new cubecorners();
+        for(let i = 0; i < 8; ++i) {
+            let corner2perm = cc2.#cperms >> 3 * i & 7;
+            let corner2orient = cc2.#corients >> 2 * i & 3;
+            let corner1perm = cc1.#cperms >> 3 * corner2perm & 7;
+            let corner1orient = cc1.#corients >> 2 * corner2perm & 3;
+            res.#cperms |= corner1perm << 3*i;
+            res.#corients |= (corner1orient+corner2orient)%3 << 2*i;
+        }
+        return res;
+    }
+
+	getPerms() { return this.#cperms; }
+	getOrients() { return this.#corients; }
+	equals(cc) {
+		return this.#cperms == cc.#cperms && this.#corients == cc.#corients;
 	}
 }
 
@@ -265,88 +387,120 @@ class cubeedges {
         return res;
     }
 
-    static transform(ce, idx) {
-        let cetrans = ctransformed[idx].ce;
-        let cetransRev = ctransformed[transformReverse(idx)].ce;
-        let res = new cubeedges();
-        for(let i = 0n; i < 12n; ++i) {
-            let ctrRevItem = cetransRev.#edges >> 5n * i;
-            let ctrRevPerm = ctrRevItem & 0xfn;
-            let ceItem = ce.#edges >> 5n * ctrRevPerm;
-            let cePerm = ceItem & 0xfn;
-            let ctransItem = cetrans.#edges >> 5n * cePerm & 0x1fn;
-            let orient = (ceItem ^ ctrRevItem) & 0x10n;
-            res.#edges |= (ctransItem ^ orient) << 5n*i;
-        }
-        return res;
-    }
-
 	edgeN(idx) { return Number(this.#edges >> BigInt(5 * idx) & 0xfn); }
 	edgeR(idx) { return Number(this.#edges >> BigInt(5*idx+4) & 1n); }
 	equals(ce) { return this.#edges == ce.#edges; }
-	isLessThan(ce) { return this.#edges < ce.#edges; }
     get() { return this.#edges; }
 };
+
+class cubemiddles {
+    #quarterturns;
+
+    constructor(mid0 = 0, mid1 = 0, mid2 = 0, mid3 = 0, mid4 = 0, mid5 = 0) {
+        this.#quarterturns = mid0 | mid1 << 2 | mid2 << 4 |
+            mid3 << 6 | mid4 << 8 | mid5 << 10;
+    }
+
+    getAt(idx) { return this.#quarterturns >> 2 * idx & 3; }
+    setAt(idx, qturn) {
+		this.#quarterturns &= ~(3 << 2*idx);
+		this.#quarterturns |= qturn << 2*idx;
+    }
+
+    static compose(cm1, cm2) {
+        let res = new cubemiddles();
+        for(let i = 0; i < 6; ++i) {
+            let cm1mid = cm1.#quarterturns >> 2 * i & 3;
+            let cm2mid = cm2.#quarterturns >> 2 * i & 3;
+            res.#quarterturns |= ((cm1mid + cm2mid) % 4) << 2*i;
+        }
+        return res;
+    }
+}
 
 class cube {
 	/*cubecorners*/ cc;
 	/*cubeedges*/ ce;
+    /*cubemiddles*/ cm;
 
-    constructor(cc, ce) {
-        if( cc == undefined )
-            cc = new cubecorners();
-        if( ce == undefined )
-            ce = new cubeedges();
+    constructor(cc = new cubecorners(), ce = new cubeedges(),
+        cm = new cubemiddles())
+    {
         this.cc = cc;
         this.ce = ce;
+        this.cm = cm;
     }
 
-    equals(c) { 
+    static compose(c1, c2) {
+        return new cube(
+            cubecorners.compose(c1.cc, c2.cc),
+            cubeedges.compose(c1.ce, c2.ce),
+            cubemiddles.compose(c1.cm, c2.cm)
+        );
+    }
+
+    equals(c) {
         return this.cc.equals(c.cc) && this.ce.equals(c.ce);
     }
 
-    isLessThan(c) { 
-        return this.cc.isLessThan(c.cc) || this.cc.equals(c.cc) && this.ce.isLessThan(c.ce);
+    static fromScrambleStr(s) {
+        const rotateMapFromExtFmt = new Map([
+            [ 'L1', ORANGECW ],
+            [ 'L2', ORANGE180],
+            [ 'L3', ORANGECCW],
+            [ 'R1', REDCW    ],
+            [ 'R2', RED180   ],
+            [ 'R3', REDCCW   ],
+            [ 'U1', YELLOWCW ],
+            [ 'U2', YELLOW180],
+            [ 'U3', YELLOWCCW],
+            [ 'D1', WHITECW  ],
+            [ 'D2', WHITE180 ],
+            [ 'D3', WHITECCW ],
+            [ 'B1', GREENCW  ],
+            [ 'B2', GREEN180 ],
+            [ 'B3', GREENCCW ],
+            [ 'F1', BLUECW   ],
+            [ 'F2', BLUE180  ],
+            [ 'F3', BLUECCW  ],
+        ]);
+
+        let rescube = csolved;
+        for(let i = 0; i+1 < s.length; i+=2) {
+            let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
+            if( mappedVal != undefined )
+                rescube = cube.compose(rescube, crotated[mappedVal])
+            else
+                dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
+        }
+        return rescube;
     }
+
+    applyToCubeImg() {
+        let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
+        let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
+        let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
+        for(let i = 0; i < 8; ++i) {
+            let cno = this.cc.getPermAt(i);
+            let squaremx = cornersmx[i][this.cc.getOrientAt(i)];
+            corners[cno].style.transform = `matrix3d(${squaremx.toMatrix3dParam()})`;
+        }
+
+        for(let i = 0; i < 12; ++i) {
+            let eno = this.ce.edgeN(i);
+            let squaremx = edgesmx[i][this.ce.edgeR(i)];
+            edges[eno].style.transform = `matrix3d(${squaremx.toMatrix3dParam()})`;
+        }
+        for(let i = 0; i < 6; ++i) {
+            let squaremx = middlesmx[i][this.cm.getAt(i)];
+            wcolors[i].style.transform = `matrix3d(${squaremx.toMatrix3dParam()})`;
+        }
+    }
+
 };
 
-
-//           ___________
-//           | YELLOW  |
-//           | 4  8  5 |
-//           | 4     5 |
-//           | 2  3  3 |
-//  _________|_________|_________ _________
-// |  ORANGE |   BLUE  |   RED   |  GREEN  |
-// | 4  4  0 | 0  0  1 | 1  5  5 | 5  8  4 |
-// | 9     1 | 1     2 | 1    10 | 10    9 |
-// | 6  6  2 | 2  3  3 | 3  7  7 | 7 11  6 |
-// |_________|_________|_________|_________|
-//           |  WHITE  |
-//           | 2  3  3 |
-//           | 6     7 |
-//           | 6 11  7 |
-//           |_________|
-//
-// orientation 0:
-//           ___________
-//           | YELLOW  |
-//           |         |
-//           | e     e |
-//           |         |
-//  _________|_________|_________ _________
-// |  ORANGE |   BLUE  |   RED   |  GREEN  |
-// |         | c  e  c |         | c  e  c |
-// | e     e |         | e     e |         |
-// |         | c  e  c |         | c  e  c |
-// |_________|_________|_________|_________|
-//           |  WHITE  |
-//           |         |
-//           | e     e |
-//           |         |
-//           |_________|
-
-const csolved = new cube(new cubecorners(
+const csolved = new cube(
+    new cubecorners(
 		0, 0,  1, 0,
 		2, 0,  3, 0,
 		4, 0,  5, 0,
@@ -365,8 +519,631 @@ const csolved = new cube(new cubecorners(
 		9, 0,
 		10, 0,
 		11, 0
-	)
+	),
+    new cubemiddles(
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    )
 );
+
+const crotated = [
+	new cube( // ORANGECW
+		new cubecorners(
+			4, 1,
+			1, 0,
+			0, 2,
+			3, 0,
+			6, 2,
+			5, 0,
+			2, 1,
+			7, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 4, 1,
+			 2, 0,
+			 3, 0,
+			 9, 1,
+			 5, 0,
+			 1, 1,
+			 7, 0,
+			 8, 0,
+			 6, 1,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+        )
+    ),
+    new cube( // ORANGE180
+		new cubecorners(
+			6, 0,
+			1, 0,
+			4, 0,
+			3, 0,
+			2, 0,
+			5, 0,
+			0, 0,
+			7, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 9, 0,
+			 2, 0,
+			 3, 0,
+			 6, 0,
+			 5, 0,
+			 4, 0,
+			 7, 0,
+			 8, 0,
+			 1, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            2,
+            0,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// ORANGECCW
+		new cubecorners(
+			2, 1,
+			1, 0,
+			6, 2,
+			3, 0,
+			0, 2,
+			5, 0,
+			4, 1,
+			7, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 6, 1,
+			 2, 0,
+			 3, 0,
+			 1, 1,
+			 5, 0,
+			 9, 1,
+			 7, 0,
+			 8, 0,
+			 4, 1,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            3,
+            0,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// REDCW
+		new cubecorners(
+			0, 0,
+			3, 2,
+			2, 0,
+			7, 1,
+			4, 0,
+			1, 1,
+			6, 0,
+			5, 2
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 7, 1,
+			 3, 0,
+			 4, 0,
+			 2, 1,
+			 6, 0,
+			10, 1,
+			 8, 0,
+			 9, 0,
+			 5, 1,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            1,
+            0,
+            0
+		)
+    ),
+    new cube(// RED180
+		new cubecorners(
+			0, 0,
+			7, 0,
+			2, 0,
+			5, 0,
+			4, 0,
+			3, 0,
+			6, 0,
+			1, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			10, 0,
+			 3, 0,
+			 4, 0,
+			 7, 0,
+			 6, 0,
+			 5, 0,
+			 8, 0,
+			 9, 0,
+			 2, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            2,
+            0,
+            0
+		)
+    ),
+    new cube(// REDCCW
+		new cubecorners(
+			0, 0,
+			5, 2,
+			2, 0,
+			1, 1,
+			4, 0,
+			7, 1,
+			6, 0,
+			3, 2
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 5, 1,
+			 3, 0,
+			 4, 0,
+			10, 1,
+			 6, 0,
+			 2, 1,
+			 8, 0,
+			 9, 0,
+			 7, 1,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            3,
+            0,
+            0
+		)
+    ),
+    new cube(// YELLOWCW
+		new cubecorners(
+			1, 2,
+			5, 1,
+			2, 0,
+			3, 0,
+			0, 1,
+			4, 2,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 5, 1,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 0, 1,
+			 8, 1,
+			 6, 0,
+			 7, 0,
+			 4, 1,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            1,
+            0,
+            0,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// YELLOW180
+		new cubecorners(
+			5, 0,
+			4, 0,
+			2, 0,
+			3, 0,
+			1, 0,
+			0, 0,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 8, 0,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 5, 0,
+			 4, 0,
+			 6, 0,
+			 7, 0,
+			 0, 0,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            2,
+            0,
+            0,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// YELLOWCCW
+		new cubecorners(
+			4, 2,
+			0, 1,
+			2, 0,
+			3, 0,
+			5, 1,
+			1, 2,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 4, 1,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 8, 1,
+			 0, 1,
+			 6, 0,
+			 7, 0,
+			 5, 1,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            3,
+            0,
+            0,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// WHITECW
+		new cubecorners(
+			0, 0,
+			1, 0,
+			6, 1,
+			2, 2,
+			4, 0,
+			5, 0,
+			7, 2,
+			3, 1
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			 6, 1,
+			 4, 0,
+			 5, 0,
+			11, 1,
+			 3, 1,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			 7, 1
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            0,
+            1
+		)
+    ),
+    new cube(// WHITE180
+		new cubecorners(
+			0, 0,
+			1, 0,
+			7, 0,
+			6, 0,
+			4, 0,
+			5, 0,
+			3, 0,
+			2, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			11, 0,
+			 4, 0,
+			 5, 0,
+			 7, 0,
+			 6, 0,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			 3, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            0,
+            2
+		)
+    ),
+    new cube(// WHITECCW
+		new cubecorners(
+			0, 0,
+			1, 0,
+			3, 1,
+			7, 2,
+			4, 0,
+			5, 0,
+			2, 2,
+			6, 1
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			 7, 1,
+			 4, 0,
+			 5, 0,
+			 3, 1,
+			11, 1,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			 6, 1
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            0,
+            3
+		)
+    ),
+    new cube(// GREENCW
+		new cubecorners(
+			0, 0,
+			1, 0,
+			2, 0,
+			3, 0,
+			5, 0,
+			7, 0,
+			4, 0,
+			6, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			10, 1,
+			 8, 1,
+			11, 1,
+			 9, 1
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            1,
+            0
+		)
+    ),
+    new cube(// GREEN180
+		new cubecorners(
+			0, 0,
+			1, 0,
+			2, 0,
+			3, 0,
+			7, 0,
+			6, 0,
+			5, 0,
+			4, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			11, 0,
+			10, 0,
+			 9, 0,
+			 8, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            2,
+            0
+		)
+    ),
+    new cube(// GREENCCW
+		new cubecorners(
+			0, 0,
+			1, 0,
+			2, 0,
+			3, 0,
+			6, 0,
+			4, 0,
+			7, 0,
+			5, 0
+		),
+		new cubeedges(
+			 0, 0,
+			 1, 0,
+			 2, 0,
+			 3, 0,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			 9, 1,
+			11, 1,
+			 8, 1,
+			10, 1
+		),
+        new cubemiddles(
+            0,
+            0,
+            0,
+            0,
+            3,
+            0
+		)
+    ),
+    new cube(// BLUECW
+		new cubecorners(
+			2, 0,
+			0, 0,
+			3, 0,
+			1, 0,
+			4, 0,
+			5, 0,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 1, 1,
+			 3, 1,
+			 0, 1,
+			 2, 1,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            1,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// BLUE180
+		new cubecorners(
+			3, 0,
+			2, 0,
+			1, 0,
+			0, 0,
+			4, 0,
+			5, 0,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 3, 0,
+			 2, 0,
+			 1, 0,
+			 0, 0,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            2,
+            0,
+            0,
+            0
+		)
+    ),
+    new cube(// BLUECCW
+		new cubecorners(
+			1, 0,
+			3, 0,
+			0, 0,
+			2, 0,
+			4, 0,
+			5, 0,
+			6, 0,
+			7, 0
+		),
+		new cubeedges(
+			 2, 1,
+			 0, 1,
+			 3, 1,
+			 1, 1,
+			 4, 0,
+			 5, 0,
+			 6, 0,
+			 7, 0,
+			 8, 0,
+			 9, 0,
+			10, 0,
+			11, 0
+		),
+        new cubemiddles(
+            0,
+            0,
+            3,
+            0,
+            0,
+            0
+		)
+	)
+];
 
 function isCubeSolvable(c)
 {
@@ -422,20 +1199,6 @@ function isCubeSolvable(c)
     return true;
 }
 
-/*cubecorner_perms*/ function cornersIdxToPerm(idx) {
-	let unused = 0x76543210;
-	let ccp = new cubecorner_perms();
-
-	for(let cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
-		let p = idx % cornerIdx * 4;
-		ccp.setAt(8-cornerIdx, unused >> p & 0xf);
-		let m = (1 << p) - 1;
-		unused = unused & m | unused >> 4 & ~m;
-		idx = Math.floor(idx/cornerIdx);
-	}
-	return ccp;
-}
-
 /*
 struct elemLoc {
 	int wall;
@@ -444,7 +1207,7 @@ struct elemLoc {
 };
 */
 
-function cubeFromColorsOnWalls(text)
+function cubeFromColorsOnSquares(text)
 {
 	const /*elemLoc*/ cornerLocMap = [
 		[ { wall: 2, row: 0, col: 0 }, { wall: 1, row: 0, col: 2 }, { wall: 0, row: 2, col: 0 } ],
@@ -625,6 +1388,17 @@ function cubeFromColorsOnWalls(text)
         return null;
 	return c;
 }
+
+function cubeFromString(s) {
+    let rescube;
+    if( /[Yy]/.test(s) ) {
+        rescube = cubeFromColorsOnSquares(s);
+    }else{
+        rescube = cube.fromScrambleStr(s);
+    }
+    return rescube;
+}
+
 
 function cubeToParamText(c)
 {
@@ -851,577 +1625,25 @@ async function searchMoves(c) {
     startTime = undefined;
 }
 
-class TransformMatrix {
-    #x;
-    #y;
-    #z;
-    constructor(x1, x2, x3, y1, y2, y3, z1, z2, z3) {
-        this.#x = [x1, x2, x3];
-        this.#y = [y1, y2, y3];
-        this.#z = [z1, z2, z3];
-    }
-    static multiply(a, b) {
-        return new TransformMatrix(
-            a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0],
-            a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1],
-            a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2],
-            a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0],
-            a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1],
-            a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2],
-            a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0],
-            a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1],
-            a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]);
-    }
-
-    static multiplyRnd(a, b) {
-        return new TransformMatrix(
-            Math.round(a.#x[0] * b.#x[0] + a.#x[1] * b.#y[0] + a.#x[2] * b.#z[0]),
-            Math.round(a.#x[0] * b.#x[1] + a.#x[1] * b.#y[1] + a.#x[2] * b.#z[1]),
-            Math.round(a.#x[0] * b.#x[2] + a.#x[1] * b.#y[2] + a.#x[2] * b.#z[2]),
-            Math.round(a.#y[0] * b.#x[0] + a.#y[1] * b.#y[0] + a.#y[2] * b.#z[0]),
-            Math.round(a.#y[0] * b.#x[1] + a.#y[1] * b.#y[1] + a.#y[2] * b.#z[1]),
-            Math.round(a.#y[0] * b.#x[2] + a.#y[1] * b.#y[2] + a.#y[2] * b.#z[2]),
-            Math.round(a.#z[0] * b.#x[0] + a.#z[1] * b.#y[0] + a.#z[2] * b.#z[0]),
-            Math.round(a.#z[0] * b.#x[1] + a.#z[1] * b.#y[1] + a.#z[2] * b.#z[1]),
-            Math.round(a.#z[0] * b.#x[2] + a.#z[1] * b.#y[2] + a.#z[2] * b.#z[2]));
-    }
-
-    multiplyWith(b) { return TransformMatrix.multiply(this, b); }
-    multiplyRndWith(b) { return TransformMatrix.multiplyRnd(this, b); }
-    equals(b) {
-        return this.#x[0] == b.#x[0] && this.#x[1] == b.#x[1] && this.#x[2] == b.#x[2] && 
-            this.#y[0] == b.#y[0] && this.#y[1] == b.#y[1] && this.#y[2] == b.#y[2] && 
-            this.#z[0] == b.#z[0] && this.#z[1] == b.#z[1] && this.#z[2] == b.#z[2];
-    }
-
-    isIn(searchArr) {
-        for(let item of searchArr) {
-            if( item.equals(this) )
-                return true;
-        }
-        return false;
-    }
-
-    toMatrix3dParam() {
-        return this.#x.join() + ',0,' + this.#y.join() + ',0,' +
-            this.#z.join() + ',0,0,0,0,1';
-    }
-}
- 
 let cubeimgmx = new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1);
 
-// Maps corner permutation + orientation to a transformation matrix
-let cornersmx = [
-    [
-        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-    ],[
-        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-    ],[
-        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    ],[
-        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-    ],[
-        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    ],[
-        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-    ],[
-        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-    ],[
-        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    ]
-];
-
-// Maps edge permutation + orientation to a transformation matrix
-let edgesmx = [
-    [
-        new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-        new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-    ],[
-        new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-        new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-    ],[
-        new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-        new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-    ],[
-        new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-        new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    ],[
-        new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-        new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-    ],[
-        new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-        new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-    ],[
-        new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-        new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-    ],[
-        new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-        new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-    ],[
-        new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-        new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    ],[
-        new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-        new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-    ],[
-        new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-        new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    ],[
-        new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-        new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    ]
-];
-
-// possible matrix values for corners on blue wall
-let cbluemx = [
-    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-
-    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-
-    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-];
-
-// possible matrix values for edges on blue wall
-let ebluemx = [
-    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-
-    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-
-    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-
-    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0)
-];
-
-// possible matrix values for corners on red wall
-let credmx = [
-    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-];
-
-// possible matrix values for edges on red wall
-let eredmx = [
-    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-];
-
-// possible matrix values for corners on yellow wall
-let cyellowmx = [
-    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-];
-
-// possible matrix values for edges on yellow wall
-let eyellowmx = [
-    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, 0, -1,  0, -1, 0),
-    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-];
-
-// possible matrix values for corners on green wall
-let cgreenmx = [
-    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  -1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-];
-
-// possible matrix values for edges on green wall
-let egreenmx = [
-    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1),
-    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 1, 0,  0, 0, 1,  1, 0, 0),
-];
-
-// possible matrix values for corners on white wall
-let cwhitemx = [
-    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, -1,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  -1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-];
-
-// possible matrix values for edges on white wall
-let ewhitemx = [
-    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  -1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, 0, 1,  0, -1, 0,  1, 0, 0),
-    new TransformMatrix(-1, 0, 0,  0, 0, 1,  0, 1, 0),
-    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-];
-
-// possible matrix values for corners on orange wall
-let corangemx = [
-    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1),
-    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-];
-
-// possible matrix values for edges on orange wall
-let eorangemx = [
-    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0),
-    new TransformMatrix(0, 0, -1,  1, 0, 0,  0, -1, 0),
-    new TransformMatrix(0, 1, 0,  0, 0, -1,  -1, 0, 0),
-    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1),
-    new TransformMatrix(0, 0, -1,  0, -1, 0,  -1, 0, 0),
-    new TransformMatrix(0, 0, 1,  1, 0, 0,  0, 1, 0),
-    new TransformMatrix(0, -1, 0,  0, 0, 1,  -1, 0, 0),
-    new TransformMatrix(0, 1, 0,  1, 0, 0,  0, 0, -1),
-];
-
-// The cube in corner/edge transformation matrixes format
-class CubeTrMatrix {
-    #corners;
-    #edges;
-    #middles;
-
-    static solved;
-    static {
-        CubeTrMatrix.solved = new CubeTrMatrix();
-        CubeTrMatrix.solved.#corners = [
-            cornersmx[0][0], cornersmx[1][0], cornersmx[2][0], cornersmx[3][0],
-            cornersmx[4][0], cornersmx[5][0], cornersmx[6][0], cornersmx[7][0]
-        ];
-        CubeTrMatrix.solved.#edges = [
-            edgesmx[0][0], edgesmx[1][0], edgesmx[2][0], edgesmx[3][0],
-            edgesmx[4][0], edgesmx[5][0], edgesmx[6][0], edgesmx[7][0],
-            edgesmx[8][0], edgesmx[9][0], edgesmx[10][0], edgesmx[11][0]
-        ];
-        CubeTrMatrix.solved.#middles = [
-            new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), // yellow
-            new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), // orange
-            new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1), // blue
-            new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), // red
-            new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1), // green
-            new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), // white
-        ];
-    }
-
-    equals(cubemx2, includingMiddle) {
-        for(let i = 0; i < 8; ++i)
-            if( !this.#corners[i].equals(cubemx2.#corners[i] ) )
-                return false;
-        for(let i = 0; i < 12; ++i)
-            if( !this.#edges[i].equals(cubemx2.#edges[i] ) )
-                return false;
-        if( includingMiddle ) {
-            for(let i = 0; i < 6; ++i)
-                if( !this.#middles[i].equals(cubemx2.#middles[i] ) )
-                    return false;
-        }
-        return true;
-    }
-
-    static fromCube(c, cubemxmid) {
-        let rescubemx = new CubeTrMatrix();
-        rescubemx.#corners = [];
-        for(let i = 0; i < 8; ++i) {
-            let cno = c.cc.getPermAt(i);
-            rescubemx.#corners[cno] = cornersmx[i][c.cc.getOrientAt(i)];
-        }
-        rescubemx.#edges = [];
-        for(let i = 0; i < 12; ++i) {
-            let eno = c.ce.edgeN(i);
-            rescubemx.#edges[eno] = edgesmx[i][c.ce.edgeR(i)];
-        }
-        rescubemx.#middles = cubemxmid.#middles;
-        return rescubemx;
-    }
-
-    toCube() {
-        let cc = new cubecorners();
-        for(let i = 0; i < 8; ++i) {
-            for(let cno = 0; cno < 8; ++cno) {
-                for(let orient = 0; orient < 3; ++orient) {
-                    if( this.#corners[cno].equals(cornersmx[i][orient]) ) {
-                        cc.setPermAt(i, cno);
-                        cc.setOrientAt(i, orient);
-                    }
-                }
-            }
-        }
-        let ce = new cubeedges();
-        for(let i = 0; i < 12; ++i) {
-            for(let eno = 0; eno < 12; ++eno) {
-                for(let orient = 0; orient < 2; ++orient) {
-                    if( this.#edges[eno].equals(edgesmx[i][orient]) ) {
-                        ce.set(i, eno, orient);
-                    }
-                }
-            }
-        }
-        return new cube(cc, ce);
-    }
-
-    static fromScrambleStr(s) {
-        const rotateMapFromExtFmt = new Map([
-            [ 'L1', ORANGECW ],
-            [ 'L2', ORANGE180],
-            [ 'L3', ORANGECCW],
-            [ 'R1', REDCW    ],
-            [ 'R2', RED180   ],
-            [ 'R3', REDCCW   ],
-            [ 'U1', YELLOWCW ],
-            [ 'U2', YELLOW180],
-            [ 'U3', YELLOWCCW],
-            [ 'D1', WHITECW  ],
-            [ 'D2', WHITE180 ],
-            [ 'D3', WHITECCW ],
-            [ 'B1', GREENCW  ],
-            [ 'B2', GREEN180 ],
-            [ 'B3', GREENCCW ],
-            [ 'F1', BLUECW   ],
-            [ 'F2', BLUE180  ],
-            [ 'F3', BLUECCW  ],
-        ]);
-
-        let rescubemx = CubeTrMatrix.solved;
-        for(let i = 0; i+1 < s.length; i+=2) {
-            let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
-            if( mappedVal != undefined )
-                rescubemx = rescubemx.rotateWall(mappedVal)
-            else
-                dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
-        }
-        return rescubemx;
-    }
-
-    static fromString(s) {
-        let rescubemx;
-        if( /[Yy]/.test(s) ) {
-            let c = cubeFromColorsOnWalls(s);
-            if( c )
-                rescubemx = CubeTrMatrix.fromCube(c, curcubemx);
-        }else{
-            rescubemx = CubeTrMatrix.fromScrambleStr(s);
-        }
-        return rescubemx;
-    }
-
-    #rotateWallInt(ccolormx, ecolormx, colornum, transform, wcolor) {
-        let rescubemx = new CubeTrMatrix();
-        rescubemx.#corners = [];
-        for(let i = 0; i < 8; ++i) {
-            if( this.#corners[i].isIn(ccolormx) )
-                rescubemx.#corners[i] = this.#corners[i].multiplyRndWith(transform);
-            else
-                rescubemx.#corners[i] = this.#corners[i];
-        }
-        rescubemx.#edges = [];
-        for(let i = 0; i < 12; ++i) {
-            if( this.#edges[i].isIn(ecolormx) )
-                rescubemx.#edges[i] = this.#edges[i].multiplyRndWith(transform);
-            else
-                rescubemx.#edges[i] = this.#edges[i];
-        }
-        rescubemx.#middles = [];
-        for(let i = 0; i < 6; ++i)
-            rescubemx.#middles[i] = this.#middles[i];
-        rescubemx.#middles[colornum] = this.#middles[colornum].multiplyRndWith(transform);
-        return rescubemx;
-    }
-
-    rotateWall(rotateDir) {
-        let rescubemx = this;
-
-        switch( rotateDir ) {
-            case ORANGECW:
-                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
-                    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), worange);
-                break;
-            case ORANGE180:
-                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
-                    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1), worange);
-                break;
-            case ORANGECCW:
-                rescubemx = this.#rotateWallInt(corangemx, eorangemx, 1,
-                    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), worange);
-                break;
-            case REDCW:
-                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
-                    new TransformMatrix(1, 0, 0,  0, 0, 1,  0, -1, 0), wred);
-                break;
-            case RED180:
-                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
-                    new TransformMatrix(1, 0, 0,  0, -1, 0,  0, 0, -1), wred);
-                break;
-            case REDCCW:
-                rescubemx = this.#rotateWallInt(credmx, eredmx, 3,
-                    new TransformMatrix(1, 0, 0,  0, 0, -1,  0, 1, 0), wred);
-                break;
-            case YELLOWCW:
-                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
-                    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), wyellow);
-                break;
-            case YELLOW180:
-                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
-                    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1), wyellow);
-                break;
-            case YELLOWCCW:
-                rescubemx = this.#rotateWallInt(cyellowmx, eyellowmx, 0,
-                    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), wyellow);
-                break;
-            case WHITECW:
-                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
-                    new TransformMatrix(0, 0, -1,  0, 1, 0,  1, 0, 0), wwhite);
-                break;
-            case WHITE180:
-                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
-                    new TransformMatrix(-1, 0, 0,  0, 1, 0,  0, 0, -1), wwhite);
-                break;
-            case WHITECCW:
-                rescubemx = this.#rotateWallInt(cwhitemx, ewhitemx, 5,
-                    new TransformMatrix(0, 0, 1,  0, 1, 0,  -1, 0, 0), wwhite);
-                break;
-            case GREENCW:
-                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
-                    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1), wgreen);
-                break;
-            case GREEN180:
-                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
-                    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1), wgreen);
-                break;
-            case GREENCCW:
-                rescubemx = this.#rotateWallInt(cgreenmx, egreenmx, 4,
-                    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1), wgreen);
-                break;
-            case BLUECW:
-                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
-                    new TransformMatrix(0, 1, 0,  -1, 0, 0,  0, 0, 1), wblue);
-                break;
-            case BLUE180:
-                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
-                    new TransformMatrix(-1, 0, 0,  0, -1, 0,  0, 0, 1), wblue);
-                break;
-            case BLUECCW:
-                rescubemx = this.#rotateWallInt(cbluemx, ebluemx, 2,
-                    new TransformMatrix(0, -1, 0,  1, 0, 0,  0, 0, 1), wblue);
-                break;
-        }
-        return rescubemx;
-    }
-
-    applyToCubeImg() {
-        let corners = [ c1, c2, c3, c4, c5, c6, c7, c8 ];
-        let edges = [ e1, e2, e3, e4, e5, e6, e7, e8, e9, ea, eb, ec ];
-        let wcolors = [ wyellow, worange, wblue, wred, wgreen, wwhite ];
-        for(let i = 0; i < 8; ++i)
-            corners[i].style.transform = `matrix3d(${this.#corners[i].toMatrix3dParam()})`;
-        for(let i = 0; i < 12; ++i)
-            edges[i].style.transform = `matrix3d(${this.#edges[i].toMatrix3dParam()})`;
-        for(let i = 0; i < 6; ++i)
-            wcolors[i].style.transform = `matrix3d(${this.#middles[i].toMatrix3dParam()})`;
-    }
-}
-
-let curcubemx = CubeTrMatrix.solved;
+let curcube = csolved;
 
 const STYLEAPPLY_IMMEDIATE = 1;
 const STYLEAPPLY_DEFER = 2;
 
 function rotateCurWall(rotateDir, styleApply) {
     function rotateCurWallInt(rotateDir, styleApply) {
-        curcubemx = curcubemx.rotateWall(rotateDir);
-        if( styleApply === STYLEAPPLY_DEFER )
-            setTimeout(() => curcubemx.applyToCubeImg(), 50);
-        else
-            curcubemx.applyToCubeImg();
+        curcube = cube.compose(curcube, crotated[rotateDir]);
+        if( styleApply === STYLEAPPLY_DEFER ) {
+            let c = curcube;
+            setTimeout(() => c.applyToCubeImg(), 50);
+        }else
+            curcube.applyToCubeImg();
     }
     function rotateCurWallInt180(rotateDirCW) {
         if( styleApply === undefined ) {
-            // minimize split rotation of pieces
+            // minimize split rotations of pieces
             rotateCurWallInt(rotateDirCW, STYLEAPPLY_IMMEDIATE);
             rotateCurWallInt(rotateDirCW, STYLEAPPLY_DEFER);
         }else{
@@ -2022,12 +2244,12 @@ function areCubeColorsFilled() {
     return true;
 }
 
-let cmanipulate = CubeTrMatrix.solved;
+let cmanipulate = csolved;
 
 function enterEditMode() {
-    cmanipulate = curcubemx;
-    curcubemx = CubeTrMatrix.solved;
-    curcubemx.applyToCubeImg();
+    cmanipulate = curcube;
+    curcube = csolved;
+    curcube.applyToCubeImg();
     cubeimg.classList.add('editmode');
     document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = false; });
     document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = true; });
@@ -2046,15 +2268,15 @@ function doReset() {
         ];
         document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
     }else{
-        curcubemx = CubeTrMatrix.solved;
-        curcubemx.applyToCubeImg();
+        curcube = csolved;
+        curcube.applyToCubeImg();
     }
 }
 
 function enterManipulateMode() {
     cubeimg.classList.remove('editmode');
-    curcubemx = cmanipulate;
-    curcubemx.applyToCubeImg();
+    curcube = cmanipulate;
+    curcube.applyToCubeImg();
     document.querySelectorAll('.editmodeonly').forEach( (el) => { el.disabled = true; });
     document.querySelectorAll('.manipmodeonly').forEach( (el) => { el.disabled = false; });
     applybtn.disabled = true;
@@ -2066,15 +2288,15 @@ function applyEdit() {
     let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
     let cc = allowedCornerColors.sampleCubecorners[permParity];
     let ce = allowedEdgeColors.sampleCubeedges[permParity];
-	cmanipulate = CubeTrMatrix.fromCube(new cube(cc, ce), curcubemx);
+	cmanipulate = new cube(cc, ce);
     manipmodebtn.checked = true;
     enterManipulateMode();
 }
 
 function searchSolution() {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
-    let c = curcubemx.toCube();
-    localStorage.setItem('cube', `${c.cc.getPerms().getPermVal()} ${c.cc.getOrients().get()} ${c.ce.get()}`);
+    let c = curcube;
+    localStorage.setItem('cube', `${c.cc.getPerms()} ${c.cc.getOrients()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
     else{
@@ -2097,8 +2319,8 @@ function loadFromFile() {
     }).then(async function ( [fileHandle] ) {
         let file = await fileHandle.getFile();
         let val = await file.text();
-        curcubemx = CubeTrMatrix.fromString(val);
-        curcubemx.applyToCubeImg();
+        curcube = cubeFromString(val);
+        curcube.applyToCubeImg();
     }, function() {});
 }
 
@@ -2115,8 +2337,7 @@ function saveToFile() {
         } ]
     }).then(async function(fileHandle) {
         const fout = await fileHandle.createWritable();
-        let c = curcubemx.toCube();
-        let saveText = cubeToSaveText(c);
+        let saveText = cubeToSaveText(curcube);
         await fout.write(saveText);
         await fout.close();
         localStorage.setItem('fileseq', +fileSeq+1);
@@ -2127,10 +2348,10 @@ function loadFromInput(ev) {
     if( ev.type == 'keydown' && ev.key != 'Enter' )
         return;
     err.textContent = '';
-    let cubemx = CubeTrMatrix.fromString(loadinput.value);
-    if( cubemx ) {
-        curcubemx = cubemx;
-        curcubemx.applyToCubeImg();
+    let c = cubeFromString(loadinput.value);
+    if( c ) {
+        curcube = c;
+        curcube.applyToCubeImg();
     }
 }
 
@@ -2140,8 +2361,11 @@ onload = () => {
         document.querySelector('#cubefile').addEventListener('change', (ev) => {
             let file = ev.target.files[0];
             file.text().then((val) => {
-                curcubemx = CubeTrMatrix.fromString(val);
-                curcubemx.applyToCubeImg();
+                let c = cubeFromString(val);
+                if( c ) {
+                    curcube = c;
+                    curcube.applyToCubeImg();
+                }
             });
         });
     }else{
@@ -2230,7 +2454,7 @@ onload = () => {
     if( crestore ) {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
-        curcubemx = CubeTrMatrix.fromCube(c, curcubemx);
-        curcubemx.applyToCubeImg();
+        curcube = c;
+        curcube.applyToCubeImg();
     }
 }
