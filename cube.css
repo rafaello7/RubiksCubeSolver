@@ -107,8 +107,6 @@ h3 {
 }
 
 .square {
-    border-style: solid;
-    border-width: 1px;
     width: 4em;
     height: 4em;
     position: absolute;
@@ -116,13 +114,18 @@ h3 {
     grid-template-columns: repeat(2, 1fr);
 }
 
-.square:not(:has(> button:not(.cnone) ~ button:not(.cnone))) {
+.square:not(:has(> .csel:not(.cnone) ~ .csel:not(.cnone))) {
     grid-template-columns: 1fr;
 }
 
 .edge > .square, .corner > .square {
     background-image: repeating-linear-gradient(30deg, khaki 0 3px, transparent 3px 6px),
         repeating-linear-gradient(to right, bisque 0 3px, gray 3px 6px);
+}
+
+.csel {
+    border-style: solid;
+    border-width: 1px;
 }
 
 .csq1 {
