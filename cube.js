@@ -1386,6 +1386,7 @@ function cubeFromColorsOnSquares(text)
 }
 
 function cubeFromString(s) {
+    document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
     let rescube;
     if( /[Yy]/.test(s) ) {
         rescube = cubeFromColorsOnSquares(s);
@@ -1624,6 +1625,8 @@ async function searchMoves(c) {
 let cubeimgmx = new TransformMatrix(1, 0, 0,  0, 1, 0,  0, 0, 1);
 
 let curcube = csolved;
+let fixedCornerColors = cubeCornerColors.map((it) => it.slice()); // copy 2D
+let fixedEdgeColors = cubeEdgeColors.map((it) => it.slice());
 
 const STYLEAPPLY_IMMEDIATE = 1;
 const STYLEAPPLY_DEFER = 2;
@@ -1726,16 +1729,6 @@ setInterval(function () {
             moveidxgoal = -1;
     }
 }, 100);
-
-function copy2DArr(arr) {
-    let res = [];
-    for(let i = 0; i < arr.length; ++i)
-        res[i] = arr[i].slice();
-    return res;
-}
-
-let fixedCornerColors = copy2DArr(cubeCornerColors);
-let fixedEdgeColors = copy2DArr(cubeEdgeColors);
 
 class AllowedPerm {
     perm = -1;
@@ -2228,6 +2221,30 @@ function selectColors(ev) {
     applyFixedColorsToImg();
 }
 
+function getDisplayedCube()
+{
+    let allowedCornerColors = getAllowedCornerColors();
+    let allowedEdgeColors = getAllowedEdgeColors();
+    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
+    let cc = allowedCornerColors.sampleCubecorners[permParity];
+    let ce = allowedEdgeColors.sampleCubeedges[permParity];
+	return cube.compose(new cube(cc, ce), curcube);
+}
+
+function displayCube(c) {
+    fixedCornerColors = [[], [], [], [], [], [], [], []];
+    for(let cno = 0; cno < 8; ++cno)
+        for(let cwall = 0; cwall < 3; ++cwall)
+            fixedCornerColors[curcube.cc.getPermAt(cno)][(curcube.cc.getOrientAt(cno)+cwall)%3] =
+                cubeCornerColors[c.cc.getPermAt(cno)][(c.cc.getOrientAt(cno)+cwall)%3];
+    fixedEdgeColors = [[], [], [], [], [], [], [], [], [], [], [], []];
+    for(let eno = 0; eno < 12; ++eno)
+        for(let ewall = 0; ewall < 2; ++ewall)
+            fixedEdgeColors[curcube.ce.edgeN(eno)][(curcube.ce.edgeR(eno)+ewall)%2] =
+                cubeEdgeColors[c.ce.edgeN(eno)][(c.ce.edgeR(eno)+ewall)%2];
+    applyFixedColorsToImg();
+}
+
 function doNew() {
     let isEmpty = true;
     for(let cno = 0; cno < 8 && isEmpty; ++cno)
@@ -2237,10 +2254,7 @@ function doNew() {
         for(let ewall = 0; ewall < 3 && isEmpty; ++ewall)
             isEmpty = fixedCornerColors[eno][ewall] == -1;
     if( isEmpty ) {
-        fixedCornerColors = copy2DArr(cubeCornerColors);
-        fixedEdgeColors = copy2DArr(cubeEdgeColors);
-        curcube = csolved;
-        curcube.applyToCubeImg();
+        displayCube(csolved);
     }else{
         fixedCornerColors = [
             [-1, -1, -1], [-1, -1, -1], [-1, -1, -1], [-1, -1, -1],
@@ -2251,18 +2265,13 @@ function doNew() {
             [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1], [-1, -1]
         ];
         document.querySelectorAll('.csel').forEach( (el) => { el.classList.remove('cnone'); } );
+        applyFixedColorsToImg();
     }
-    applyFixedColorsToImg();
 }
 
 function searchSolution() {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
-    let allowedCornerColors = getAllowedCornerColors();
-    let allowedEdgeColors = getAllowedEdgeColors();
-    let permParity = allowedEdgeColors.permParity & allowedCornerColors.permParity;
-    let cc = allowedCornerColors.sampleCubecorners[permParity];
-    let ce = allowedEdgeColors.sampleCubeedges[permParity];
-	let c = cube.compose(new cube(cc, ce), curcube);
+	let c = getDisplayedCube();
     localStorage.setItem('cube', `${c.cc.getPerms()} ${c.cc.getOrients()} ${c.ce.get()}`);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
@@ -2286,11 +2295,9 @@ function loadFromFile() {
     }).then(async function ( [fileHandle] ) {
         let file = await fileHandle.getFile();
         let val = await file.text();
-        fixedCornerColors = copy2DArr(cubeCornerColors);
-        fixedEdgeColors = copy2DArr(cubeEdgeColors);
-        applyFixedColorsToImg();
-        curcube = cubeFromString(val);
-        curcube.applyToCubeImg();
+        let c = cubeFromString(val);
+        if( c )
+            displayCube(c);
     }, function() {});
 }
 
@@ -2307,11 +2314,20 @@ function saveToFile() {
         } ]
     }).then(async function(fileHandle) {
         const fout = await fileHandle.createWritable();
-        let saveText = cubeToSaveText(curcube);
+        let saveText = cubeToSaveText(getDisplayedCube());
         await fout.write(saveText);
         await fout.close();
         localStorage.setItem('fileseq', +fileSeq+1);
     }, function() {});
+}
+
+function loadFromFile1(ev) {
+    let file = ev.target.files[0];
+    file.text().then((val) => {
+        let c = cubeFromString(val);
+        if( c )
+            displayCube(c);
+    });
 }
 
 function loadFromInput(ev) {
@@ -2319,36 +2335,18 @@ function loadFromInput(ev) {
         return;
     err.textContent = '';
     let c = cubeFromString(loadinput.value);
-    if( c ) {
-        fixedCornerColors = copy2DArr(cubeCornerColors);
-        fixedEdgeColors = copy2DArr(cubeEdgeColors);
-        applyFixedColorsToImg();
-        curcube = c;
-        curcube.applyToCubeImg();
-    }
+    if( c )
+        displayCube(c);
 }
 
 onload = () => {
     if( window['showOpenFilePicker'] == undefined ) {
         loadsavebtns.style.display = 'none';
-        document.querySelector('#cubefile').addEventListener('change', (ev) => {
-            let file = ev.target.files[0];
-            file.text().then((val) => {
-                let c = cubeFromString(val);
-                if( c ) {
-                    fixedCornerColors = copy2DArr(cubeCornerColors);
-                    fixedEdgeColors = copy2DArr(cubeEdgeColors);
-                    applyFixedColorsToImg();
-                    curcube = c;
-                    curcube.applyToCubeImg();
-                }
-            });
-        });
-    }else{
-        loadonlybtn.style.display = 'none';
-        loadfromfilebtn.addEventListener('click', loadFromFile);
-        savetofilebtn.addEventListener('click', saveToFile);
+        loadonlybtn.style.display = 'block';
     }
+    loadfromfilebtn.addEventListener('click', loadFromFile);
+    savetofilebtn.addEventListener('click', saveToFile);
+    cubefile.addEventListener('change', loadFromFile1);
     loadfrominputbtn.addEventListener('click', loadFromInput);
     loadinput.addEventListener('keydown', loadFromInput);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
@@ -2427,7 +2425,6 @@ onload = () => {
     if( crestore ) {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
-        curcube = c;
-        curcube.applyToCubeImg();
+        displayCube(c);
     }
 }

@@ -469,6 +469,10 @@ h3 {
     gap: 1ex;
 }
 
+#loadonlybtn {
+    display: none;
+}
+
 #loadinput {
     width: 52em;
 }
