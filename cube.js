@@ -1864,6 +1864,7 @@ function *cornerPermOnFixedColors(
             fixedCornerColors[filledCount][2] == -1)
         ++filledCount;
     if( filledCount == 8 ) {
+        // constrain to solvable
         let yieldPerm = [];
         let twoOrientPerms = [];
         let unsetPerms = [];
@@ -1886,6 +1887,8 @@ function *cornerPermOnFixedColors(
                 freeCorners.push(cno);
         }
         if( unsetPerms.length == 2 && twoOrientPerms.length == 0 ) {
+            // possible further selection can leave only odd/even permutation
+            // so, yield odd/even permutations separately
             let allowedPerm1 = unsetPerms[0];
             let allowedPerm2 = unsetPerms[1];
             allowedPerm1.orients = allowedPerm2.orients = [ 0, 1, 2 ];
@@ -2024,6 +2027,7 @@ function *edgePermOnFixedColors(
             fixedEdgeColors[filledCount][1] == -1 )
         ++filledCount;
     if( filledCount == 12 ) {
+        // constrain to solvable
         let yieldPerm = [];
         let unsetPerms = [];
         let orientSum = 0;
@@ -2038,6 +2042,8 @@ function *edgePermOnFixedColors(
                 freeEdges.push(eno);
         }
         if( unsetPerms.length == 2 ) {
+            // possible further selection can leave only odd/even permutation
+            // so, yield odd/even permutations separately
             let allowedPerm1 = unsetPerms[0];
             let allowedPerm2 = unsetPerms[1];
             allowedPerm1.orients = allowedPerm2.orients = [ 0, 1 ];
@@ -2176,6 +2182,7 @@ function applyFixedColorsToImg()
         }
     }
     solvebtn.disabled = ! isFilled;
+    savetofilebtn.disabled = ! isFilled;
 }
 
 function selectColors(ev) {
