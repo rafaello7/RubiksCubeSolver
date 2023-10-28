@@ -1746,7 +1746,7 @@ const PERMPARITY_ODD = 1;
 const PERMPARITY_EVEN = 2;
 
 function getPermArrParity(allowedPermArr) {
-    isPermSwapsOdd = false;
+    let isPermSwapsOdd = false;
     let permsScanned = [];
     for(let i = 0; i < allowedPermArr.length; ++i) {
         if( !permsScanned[i] ) {
