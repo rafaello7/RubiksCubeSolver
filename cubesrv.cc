@@ -4103,7 +4103,6 @@ static void processConnection(int fdConn) {
 int main(int argc, char *argv[]) {
     int listenfd, acceptfd, opton = 1;
     struct sockaddr_in addr;
-    std::set<cube> added;
 
     if( argc >= 2 ) {
         const char *s = argv[1];
