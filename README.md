@@ -246,7 +246,7 @@ Or whatever. The sum of rotations modulo 3 must be always 0, counting
 number of all corner orientations is divided by 3.
 
 Similar situation applies to the edges. For edges there are only
-rwo possible rotation, by 0&deg; or 180&deg;. The sum is calculated modulo 2.
+two possible rotations, by 0&deg; and 180&deg;. The sum is calculated modulo 2.
 The number of all edge orientations is divided by 2.
 
 The third reason is permutation parity. What is permutation parity?
@@ -266,10 +266,10 @@ To sort the numbers, we can use the following sequence of the number swaps:
     6 <-> 7     1 2 3 4 5 6 8 7
     7 <-> 8     1 2 3 4 5 6 7 8
 
-In the above sequence we used 6 swaps. We can select different swap sequences,
+The above sequence has 6 swaps. We can select different swap sequences,
 but for the above permutation the number of swaps always will be even.
 Similar, if for some permutation some sequence has odd number of element
-swaps, then all sequences for the permutation have odd length.
+swaps, then all swap sequences for the permutation have odd length.
 
 
 Coming back to the cube: the corner permutations and edge permutations
@@ -343,6 +343,7 @@ spaces have different edges chosen.
 
 The general formula for choice of k elements out of n is:
 
+<p>
 <math display="block">
     <mfrac>
         <mrow>
@@ -361,9 +362,11 @@ The general formula for choice of k elements out of n is:
         </mrow>
     </mfrac>
 </math>
+</p>
 
 For n = 12 and k = 4 we have:
 
+<p>
 <math display="block">
     <mrow>
         <mfrac>
@@ -394,6 +397,7 @@ For n = 12 and k = 4 we have:
         <mn>495</mn>
     </mrow>
 </math>
+</p>
 
 
 
