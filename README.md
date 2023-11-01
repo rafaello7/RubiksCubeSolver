@@ -210,8 +210,8 @@ cube which:
 1. is included in the set
 2. can be reached from the intermediate cube with a few moves
 
-Finally, the steps from both phases are concatenated.
-
 For both phases the program does it repeatedly with more and more moves
 (on both ends), until found.
+
+Finally, the steps from both phases are concatenated.
 
