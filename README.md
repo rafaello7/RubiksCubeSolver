@@ -217,3 +217,183 @@ For both phases the program does it repeatedly with more and more moves
 
 Finally, the steps from both phases are concatenated.
 
+### Calculating The Numbers
+
+To better understand the algorithm, it is imortant to know origin of the
+mentioned values.
+
+The cube consists of 8 corners and 12 edges. Each corner has 3 walls, so it can
+be at any given position in one of 3 orientations. Each edge has 2 walls, so it
+can be in one of 2 orientations. The 8 corners can be in one of 8! (factorial
+of 8) combinations; edges - 12!. Taking all this into account, we get the
+number of combinations:
+
+<p>
+    8! * 3<sup>8</sup> * 12! * 2<sup>12</sup> = 519024039293878272000
+</p>
+
+(about 5.1e20). But the right number is 43252003274489856000, i.e. 12 times less.
+Why the difference? There are 3 reasons.
+
+The first reason is that not all combinations of corner orientations are valid.
+The orientation of 7 corners determine 8th corner orientation. It is
+impossible to have two cubes having all the 8 corners at the same locations,
+with only one corner rotated by 120&deg; or 240&deg;. If one corner is
+rotated by 120&deg; clockwise, then another one must be rotated 120&deg;
+counterclockwise. Or, other two corners must be also rotated by 120&deg;.
+Or whatever. The sum of rotations modulo 3 must be always 0, counting
+1 for 120&deg; rotation and counting 2 for 240&deg; rotation. Hence the
+number of all corner orientations is divided by 3.
+
+Similar situation applies to the edges. For edges there are only
+rwo possible rotation, by 0&deg; or 180&deg;. The sum is calculated modulo 2.
+The number of all edge orientations is divided by 2.
+
+The third reason is permutation parity. What is permutation parity?
+Each permutation can be split into some number of element swaps. For example,
+assume we have the following permutation of numbers in range 1..8:
+
+    2 7 3 8 1 5 4 6
+
+To sort the numbers, we can use the following sequence of the number swaps:
+
+    swap        outcome
+    ----        -------
+    2 <-> 1     1 7 3 8 2 5 4 6
+    2 <-> 7     1 2 3 8 7 5 4 6
+    4 <-> 8     1 2 3 4 7 5 8 6
+    5 <-> 7     1 2 3 4 5 7 8 6
+    6 <-> 7     1 2 3 4 5 6 8 7
+    7 <-> 8     1 2 3 4 5 6 7 8
+
+In the above sequence we used 6 swaps. We can select different swap sequences,
+but for the above permutation the number of swaps always will be even.
+Similar, if for some permutation some sequence has odd number of element
+swaps, then all sequences for the permutation have odd length.
+
+
+Coming back to the cube: the corner permutations and edge permutations
+can be both even and odd, but, if the corner permutation is even, then
+also the edge permutation must be even. If the corner permutation is
+odd, then also the edge permutation must be odd. Hence the above number
+of all combinations is divided by 2.
+
+Summarizing, the number of all combinations is divided by
+
+    3 * 2 * 2 = 12
+
+Another number that appeared above is the space size, 19508428800. This
+is the value calculated as:
+
+    8! * 8! * 4! / 2 = 19508428800
+
+Let's take the blue-green subset, which includes the solved cube.
+
+The first number, 8!, is the number of corner permutations. All the
+corner permutations in the subset are possible. On the other hand
+the corner orientations are determined: the blue and green squares
+always remain on either green or blue wall (i.e. on the walls having
+blue and green squares in the middle). So, the number of possible
+corner orientations is 1.
+
+The second number, also 8!, is the permutation count of the
+edges having blue or green square. There are 8 such edges and any
+permutation of the 8 edges is possible. But the edge orientation is
+determined: the edges, like corners, have
+also blue and green squares always on blue and green walls.
+
+The third number, 4!, is the number of permutations of the remaining
+4 edges. The edge orientations also cannot be changed: on
+yellow and white walls are always yellow or white squares of the edges.
+On orange and red walls are always orange or red squares. It is
+impossible to have an orange or red square of the edge on yellow or
+white wall.
+
+The division by 2 in the above equation comes from permutation parity. To have
+the cube solvable, the overall cube permutation parity must be achieved.
+
+The number of spaces, 2217093120, is the division of the all
+cube combinations, 43252003274489856000 by the space
+size, 19508428800. But it can be also calculated in different way:
+
+<p>
+    3<sup>7</sup> * 2<sup>11</sup> * 495 = 2217093120
+</p>
+
+<p>
+The first number, 3<sup>7</sup> (=2187) is the number of possible
+corner orientations. As the combination of corner orientations is determined in
+space, each change in the combination of corner orientations causes transition
+to a different space. As the valid cube has only 3<sup>7</sup> possible
+orientations (orientation of 8th corner is determined by the remaining 7
+corners), hence the number.
+</p>
+
+<p>
+The second number, 2<sup>11</sup> (=2048) is the number of possible
+edge orientations. Like corner orientations, the edge orientations are also
+determined in space.
+</p>
+
+The third number, 495, is the number of possible choices of 4 elements from a set
+of 12. This is the number of choices of the 4 edges which are in the 4 locations
+beyond blue and green walls. In the blue-green space which includes the solved
+cube, they are the edges having only white, yellow, orange or red squares. Other
+spaces have different edges chosen.
+
+The general formula for choice of k elements out of n is:
+
+<math display="block">
+    <mfrac>
+        <mrow>
+            <mi>n</mi>
+            <mo>!</mo>
+        </mrow>
+        <mrow>
+            <mi>k</mi>
+            <mo>!</mo>
+            <mo>(</mo>
+            <mi>n</mi>
+            <mo>-</mo>
+            <mi>k</mi>
+            <mo>)</mo>
+            <mo>!</mo>
+        </mrow>
+    </mfrac>
+</math>
+
+For n = 12 and k = 4 we have:
+
+<math display="block">
+    <mrow>
+        <mfrac>
+            <mrow>
+                <mn>12</mn>
+                <mo>!</mo>
+            </mrow>
+            <mrow>
+                <mn>4</mn>
+                <mo>!</mo>
+                <mo>* </mo>
+                <mn>8</mn>
+                <mo>!</mo>
+            </mrow>
+        </mfrac>
+        <mo>=</mo>
+        <mfrac>
+            <mrow>
+                <mn>479001600</mn>
+            </mrow>
+            <mrow>
+                <mn>24</mn>
+                <mo>* </mo>
+                <mn>40320</mn>
+            </mrow>
+        </mfrac>
+        <mo>=</mo>
+        <mn>495</mn>
+    </mrow>
+</math>
+
+
+
