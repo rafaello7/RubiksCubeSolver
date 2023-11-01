@@ -88,8 +88,8 @@ G1 = &lt;U,D,R2,L2,F2,B2&gt;. That is, the whole space of all
 43252003274489856000 possible shuffle states of the cube is split into a
 cartesian product of 2217093120 x 19508428800 states. It means, there are
 2217093120 spaces (sets of cubes), each space having 19508428800 shuffle
-states.  Within each space, each cube state can be reached to another
-using only move from G1. Also, it is not possible to reach any state from
+states.  Within each space, each cube state can be reached from another
+using only moves from G1. Also, it is not possible to reach any state from
 another space using only moves from the G1 set.
 
 Note that there are three distinct move subsets, so the cartesian products
@@ -167,8 +167,8 @@ _Optimal_ mode. First, it builds a set of cube spaces which can be reached
 from the space with solved cube using a few moves. Next, it attempts to find a
 space which:
 
-    1. is included in the set
-    2. can be reached from the cube to solve with a few moves
+1. is included in the set
+2. can be reached from the cube to solve with a few moves
 
 So, the first phase gives two sets of moves: one from the solved cube,
 another from the cube to solve. Lets use the following names for particular
@@ -190,15 +190,15 @@ Let's use the symbol &#8857; for moves composing. C<sup>-1</sup> for reverse mov
 So, we have:
 </p>
 
-<div>
+<p>
     C<sub>slv1</sub> &#8857; C<sub>space</sub> = C<sub>srch1</sub>
-</div>
+</p>
 
 Let's rearrange this equation:
 
-<div>
+<p>
     C<sub>space</sub> = C<sup>-1</sup><sub>slv1</sub> &#8857; C<sub>srch1</sub>
-</div>
+</p>
 
 <p>
 The C<sub>space</sub> cube is the intermediate cube to solve in second phase.
@@ -207,8 +207,8 @@ be reached from the solved cube using a few moves, then attempts to find a
 cube which:
 </p>
 
-    1. is included in the set
-    2. can be reached from the intermediate cube with a few moves
+1. is included in the set
+2. can be reached from the intermediate cube with a few moves
 
 Finally, the steps from both phases are concatenated.
 
