@@ -197,18 +197,20 @@ So, we have:
 Let's rearrange this equation:
 
 <p>
+    C<sup>-1</sup><sub>slv1</sub> &#8857; C<sub>slv1</sub> &#8857; C<sub>space</sub> = C<sup>-1</sup><sub>slv1</sub> &#8857; C<sub>srch1</sub><br>
     C<sub>space</sub> = C<sup>-1</sup><sub>slv1</sub> &#8857; C<sub>srch1</sub>
 </p>
 
 <p>
 The C<sub>space</sub> cube is the intermediate cube to solve in second phase.
 In this phase the algorithm builds a set of cube states which can
-be reached from the solved cube using a few moves, then attempts to find a
-cube which:
+be reached from the solved cube using a few moves from the G1 subset, then
+attempts to find a cube which:
 </p>
 
 1. is included in the set
-2. can be reached from the intermediate cube with a few moves
+2. can be reached from the intermediate cube using a few moves from the G1
+   subset
 
 For both phases the program does it repeatedly with more and more moves
 (on both ends), until found.
