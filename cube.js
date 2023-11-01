@@ -4,7 +4,7 @@ function dolog(section, text) {
     let el = document.querySelector(`#${section}`);
     if( section == 'depth' )
         document.querySelector('#progress').textContent = '';
-    if( startTime ) {
+    if( startTime && ['depth', 'progress', 'solutions'].includes(section) ) {
         let curTime = Date.now();
         if( curTime - lastTime >= 100 ) {
             let dig1 = curTime - lastTime < 10000 ? 1 : 0;
@@ -14,7 +14,7 @@ function dolog(section, text) {
         if( section == 'depth' )
             lastTime = curTime;
     }
-    if( section == 'progress' ) {
+    if( ['progress', 'movecount'].includes(section) ) {
         el.textContent = text;
     }else{
         let d = document.createElement('div');
@@ -1557,8 +1557,9 @@ async function searchMoves(c) {
         movebuttonini.classList.add('currentmv');
         document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
 
-        let qparam=cubeToParamText(c);
-        let a = await fetch('/?' + qparam);
+        let qparamcube=cubeToParamText(c);
+        let qparammode = solvequick.checked ? 'q' : solvedeep.checked ? 'd' : 'o';
+        let a = await fetch('/?' + qparammode + '=' + qparamcube);
         let b = a.body.getReader();
         const utf8Decoder = new TextDecoder("utf-8");
         let msg = '';
@@ -1573,6 +1574,8 @@ async function searchMoves(c) {
                 msg = msg.substring(lineEnd+1);
                 if( line.startsWith("setup: ") ) {
                     dolog('err', `${line.substring(7)}\n`);
+                }else if( line.startsWith("moves: ") ) {
+                    dolog('movecount', `${line}\n`);
                 }else if( line.startsWith("solution: ") ) {
                     dolog('solutions', `${line}\n`);
                     if( moves.length == 0 ) {
@@ -2399,7 +2402,7 @@ onload = () => {
         cubeimg.style.transform = `matrix3d(${cubeimgmx.toMatrix3dParam()})`;
     });
     movebuttonini.addEventListener('click', () => { moveidxgoal = -1; });
-    for(let i = 0; i < 20; ++i)
+    for(let i = 0; i < 30; ++i)
         document.querySelector(`#movebutton${i}`).addEventListener('click', () => {
             if( i < moves.length ) {
                 moveidxgoal = i;

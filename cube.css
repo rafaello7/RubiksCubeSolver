@@ -39,6 +39,11 @@ h3 {
     align-self: stretch;
 }
 
+#solvemodebuttons {
+    display: flex;
+    flex-direction: column;
+}
+
 #rotatewalls {
     display: grid;
     grid-template-columns: repeat(4, min-content);
@@ -450,7 +455,7 @@ h3 {
     width: 100%;
 }
 
-#err {
+#err,#movecount {
     font-weight: bold;
 }
 
@@ -474,7 +479,7 @@ h3 {
 }
 
 #loadinput {
-    width: 52em;
+    width: 44em;
 }
 
 #loadinput:invalid {

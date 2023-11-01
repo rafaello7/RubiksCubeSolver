@@ -16,6 +16,11 @@
                             <button id='cancelbtn' disabled>Cancel</button>
                             <button id='solvebtn' class='changingcube'>Solve</button>
                         </div>
+                        <div id='solvemodebuttons'>
+                            <label><input type='radio' name='solvemode' id='solveoptimal' checked>Optimal</label>
+                            <label><input type='radio' name='solvemode' id='solvequick'>Quick</label>
+                            <label><input type='radio' name='solvemode' id='solvedeep'>Two Phase Deep</label>
+                        </div>
                         <div id='rotatecube'>
                             <div id='rotatecubetitle'>Rotate Cube&emsp;
                             <input type='number' min='15' max='90' step='15' value='90' id='angle'>&deg;
@@ -500,6 +505,17 @@
                         </div>
                     </div>
                 </div>
+                <p>
+                    <button id='loadfrominputbtn' class='changingcube'>Load:</button>
+                    <input id='loadinput' type='text' class='changingcube'
+                           title='F1B2U3L1... or YOBRGW...' spellcheck='false'
+                           pattern='([FBLRUD][123])*|[YOBRGW]{4}Y[YOBRGW]{8}O[YOBRGW]{8}B[YOBRGW]{8}R[YOBRGW]{8}G[YOBRGW]{8}W[YOBRGW]{4}'>
+                </p>
+                <p id='loadsavebtns'>
+                    <button id='loadfromfilebtn' class='changingcube'>Load From File</button>
+                    <button id='savetofilebtn' class='changingcube'>Save To File</button>
+                </p>
+                <div id='loadonlybtn' class='changingcube'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
             </div>
             <div id='movebuttons'>
                 <button id='movebuttonini' class='currentmv changingcube'>Initial</button>
@@ -523,24 +539,24 @@
                 <button id='movebutton17' class='movebtn changingcube'></button>
                 <button id='movebutton18' class='movebtn changingcube'></button>
                 <button id='movebutton19' class='movebtn changingcube'></button>
+                <button id='movebutton20' class='movebtn changingcube'></button>
+                <button id='movebutton21' class='movebtn changingcube'></button>
+                <button id='movebutton22' class='movebtn changingcube'></button>
+                <button id='movebutton23' class='movebtn changingcube'></button>
+                <button id='movebutton24' class='movebtn changingcube'></button>
+                <button id='movebutton25' class='movebtn changingcube'></button>
+                <button id='movebutton26' class='movebtn changingcube'></button>
+                <button id='movebutton27' class='movebtn changingcube'></button>
+                <button id='movebutton28' class='movebtn changingcube'></button>
+                <button id='movebutton29' class='movebtn changingcube'></button>
             </div>
             <div id='logarea'>
                 <div id='err' class='log'></div>
                 <div id='depth' class='log'></div>
+                <div id='movecount' class='log'></div>
                 <div id='progress' class='log'></div>
                 <p id='solutions' class='log'></p>
             </div>
         </div>
-        <p>
-            <button id='loadfrominputbtn' class='changingcube'>Load:</button>
-            <input id='loadinput' type='text' class='changingcube'
-                   title='F1B2U3L1... or YOBRGW...' spellcheck='false'
-                   pattern='([FBLRUD][123])*|[YOBRGW]{4}Y[YOBRGW]{8}O[YOBRGW]{8}B[YOBRGW]{8}R[YOBRGW]{8}G[YOBRGW]{8}W[YOBRGW]{4}'>
-        </p>
-        <p id='loadsavebtns'>
-            <button id='loadfromfilebtn' class='changingcube'>Load From File</button>
-            <button id='savetofilebtn' class='changingcube'>Save To File</button>
-        </p>
-        <div id='loadonlybtn' class='changingcube'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
 	</body>
 </html>
