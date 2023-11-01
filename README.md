@@ -343,61 +343,15 @@ spaces have different edges chosen.
 
 The general formula for choice of k elements out of n is:
 
-<p>
-<math display="block">
-    <mfrac>
-        <mrow>
-            <mi>n</mi>
-            <mo>!</mo>
-        </mrow>
-        <mrow>
-            <mi>k</mi>
-            <mo>!</mo>
-            <mo>(</mo>
-            <mi>n</mi>
-            <mo>-</mo>
-            <mi>k</mi>
-            <mo>)</mo>
-            <mo>!</mo>
-        </mrow>
-    </mfrac>
-</math>
-</p>
+            n!
+        -----------
+        k! * (n-k)!
 
 For n = 12 and k = 4 we have:
 
-<p>
-<math display="block">
-    <mrow>
-        <mfrac>
-            <mrow>
-                <mn>12</mn>
-                <mo>!</mo>
-            </mrow>
-            <mrow>
-                <mn>4</mn>
-                <mo>!</mo>
-                <mo>* </mo>
-                <mn>8</mn>
-                <mo>!</mo>
-            </mrow>
-        </mfrac>
-        <mo>=</mo>
-        <mfrac>
-            <mrow>
-                <mn>479001600</mn>
-            </mrow>
-            <mrow>
-                <mn>24</mn>
-                <mo>* </mo>
-                <mn>40320</mn>
-            </mrow>
-        </mfrac>
-        <mo>=</mo>
-        <mn>495</mn>
-    </mrow>
-</math>
-</p>
+         479001600
+        ------------  =  495
+         24 * 40320
 
 
 
