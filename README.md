@@ -186,8 +186,8 @@ cubes:
 </div>
 
 <p>
-Let's use the symbol &#8857; for moves composing. C<sup>-1</sup> for reverse moves of C.
-So, we have:
+Let's use the symbol &#8857; for moves composing (concatenation). Let's use
+C<sup>-1</sup> for reverse moves of C.  So, we have:
 </p>
 
 <p>
