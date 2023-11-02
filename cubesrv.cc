@@ -3817,9 +3817,8 @@ static bool isSpaceCube(unsigned spaceKind, const cube &c) {
 static cubecorner_orients cubecornerOrientsRepresentativeBG(cubecorner_perms ccp, cubecorner_orients cco)
 {
     cubecorner_orients orepr;
-    cubecorner_perms ccpRev = ccp.reverse();
     for(unsigned i = 0; i < 8; ++i)
-        orepr.setAt(i, cco.getAt(ccpRev.getAt(i)));
+        orepr.setAt(ccp.getAt(i), cco.getAt(i));
     return orepr;
 }
 
