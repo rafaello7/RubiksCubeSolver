@@ -3943,13 +3943,6 @@ static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
         cerepr.setOrientAt(7, o);
 	}
 #if 0
-	unsigned sumOrient = 0;
-	for(int i = 0; i < 12; ++i)
-		sumOrient += cerepr.edgeR(i);
-	if( sumOrient % 2 ) {
-		cerepr.setOrientAt(7, 1);
-	}
-#endif
     cube cchk = { .cc = csolved.cc, .ce = cerepr };
     cube c = { .cc = csolved.cc, .ce = ce };
     // someSpace = (c rev) ⊙  ccchk
@@ -3961,6 +3954,7 @@ static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
         printf("fatal: BG cube representative is unsolvable\n");
         exit(1);
     }
+#endif
     return cerepr;
 }
 
@@ -4008,14 +4002,6 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
         cerepr.setPermAt(9, p);
         cerepr.setOrientAt(9, o);
 	}
-#if 0
-	unsigned sumOrient = 0;
-	for(int i = 0; i < 12; ++i)
-		sumOrient += cerepr.edgeR(i);
-	if( sumOrient % 2 ) {
-		cerepr.setOrientAt(10, 1);
-	}
-#endif
     cube cchk = { .cc = csolved.cc, .ce = cerepr };
     cube c = { .cc = csolved.cc, .ce = ce };
     if( !isYWspace(cube::compose(c.reverse(), cchk)) ) {
@@ -4073,14 +4059,6 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
         cerepr.setPermAt(11, p);
         cerepr.setOrientAt(11, o);
 	}
-#if 0
-	unsigned sumOrient = 0;
-	for(int i = 0; i < 12; ++i)
-		sumOrient += cerepr.edgeR(i);
-	if( sumOrient % 2 ) {
-		cerepr.setOrientAt(11, 1);
-	}
-#endif
     cube cchk = { .cc = csolved.cc, .ce = cerepr };
     cube c = { .cc = csolved.cc, .ce = ce };
     if( !isORspace(cube::compose(c.reverse(), cchk)) ) {
