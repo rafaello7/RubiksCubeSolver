@@ -76,6 +76,44 @@ static std::string dumpedges(unsigned long edges) {
 }
 #endif
 
+// The cube corner and edge numbers
+//           ___________
+//           | YELLOW  |
+//           | 4  8  5 |
+//           | 4     5 |
+//           | 0  0  1 |
+//  _________|_________|_________ _________
+// |  ORANGE |   BLUE  |   RED   |  GREEN  |
+// | 4  4  0 | 0  0  1 | 1  5  5 | 5  8  4 |
+// | 9     1 | 1     2 | 2    10 | 10    9 |
+// | 6  6  2 | 2  3  3 | 3  7  7 | 7 11  6 |
+// |_________|_________|_________|_________|
+//           |  WHITE  |
+//           | 2  3  3 |
+//           | 6     7 |
+//           | 6 11  7 |
+//           |_________|
+//
+// The cube corner and edge orientation referential squares
+// if a referential square of a corner/edge being moved goes into a
+// referential square, the corner/edge orientation is not changed
+//           ___________
+//           | YELLOW  |
+//           |         |
+//           | e     e |
+//           |         |
+//  _________|_________|_________ _________
+// |  ORANGE |   BLUE  |   RED   |  GREEN  |
+// |         | c  e  c |         | c  e  c |
+// | e     e |         | e     e |         |
+// |         | c  e  c |         | c  e  c |
+// |_________|_________|_________|_________|
+//           |  WHITE  |
+//           |         |
+//           | e     e |
+//           |         |
+//           |_________|
+
 enum rotate_dir {
 	ORANGECW, ORANGE180, ORANGECCW, REDCW, RED180, REDCCW,
 	YELLOWCW, YELLOW180, YELLOWCCW, WHITECW, WHITE180, WHITECCW,
@@ -153,6 +191,85 @@ static int rotateDirReverse(int rd) {
 	case BLUECCW: return BLUECW;
 	}
 	return RCOUNT;
+}
+
+// The cube transformation (colors switch) through the cube rotation
+enum transform_dir {
+    TD_0,           // no rotation
+    TD_C0_7_CW,     // rotation along axis from corner 0 to 7, 120 degree clockwise
+    TD_C0_7_CCW,    // rotation along axis from corner 0 to 7, counterclockwise
+    TD_C1_6_CW,
+    TD_C1_6_CCW,
+    TD_C2_5_CW,
+    TD_C2_5_CCW,
+    TD_C3_4_CW,
+    TD_C3_4_CCW,
+    TD_BG_CW,       // rotation along axis through the wall middle, from blue to green wall, clockwise
+    TD_BG_180,
+    TD_BG_CCW,
+    TD_YW_CW,
+    TD_YW_180,
+    TD_YW_CCW,
+    TD_OR_CW,
+    TD_OR_180,
+    TD_OR_CCW,
+    TD_E0_11,       // rotation along axis from edge 0 to 11, 180 degree
+    TD_E1_10,
+    TD_E2_9,
+    TD_E3_8,
+    TD_E4_7,
+    TD_E5_6,
+    TCOUNT
+};
+
+static int transformReverse(int idx) {
+    switch( idx ) {
+        case TD_C0_7_CW: return  TD_C0_7_CCW;
+        case TD_C0_7_CCW: return  TD_C0_7_CW;
+        case TD_C1_6_CW: return  TD_C1_6_CCW;
+        case TD_C1_6_CCW: return  TD_C1_6_CW;
+        case TD_C2_5_CW: return  TD_C2_5_CCW;
+        case TD_C2_5_CCW: return  TD_C2_5_CW;
+        case TD_C3_4_CW: return  TD_C3_4_CCW;
+        case TD_C3_4_CCW: return  TD_C3_4_CW;
+        case TD_BG_CW: return  TD_BG_CCW;
+        case TD_BG_CCW: return TD_BG_CW;
+        case TD_YW_CW: return TD_YW_CCW;
+        case TD_YW_CCW: return TD_YW_CW;
+        case TD_OR_CW: return TD_OR_CCW;
+        case TD_OR_CCW: return TD_OR_CW;
+    }
+    return idx;
+}
+
+static const char *transformName(unsigned td) {
+    switch( td ) {
+    case TD_0: return "0";
+    case TD_C0_7_CW: return "c0-7.cw";
+    case TD_C0_7_CCW: return "c0-7.ccw";
+    case TD_C1_6_CW: return "c1-6.cw";
+    case TD_C1_6_CCW: return "c1-6.ccw";
+    case TD_C2_5_CW: return "c2-5.cw";
+    case TD_C2_5_CCW: return "c2-5.ccw";
+    case TD_C3_4_CW: return "c3-4.cw";
+    case TD_C3_4_CCW: return "c3-4.ccw";
+    case TD_BG_CW: return "bg.cw";
+    case TD_BG_180: return "bg.180";
+    case TD_BG_CCW: return "bg.ccw";
+    case TD_YW_CW: return "yw.cw";
+    case TD_YW_180: return "yw.180";
+    case TD_YW_CCW: return "yw.ccw";
+    case TD_OR_CW: return "or.cw";
+    case TD_OR_180: return "or.180";
+    case TD_OR_CCW: return "or.ccw";
+    case TD_E0_11: return "e0-11";
+    case TD_E1_10: return "e1-10";
+    case TD_E2_9: return "e2-9";
+    case TD_E3_8: return "e3-8";
+    case TD_E4_7: return "e4-7";
+    case TD_E5_6: return "e5-6";
+    }
+    return "unknown";
 }
 
 static const unsigned char R120[3] = { 1, 2, 0 };
@@ -541,6 +658,7 @@ public:
     unsigned getPermIdx() const;
     unsigned short getOrientIdx() const;
     unsigned long get() const { return edges; }
+    void set(unsigned long e) { edges = e; }
     bool isNil() const { return edges == 0; }
 };
 
@@ -1112,41 +1230,6 @@ bool cube::operator<(const cube &c) const
 	return cc < c.cc || cc == c.cc && ce < c.ce;
 }
 
-//           ___________
-//           | YELLOW  |
-//           | 4  8  5 |
-//           | 4     5 |
-//           | 2  3  3 |
-//  _________|_________|_________ _________
-// |  ORANGE |   BLUE  |   RED   |  GREEN  |
-// | 4  4  0 | 0  0  1 | 1  5  5 | 5  8  4 |
-// | 9     1 | 1     2 | 1    10 | 10    9 |
-// | 6  6  2 | 2  3  3 | 3  7  7 | 7 11  6 |
-// |_________|_________|_________|_________|
-//           |  WHITE  |
-//           | 2  3  3 |
-//           | 6     7 |
-//           | 6 11  7 |
-//           |_________|
-//
-// orientation 0:
-//           ___________
-//           | YELLOW  |
-//           |         |
-//           | e     e |
-//           |         |
-//  _________|_________|_________ _________
-// |  ORANGE |   BLUE  |   RED   |  GREEN  |
-// |         | c  e  c |         | c  e  c |
-// | e     e |         | e     e |         |
-// |         | c  e  c |         | c  e  c |
-// |_________|_________|_________|_________|
-//           |  WHITE  |
-//           |         |
-//           | e     e |
-//           |         |
-//           |_________|
-
 const struct cube csolved = {
 	.cc = cubecorners(
 		0, 0,  1, 0,
@@ -1627,9 +1710,9 @@ const struct cube crotated[RCOUNT] = {
 //   Y
 // O B R G      == Y O B R G W
 //   W
-const struct cube ctransformed[] = {
+const struct cube ctransformed[TCOUNT] = {
     csolved,
-	{ // O B Y G W R
+	{ // O B Y G W R, TD_C0_7_CW
 		.cc = cubecorners(
 			 0,  2,
 			 4,  1,
@@ -1654,7 +1737,7 @@ const struct cube ctransformed[] = {
 			11,  0,
 			 7,  0
 		)
-	},{ // B Y O W R G
+	},{ // B Y O W R G, TD_C0_7_CCW
 		.cc = cubecorners(
 			 0,  1,
 			 2,  2,
@@ -1679,7 +1762,7 @@ const struct cube ctransformed[] = {
 			 7,  0,
 			10,  0
 		)
-    },{ // B W R Y O G
+    },{ // B W R Y O G, TD_C1_6_CW
 		.cc = cubecorners(
 			3, 1,
 			1, 2,
@@ -1704,7 +1787,7 @@ const struct cube ctransformed[] = {
 			 4, 0,
 			 9, 0
 		)
-	},{ // R G Y B W O
+	},{ // R G Y B W O, TD_C1_6_CCW
         .cc = cubecorners(
              5, 2,
              1, 1,
@@ -1729,57 +1812,7 @@ const struct cube ctransformed[] = {
              3, 0,
              6, 0
         )
-	},{ // G Y R W O B
-		.cc = cubecorners(
-			 5,  1,
-			 7,  2,
-			 1,  2,
-			 3,  1,
-			 4,  2,
-			 6,  1,
-			 0,  1,
-			 2,  2
-		),
-		.ce = cubeedges(
-			10,  0,
-			 5,  0,
-			 7,  0,
-			 2,  0,
-			 8,  0,
-			11,  0,
-			 0,  0,
-			 3,  0,
-			 9,  0,
-			 4,  0,
-			 6,  0,
-			 1,  0
-		)
-	},{ // O G W B Y R
-		.cc = cubecorners(
-			 6,  2,
-			 2,  1,
-			 7,  1,
-			 3,  2,
-			 4,  1,
-			 0,  2,
-			 5,  2,
-			 1,  1
-		),
-		.ce = cubeedges(
-			 6,  0,
-			11,  0,
-			 3,  0,
-			 7,  0,
-			 9,  0,
-			 1,  0,
-			10,  0,
-			 2,  0,
-			 4,  0,
-			 8,  0,
-			 0,  0,
-			 5,  0
-		)
-	},{ // G W O Y R B
+	},{ // G W O Y R B, TD_C2_5_CW
 		.cc = cubecorners(
 			 6,  1,
 			 4,  2,
@@ -1804,7 +1837,7 @@ const struct cube ctransformed[] = {
 			 5,  0,
 			 2,  0
 		)
-	},{ // R B W G Y O
+	},{ // R B W G Y O, TD_C2_5_CCW
 		.cc = cubecorners(
 			 3,  2,
 			 7,  1,
@@ -1829,82 +1862,57 @@ const struct cube ctransformed[] = {
 			 8,  0,
 			 4,  0
 		)
-	},{ // B O W R Y G
+	},{ // O G W B Y R, TD_C3_4_CW
 		.cc = cubecorners(
+			 6,  2,
 			 2,  1,
+			 7,  1,
 			 3,  2,
-			 6,  2,
-			 7,  1,
+			 4,  1,
 			 0,  2,
-			 1,  1,
-			 4,  1,
-			 5,  2
-		),
-		.ce = cubeedges(
-			 3,  1,
-			 6,  1,
-			 7,  1,
-			11,  1,
-			 1,  1,
-			 2,  1,
-			 9,  1,
-			10,  1,
-			 0,  1,
-			 4,  1,
-			 5,  1,
-			 8,  1
-		)
-	},{ // W O G R B Y
-		.cc = cubecorners(
-			 6,  0,
-			 7,  0,
-			 4,  0,
-			 5,  0,
-			 2,  0,
-			 3,  0,
-			 0,  0,
-			 1,  0
-		),
-		.ce = cubeedges(
-			11,  0,
-			 9,  0,
-			10,  0,
-			 8,  0,
-			 6,  0,
-			 7,  0,
-			 4,  0,
-			 5,  0,
-			 3,  0,
-			 1,  0,
-			 2,  0,
-			 0,  0
-		)
-	},{ // G O Y R W B
-		.cc = cubecorners(
-			 4,  1,
 			 5,  2,
-			 0,  2,
-			 1,  1,
-			 6,  2,
-			 7,  1,
-			 2,  1,
-			 3,  2
+			 1,  1
 		),
 		.ce = cubeedges(
-			 8,  1,
-			 4,  1,
-			 5,  1,
-			 0,  1,
-			 9,  1,
-			10,  1,
-			 1,  1,
-			 2,  1,
-			11,  1,
-			 6,  1,
-			 7,  1,
-			 3,  1
+			 6,  0,
+			11,  0,
+			 3,  0,
+			 7,  0,
+			 9,  0,
+			 1,  0,
+			10,  0,
+			 2,  0,
+			 4,  0,
+			 8,  0,
+			 0,  0,
+			 5,  0
 		)
-	},{ // O W B Y G R
+	},{ // G Y R W O B, TD_C3_4_CCW
+		.cc = cubecorners(
+			 5,  1,
+			 7,  2,
+			 1,  2,
+			 3,  1,
+			 4,  2,
+			 6,  1,
+			 0,  1,
+			 2,  2
+		),
+		.ce = cubeedges(
+			10,  0,
+			 5,  0,
+			 7,  0,
+			 2,  0,
+			 8,  0,
+			11,  0,
+			 0,  0,
+			 3,  0,
+			 9,  0,
+			 4,  0,
+			 6,  0,
+			 1,  0
+		)
+	},{ // O W B Y G R, TD_BG_CW
 		.cc = cubecorners(
 			 2,  0,
 			 0,  0,
@@ -1929,7 +1937,7 @@ const struct cube ctransformed[] = {
 			 8,  1,
 			10,  1
 		)
-	},{ // W R B O G Y
+	},{ // W R B O G Y, TD_BG_180
 		.cc = cubecorners(
 			 3,  0,
 			 2,  0,
@@ -1954,7 +1962,7 @@ const struct cube ctransformed[] = {
 			 9,  0,
 			 8,  0
 		)
-	},{ // R Y B W G O
+	},{ // R Y B W G O, TD_BG_CCW
 		.cc = cubecorners(
 			 1,  0,
 			 3,  0,
@@ -1979,32 +1987,32 @@ const struct cube ctransformed[] = {
 			11,  1,
 			 9,  1
 		)
-	},{ // Y G O B R W
+	},{ // Y B R G O W, TD_YW_CW
 		.cc = cubecorners(
-			 4,  2,
-			 0,  1,
-			 6,  1,
-			 2,  2,
-			 5,  1,
 			 1,  2,
+			 5,  1,
+			 3,  1,
 			 7,  2,
-			 3,  1
+			 0,  1,
+			 4,  2,
+			 2,  2,
+			 6,  1
 		),
 		.ce = cubeedges(
-			 4,  1,
-			 9,  1,
-			 1,  1,
-			 6,  1,
-			 8,  1,
-			 0,  1,
-			11,  1,
-			 3,  1,
 			 5,  1,
-			10,  1,
 			 2,  1,
-			 7,  1
+			10,  1,
+			 7,  1,
+			 0,  1,
+			 8,  1,
+			 3,  1,
+			11,  1,
+			 4,  1,
+			 1,  1,
+			 9,  1,
+			 6,  1
 		)
-	},{ // Y R G O B W
+	},{ // Y R G O B W, TD_YW_180
 		.cc = cubecorners(
 			 5,  0,
 			 4,  0,
@@ -2029,82 +2037,107 @@ const struct cube ctransformed[] = {
 			 1,  0,
 			 3,  0
 		)
-	},{ // Y B R G O W
+	},{ // Y G O B R W, TD_YW_CCW
 		.cc = cubecorners(
-			 1,  2,
-			 5,  1,
-			 3,  1,
-			 7,  2,
-			 0,  1,
 			 4,  2,
+			 0,  1,
+			 6,  1,
 			 2,  2,
-			 6,  1
+			 5,  1,
+			 1,  2,
+			 7,  2,
+			 3,  1
 		),
 		.ce = cubeedges(
-			 5,  1,
-			 2,  1,
-			10,  1,
-			 7,  1,
-			 0,  1,
-			 8,  1,
-			 3,  1,
-			11,  1,
 			 4,  1,
-			 1,  1,
 			 9,  1,
-			 6,  1
+			 1,  1,
+			 6,  1,
+			 8,  1,
+			 0,  1,
+			11,  1,
+			 3,  1,
+			 5,  1,
+			10,  1,
+			 2,  1,
+			 7,  1
 		)
-	},{ // O Y G W B R
+	},{ // B O W R Y G, TD_OR_CW
 		.cc = cubecorners(
-			 4,  0,
+			 2,  1,
+			 3,  2,
+			 6,  2,
+			 7,  1,
+			 0,  2,
+			 1,  1,
+			 4,  1,
+			 5,  2
+		),
+		.ce = cubeedges(
+			 3,  1,
+			 6,  1,
+			 7,  1,
+			11,  1,
+			 1,  1,
+			 2,  1,
+			 9,  1,
+			10,  1,
+			 0,  1,
+			 4,  1,
+			 5,  1,
+			 8,  1
+		)
+	},{ // W O G R B Y, TD_OR_180
+		.cc = cubecorners(
 			 6,  0,
-			 5,  0,
 			 7,  0,
-			 0,  0,
+			 4,  0,
+			 5,  0,
 			 2,  0,
+			 3,  0,
+			 0,  0,
+			 1,  0
+		),
+		.ce = cubeedges(
+			11,  0,
+			 9,  0,
+			10,  0,
+			 8,  0,
+			 6,  0,
+			 7,  0,
+			 4,  0,
+			 5,  0,
+			 3,  0,
 			 1,  0,
-			 3,  0
-		),
-		.ce = cubeedges(
-			 9,  1,
-			 8,  1,
-			11,  1,
-			10,  1,
-			 4,  1,
-			 6,  1,
-			 5,  1,
-			 7,  1,
-			 1,  1,
-			 0,  1,
-			 3,  1,
-			 2,  1
+			 2,  0,
+			 0,  0
 		)
-	},{ // W B O G R Y
+	},{ // G O Y R W B, TD_OR_CCW
 		.cc = cubecorners(
-			 2,  2,
-			 6,  1,
-			 0,  1,
-			 4,  2,
-			 3,  1,
-			 7,  2,
-			 1,  2,
-			 5,  1
-		),
-		.ce = cubeedges(
-			 6,  1,
-			 1,  1,
-			 9,  1,
 			 4,  1,
-			 3,  1,
-			11,  1,
-			 0,  1,
-			 8,  1,
+			 5,  2,
+			 0,  2,
+			 1,  1,
+			 6,  2,
 			 7,  1,
 			 2,  1,
+			 3,  2
+		),
+		.ce = cubeedges(
+			 8,  1,
+			 4,  1,
+			 5,  1,
+			 0,  1,
+			 9,  1,
 			10,  1,
-			 5,  1
+			 1,  1,
+			 2,  1,
+			11,  1,
+			 6,  1,
+			 7,  1,
+			 3,  1
 		)
-	},{ // B R Y O W G
+	},{ // B R Y O W G, TD_E0_11
 		.cc = cubecorners(
 			 1,  1,
 			 0,  2,
@@ -2129,32 +2162,32 @@ const struct cube ctransformed[] = {
 			 6,  1,
 			11,  1
 		)
-	},{ // R W G Y B O
+	},{ // W B O G R Y, TD_E1_10
 		.cc = cubecorners(
-			 7,  0,
-			 5,  0,
-			 6,  0,
-			 4,  0,
-			 3,  0,
-			 1,  0,
-			 2,  0,
-			 0,  0
+			 2,  2,
+			 6,  1,
+			 0,  1,
+			 4,  2,
+			 3,  1,
+			 7,  2,
+			 1,  2,
+			 5,  1
 		),
 		.ce = cubeedges(
-			10,  1,
-			11,  1,
-			 8,  1,
-			 9,  1,
-			 7,  1,
-			 5,  1,
 			 6,  1,
+			 1,  1,
+			 9,  1,
 			 4,  1,
-			 2,  1,
 			 3,  1,
+			11,  1,
 			 0,  1,
-			 1,  1
+			 8,  1,
+			 7,  1,
+			 2,  1,
+			10,  1,
+			 5,  1
 		)
-	},{ // W G R B O Y
+	},{ // W G R B O Y, TD_E2_9
 		.cc = cubecorners(
 			 7,  2,
 			 3,  1,
@@ -2179,7 +2212,7 @@ const struct cube ctransformed[] = {
 			 1,  1,
 			 4,  1
 		)
-	},{ // G R W O Y B
+	},{ // G R W O Y B, TD_E3_8
 		.cc = cubecorners(
 			 7,  1,
 			 6,  2,
@@ -2204,30 +2237,58 @@ const struct cube ctransformed[] = {
 			 4,  1,
 			 0,  1
 		)
+	},{ // O Y G W B R, TD_E4_7
+		.cc = cubecorners(
+			 4,  0,
+			 6,  0,
+			 5,  0,
+			 7,  0,
+			 0,  0,
+			 2,  0,
+			 1,  0,
+			 3,  0
+		),
+		.ce = cubeedges(
+			 9,  1,
+			 8,  1,
+			11,  1,
+			10,  1,
+			 4,  1,
+			 6,  1,
+			 5,  1,
+			 7,  1,
+			 1,  1,
+			 0,  1,
+			 3,  1,
+			 2,  1
+		)
+	},{ // R W G Y B O, TD_E5_6
+		.cc = cubecorners(
+			 7,  0,
+			 5,  0,
+			 6,  0,
+			 4,  0,
+			 3,  0,
+			 1,  0,
+			 2,  0,
+			 0,  0
+		),
+		.ce = cubeedges(
+			10,  1,
+			11,  1,
+			 8,  1,
+			 9,  1,
+			 7,  1,
+			 5,  1,
+			 6,  1,
+			 4,  1,
+			 2,  1,
+			 3,  1,
+			 0,  1,
+			 1,  1
+		)
 	}
 };
-
-const int TCOUNT = sizeof(ctransformed) / sizeof(ctransformed[0]);
-
-static int transformReverse(int idx) {
-    switch( idx ) {
-        case 1: return  2;
-        case 2: return  1;
-        case 3: return  4;
-        case 4: return  3;
-        case 5: return  6;
-        case 6: return  5;
-        case 7: return  8;
-        case 8: return  7;
-        case 9: return  11;
-        case 11: return 9;
-        case 12: return 14;
-        case 14: return 12;
-        case 15: return 17;
-        case 17: return 15;
-    }
-    return idx;
-}
 
 static cube cubeTransform(const cube &c, unsigned idx)
 {
@@ -4634,7 +4695,7 @@ static void addCubesT(
                                 const cubeedges ce = *edgeIt;
 
                                 if( onlyInSpace ) {
-                                    // TODO: rozbic check na cco+ce
+                                    // TODO: split check into cco+ce
                                     cube c = { .cc = cubecorners(ccp, cco), .ce = ce };
                                     bool isBG = isBGspace(c);
                                     bool isYW = isYWspace(c);
@@ -5078,6 +5139,11 @@ static const CubesReprByDepth *getCubesInSpace(unsigned depth, int threadCount, 
     static std::mutex mtx;
     bool isCanceled = false;
 
+    if( depth >= cubesReprByDepthInSpace.size() ) {
+        std::cout << "fatal: getCubesInSpace depth=" << depth << ", max=" <<
+            cubesReprByDepthInSpace.size()-1 << std::endl;
+        exit(1);
+    }
     mtx.lock();
     while( !isCanceled && depthAvailCountInSpace <= depth ) {
         isCanceled =  addCubes(cubesReprByDepthInSpace, depthAvailCountInSpace, true, threadCount, reqFd);
