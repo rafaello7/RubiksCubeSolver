@@ -11,13 +11,15 @@ mode the solution can be up to 30 steps long.
 
 The program can be compiled and run under Linux. It is compiled using `g++`.
 
-To run, a computer with at least 6GB RAM is recommended.
-With 3-4 GB of RAM the program executes slightly slower.
+To search for optimal solutions, a computer with at least 6GB RAM
+is recommended.  With 3-4 GB of RAM the program executes slightly slower.
 With 2GB RAM or less it will perform rather poorly
 (512MB is absolute minimum).
 
 Please note that the program performs a lot of computations. The more
 processors, the less time the calculations will take.
+
+In quick mode the program uses only about 16MB RAM.
 
 ## Compilation
 
@@ -67,6 +69,14 @@ Solving the first cube (since program startup) takes longer due to data
 structures initialization. Note that the program does not build any persistent
 data structures on disk. All the data structures are kept in memory.
 
+## Quick Mode Search
+
+There are two sub-options of the Quick mode. When the _Quick_ option is
+selected, the first solution found is returned. When _Quick Multi_
+option is selected, the program searches for more and more solutions,
+until the _Stop_ button is pressed. The program returns the shortest
+solution found.
+
 ## Algorithm
 
 For _Optimal_ mode the program uses a dumb algorithm, without any heuristics,
@@ -78,8 +88,7 @@ found.
 
 In _Quick_ mode the program searches for moves in two phases. The algorithm
 resembles the Two-Phase algorihm developed by Herbert Kociemba, but it does
-not use any prunning tables to find shortest solution. Instead, it catches
-the first solution found.
+not use any prunning tables.
 
 ## More About Two Phase algorithm
 
@@ -87,23 +96,22 @@ The Two-Phase algorithm uses a subset of moves denoted by
 G1 = &lt;U,D,R2,L2,F2,B2&gt;. That is, the whole space of all
 43252003274489856000 possible shuffle states of the cube is split into a
 cartesian product of 2217093120 x 19508428800 states. It means, there are
-2217093120 spaces (sets of cubes), each space having 19508428800 shuffle
-states.  Within each space, each cube state can be reached from another
-using only moves from G1. Also, it is not possible to reach any state from
+2217093120 spaces (sets of cube shuffles), each space having 19508428800
+shuffle states. Within each space, each cube state can be reached from another
+one using only moves from G1. Also, it is not possible to reach any state from
 another space using only moves from the G1 set.
 
-Note that there are three distinct move subsets, so the cartesian products
-can be formed in three ways. Using move subsets starting from the solved
-cube, for the first subset the blue and green walls remain blue-green;
-for the second the yellow and white walls remain yellow-white; for the
-third subset the orange and red walls remain orange-red.
+Note that instead of G1 it is possible to use other two move subsets.
+When the solved cube is altered using G1 subset, the blue and green walls
+remain blue-green. For the other two subsets either the yellow and white walls
+remain yellow-white, or the orange and red walls remain orange-red.
 
-The first phase of the two-phase algorithm finds moves which transition
+The first phase of the two-phase algorithm finds moves transitioning
 the cube from one of the 2217093120 spaces to the space which includes
 the solved cube. Second phase finds moves solving the intermediate cube
 using only moves from the subset.
 
-Each cube space can be reached from another using 12 moves at maximum. Each
+Any cube space can be reached from another using up to 12 moves. Each
 cube within the space can be reached from another cube state in the same space
 using 18 moves at maximum. Hence the 30 moves max in quick mode.
 
@@ -124,7 +132,7 @@ Below are the space counts reachable by particular move numbers:
     11      58202444
     12      476
 
-About 6% spaces can be reached with 8 moves or less. About 43% spaces
+About 6% spaces can be reached using 8 moves or less. About 43% spaces
 using 9 moves or less, and about 97% of spaces using 10 moves or less.
 
 As mentioned, within the space each cube can be reached using 18 moves
