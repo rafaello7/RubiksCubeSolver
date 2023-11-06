@@ -1187,10 +1187,9 @@ struct cube {
             .ce = ce.reverse()
         };
     }
-
+    cube transform(unsigned transformDir) const;
 	bool operator==(const cube &c) const;
 	bool operator<(const cube &c) const;
-
 };
 
 bool cube::operator==(const cube &c) const
@@ -2270,20 +2269,6 @@ const struct cube ctransformed[TCOUNT] = {
 	)
 };
 
-static cube cubeTransform(const cube &c, unsigned idx)
-{
-    const cube &ctrans = ctransformed[idx];
-    cubecorner_perms ccp1 = cubecorner_perms::compose(ctrans.ccp, c.ccp);
-    cubecorner_orients cco1 = cubecorner_orients::compose(ctrans.cco, c.ccp, c.cco);
-    cubeedges ce1 = cubeedges::compose(ctrans.ce, c.ce);
-
-    const cube &ctransRev = ctransformed[transformReverse(idx)];
-    cubecorner_perms ccp2 = cubecorner_perms::compose(ccp1, ctransRev.ccp);
-    cubecorner_orients cco2 = cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
-    cubeedges ce2 = cubeedges::compose(ce1, ctransRev.ce);
-	return { .ccp = ccp2, .cco = cco2, .ce = ce2 };
-}
-
 static cubecorner_perms cubecornerPermsTransform1(cubecorner_perms ccp, int idx)
 {
     cubecorner_perms ccp1 = cubecorner_perms::compose(ctransformed[idx].ccp, ccp);
@@ -2428,6 +2413,20 @@ cubeedges cubeedges::transform(int idx) const
     }
 #endif
 	return res;
+}
+
+cube cube::transform(unsigned transformDir) const
+{
+    const cube &ctrans = ctransformed[transformDir];
+    cubecorner_perms ccp1 = cubecorner_perms::compose(ctrans.ccp, this->ccp);
+    cubecorner_orients cco1 = cubecorner_orients::compose(ctrans.cco, this->ccp, this->cco);
+    cubeedges ce1 = cubeedges::compose(ctrans.ce, this->ce);
+
+    const cube &ctransRev = ctransformed[transformReverse(transformDir)];
+    cubecorner_perms ccp2 = cubecorner_perms::compose(ccp1, ctransRev.ccp);
+    cubecorner_orients cco2 = cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
+    cubeedges ce2 = cubeedges::compose(ce1, ctransRev.ce);
+	return { .ccp = ccp2, .cco = cco2, .ce = ce2 };
 }
 
 static cubecorner_perms cornersIdxToPerm(unsigned short idx);
@@ -4918,7 +4917,7 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
         cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
         for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
             for(unsigned td = 0; td < TCOUNT; ++td) {
-                const cube cSearchT = cubeTransform(symmetric ? csearchSymm : csearch, td);
+                const cube cSearchT = (symmetric ? csearchSymm : csearch).transform(td);
                 cubecorner_perms ccpSearch = cubecorner_perms::compose(ccprev, cSearchT.ccp);
                 unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(ccpSearch);
                 const CornerPermReprCubes &ccpReprSearchCubes =
@@ -4958,15 +4957,15 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
                         //  (c rev) ⊙  cSearch = (csearch rev/symm/tr) ⊙  (cSearch rev) ⊙  cSearch
                         //  (c rev) ⊙  cSearch = (csearch rev/symm/tr)
                         // moves solving (csearch rev/symm/tr): (cSearch rev) ⊙  c
-                        cube cSearch1 = cubeTransform(cSearch, transformReverse(td));
+                        cube cSearch1 = cSearch.transform(transformReverse(td));
                         if( symmetric )
                             cSearch1 = cSearch1.symmetric();
-                        cube c1 = cubeTransform(c, transformReverse(td));
+                        cube c1 = c.transform(transformReverse(td));
                         if( symmetric )
                             c1 = c1.symmetric();
                         if( searchTd ) {
-                            cSearch1 = cubeTransform(cSearch1, transformReverse(searchTd));
-                            c1 = cubeTransform(c1, transformReverse(searchTd));
+                            cSearch1 = cSearch1.transform(transformReverse(searchTd));
+                            c1 = c1.transform(transformReverse(searchTd));
                         }
                         moves = printMoves(cubesReprByDepth, cSearch1, true);
                         moves += printMoves(cubesReprByDepth, c1);
@@ -5061,7 +5060,7 @@ static void searchMovesTb(const CubesReprByDepth *cubesReprByDepth,
                         for(unsigned symmetric1 = 0; symmetric1 < 2; ++symmetric1) {
                             cube c1rs = symmetric1 ? c1r.symmetric() : c1r;
                             for(unsigned td1 = 0; td1 < TCOUNT; ++td1) {
-                                const cube c1T = cubeTransform(c1rs, td1);
+                                const cube c1T = c1rs.transform(td1);
                                 bool isDup = std::find(cubesChecked.begin(), cubesChecked.end(), c1T) != cubesChecked.end();
                                 if( isDup )
                                     continue;
@@ -5214,7 +5213,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                                             movesMax-cube2Depth, fdReq, movesInSpace);
                                     if( depthInSpace >= 0 ) {
                                         //sendRespMessage(fdReq, "found in-space cube at depth %d\n", depthInSpace);
-                                        cube cube2T = cubeTransform(cube2, transformReverse(searchTd));
+                                        cube cube2T = cube2.transform(transformReverse(searchTd));
                                         std::string cube2Moves = printMoves(cubesReprByDepth, cube2T, true);
                                         moves = movesInSpace + cube2Moves;
                                         bestMoveCount = cube2Depth + depthInSpace;
@@ -5308,7 +5307,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
         QuickDeepSearchProgress *searchProgress)
 {
     for(unsigned searchTd = 0; searchTd < 3; ++searchTd) {
-        cube csearchT = cubeTransform(csearch, searchTd);
+        cube csearchT = csearch.transform(searchTd);
         for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
             cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
@@ -5353,7 +5352,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                             movesMax-depth, catchFirst, fdReq, threadCount, inspaceWithCube2Moves);
                                     if( moveCount >= 0 ) {
                                         cube cube1 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
-                                        cube cube1T = cubeTransform(cube1, transformReverse(searchTd));
+                                        cube cube1T = cube1.transform(transformReverse(searchTd));
                                         std::string cube1Moves = printMoves(cubesReprByDepth, cube1T);
                                         std::string moves = inspaceWithCube2Moves + cube1Moves + cubeMovesAppend;
                                         movesMax = searchProgress->setBestMoves(moves, depth+moveCount, fdReq);
