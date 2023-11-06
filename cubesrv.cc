@@ -298,6 +298,7 @@ public:
         return ccpres;
     }
     cubecorner_perms reverse() const;
+    cubecorner_perms transform(unsigned transformDir) const;
 	bool operator==(const cubecorner_perms &ccp) const { return perms == ccp.perms; }
 	bool operator!=(const cubecorner_perms &ccp) const { return perms != ccp.perms; }
 	bool operator<(const cubecorner_perms &ccp) const { return perms < ccp.perms; }
@@ -404,6 +405,7 @@ public:
         return ccores;
     }
     cubecorner_orients reverse(cubecorner_perms) const;
+    cubecorner_orients transform(cubecorner_perms, unsigned transformDir) const;
 	bool operator==(const cubecorner_orients &cco) const { return orients == cco.orients; }
 	bool operator!=(const cubecorner_orients &cco) const { return orients != cco.orients; }
 	bool operator<(const cubecorner_orients &cco) const { return orients < cco.orients; }
@@ -641,7 +643,6 @@ public:
 
     // the middle cubeedges should be reversed before compose
     static cubeedges compose3revmid(cubeedges, cubeedges, cubeedges);
-    static cubeedges transform(cubeedges, int idx);
     cubeedges symmetric() const {
         cubeedges ceres;
         // map perm: 0 1 2 3 4 5 6 7 8 9 10 11 -> 8 9 10 11 4 5 6 7 0 1 2 3
@@ -650,8 +651,9 @@ public:
         return ceres;
     }
     cubeedges reverse() const;
-	unsigned edgeN(unsigned idx) const { return edges >> 5 * idx & 0xf; }
-	unsigned edgeR(unsigned idx) const { return edges >> (5*idx+4) & 1; }
+    cubeedges transform(int idx) const;
+	unsigned getPermAt(unsigned idx) const { return edges >> 5 * idx & 0xf; }
+	unsigned getOrientAt(unsigned idx) const { return edges >> (5*idx+4) & 1; }
 	bool operator==(const cubeedges &ce) const { return edges == ce.edges; }
 	bool operator!=(const cubeedges &ce) const { return edges != ce.edges; }
 	bool operator<(const cubeedges &ce) const { return edges < ce.edges; }
@@ -2308,24 +2310,24 @@ static cubecorner_perms cubecornerPermsTransform1(cubecorner_perms ccp, int idx)
             ctransformed[transformReverse(idx)].cc.getPerms());
 }
 
-static cubecorner_perms cubecornerPermsTransform(cubecorner_perms ccp, int idx)
+cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
 {
-    cubecorner_perms cctr = ctransformed[idx].cc.getPerms();
-    cubecorner_perms ccrtr = ctransformed[transformReverse(idx)].cc.getPerms();
+    cubecorner_perms cctr = ctransformed[transformDir].cc.getPerms();
+    cubecorner_perms ccrtr = ctransformed[transformReverse(transformDir)].cc.getPerms();
 	cubecorner_perms res;
 	for(int cno = 0; cno < 8; ++cno) {
-		res.setAt(cno, cctr.getAt(ccp.getAt(ccrtr.getAt(cno))));
+		res.setAt(cno, cctr.getAt(this->getAt(ccrtr.getAt(cno))));
     }
     return res;
 }
 
-static cubecorner_orients cubecornerOrientsTransform(cubecorner_perms ccp, cubecorner_orients cco, int idx)
+cubecorner_orients cubecorner_orients::transform(cubecorner_perms ccp, unsigned transformDir) const
 {
-    cubecorner_orients cco1 = cubecorner_orients::compose(ctransformed[idx].cc.getOrients(), ccp, cco);
-	return cubecorners::orientsCompose(cco1, ctransformed[transformReverse(idx)].cc);
+    cubecorner_orients cco1 = cubecorner_orients::compose(ctransformed[transformDir].cc.getOrients(), ccp, *this);
+	return cubecorners::orientsCompose(cco1, ctransformed[transformReverse(transformDir)].cc);
 }
 
-cubeedges cubeedges::transform(cubeedges ce, int idx)
+cubeedges cubeedges::transform(int idx) const
 {
     cubeedges cetrans = ctransformed[idx].ce;
 	cubeedges res;
@@ -2388,7 +2390,7 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
         "or %[tmp1], %[res]\n"
         : [res]         "=&r"  (res.edges),
           [tmp1]        "=&r" (tmp1)
-        : [ce]          "r"   (ce.edges),
+        : [ce]          "r"   (this->edges),
           [cetrans]     "rm"  (cetrans.edges),
           [cetransRev]  "r"   (cetransRev.edges),
           [depItem]     "rm"  (0x1f1f1f1f1f1f1f1ful)
@@ -2402,17 +2404,17 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
 #if defined(ASMCHECK) || !defined(USE_ASM)
 #if 0
     cubeedges cetransRev = ctransformed[transformReverse(idx)].ce;
-    cubeedges ce1 = cubeedges::compose(cetrans, ce);
+    cubeedges ce1 = cubeedges::compose(cetrans, *this);
     res = cubeedges::compose(ce1, cetransRev);
 #elif 0
     cubeedges cetransRev = ctransformed[transformReverse(idx)].ce;
 	cubeedges mid;
 	for(int i = 0; i < 12; ++i) {
-		unsigned cePerm = ce.edges >> 5 * i & 0xf;
+		unsigned cePerm = this->edges >> 5 * i & 0xf;
 		unsigned long ctransPerm = cetrans.edges >> 5 * cePerm & 0xf;
         mid.edges |= ctransPerm << 5 * i;
     }
-    unsigned long edgeorients = ce.edges & 0x842108421084210ul;
+    unsigned long edgeorients = this->edges & 0x842108421084210ul;
     mid.edges |= edgeorients;
 	for(int i = 0; i < 12; ++i) {
 		unsigned ctransRev = cetransRev.edges >> 5 * i & 0xf;
@@ -2421,7 +2423,7 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
 	}
 #else
 	for(int i = 0; i < 12; ++i) {
-		unsigned ceItem = ce.edges >> 5 * i;
+		unsigned ceItem = this->edges >> 5 * i;
 		unsigned cePerm = ceItem & 0xf;
 		unsigned ceOrient = ceItem & 0x10;
 		unsigned ctransPerm = cetrans.edges >> 5 * cePerm & 0xf;
@@ -2434,7 +2436,7 @@ cubeedges cubeedges::transform(cubeedges ce, int idx)
     if( res != chk ) {
         flockfile(stdout);
         std::cout << "edges transform mismatch!" << std::endl;
-        std::cout << "ce.edges         = " << dumpedges(ce.edges) << std::endl;
+        std::cout << "edges            = " << dumpedges(this->edges) << std::endl;
         std::cout << "cetrans.edges    = " << dumpedges(cetrans.edges) << std::endl;
         std::cout << "cetransRev.edges = " << dumpedges(cetransRev.edges) << std::endl;
         std::cout << "expected.edges   = " << dumpedges(res.edges) << std::endl;
@@ -2545,9 +2547,9 @@ static cubecorner_orients cubecornerOrientsRepresentative(cubecorner_perms ccp, 
                     ccorevsymm = ccorev.symmetric();
                     isRevSymmInit = true;
                 }
-                ocand = cubecornerOrientsTransform(ccprevsymm, ccorevsymm, rct.transformIdx);
+                ocand = ccorevsymm.transform(ccprevsymm, rct.transformIdx);
             }else{
-                ocand = cubecornerOrientsTransform(ccprev, ccorev, rct.transformIdx);
+                ocand = ccorev.transform(ccprev, rct.transformIdx);
             }
         }else{
             if( rct.symmetric ) {
@@ -2556,9 +2558,9 @@ static cubecorner_orients cubecornerOrientsRepresentative(cubecorner_perms ccp, 
                     ccosymm = cco.symmetric();
                     isSymmInit = true;
                 }
-                ocand = cubecornerOrientsTransform(ccpsymm, ccosymm, rct.transformIdx);
+                ocand = ccosymm.transform(ccpsymm, rct.transformIdx);
             }else{
-                ocand = cubecornerOrientsTransform(ccp, cco, rct.transformIdx);
+                ocand = cco.transform(ccp, rct.transformIdx);
             }
         }
         if( !isInit || ocand < orepr ) {
@@ -2583,7 +2585,7 @@ static cubeedges cubeedgesRepresentative(cubeedges ce, const std::vector<EdgeRep
         cubeedges cechk = erct.reversed ? ce.reverse() : ce;
         if( erct.symmetric )
             cechk = cechk.symmetric();
-        cerepr = cubeedges::transform(cechk, erct.transformedIdx);
+        cerepr = cechk.transform(erct.transformedIdx);
     }else{
         cubeedges cesymm, cerev, cerevsymm;
         bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
@@ -2599,9 +2601,9 @@ static cubeedges cubeedgesRepresentative(cubeedges ce, const std::vector<EdgeRep
                         cerevsymm = cerev.symmetric();
                         isRevSymmInit = true;
                     }
-                    cand = cubeedges::transform(cerevsymm, erct.transformedIdx);
+                    cand = cerevsymm.transform(erct.transformedIdx);
                 }else{
-                    cand = cubeedges::transform(cerev, erct.transformedIdx);
+                    cand = cerev.transform(erct.transformedIdx);
                 }
             }else{
                 if( erct.symmetric ) {
@@ -2609,9 +2611,9 @@ static cubeedges cubeedgesRepresentative(cubeedges ce, const std::vector<EdgeRep
                         cesymm = ce.symmetric();
                         isSymmInit = true;
                     }
-                    cand = cubeedges::transform(cesymm, erct.transformedIdx);
+                    cand = cesymm.transform(erct.transformedIdx);
                 }else{
-                    cand = cubeedges::transform(ce, erct.transformedIdx);
+                    cand = ce.transform(erct.transformedIdx);
                 }
             }
             if( !isInit || cand < cerepr )
@@ -2652,9 +2654,9 @@ static cubecorner_orients cubecornerOrientsComposedRepresentative(
                     ccorevsymm = ccorev.symmetric();
                     isRevSymmInit = true;
                 }
-                ocand = cubecornerOrientsTransform(ccprevsymm, ccorevsymm, rct.transformIdx);
+                ocand = ccorevsymm.transform(ccprevsymm, rct.transformIdx);
             }else{
-                ocand = cubecornerOrientsTransform(ccprev, ccorev, rct.transformIdx);
+                ocand = ccorev.transform(ccprev, rct.transformIdx);
             }
         }else{
             if( rct.symmetric ) {
@@ -2663,9 +2665,9 @@ static cubecorner_orients cubecornerOrientsComposedRepresentative(
                     ccosymm = ccoComposed.symmetric();
                     isSymmInit = true;
                 }
-                ocand = cubecornerOrientsTransform(ccpsymm, ccosymm, rct.transformIdx);
+                ocand = ccosymm.transform(ccpsymm, rct.transformIdx);
             }else{
-                ocand = cubecornerOrientsTransform(ccpComposed, ccoComposed, rct.transformIdx);
+                ocand = ccoComposed.transform(ccpComposed, rct.transformIdx);
             }
         }
         if( !isInit || ocand < orepr ) {
@@ -2761,68 +2763,68 @@ static void cubePrint(const cube &c)
 	printf("\n");
 	printf("        %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][R120[c.cc.getOrientAt(4)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(8)][!c.ce.edgeR(8)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(8)][!c.ce.getOrientAt(8)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][R240[c.cc.getOrientAt(5)]]]);
 	printf("        %s%s%s\n",
-			colorPrint[cubeEdgeColors[c.ce.edgeN(4)][c.ce.edgeR(4)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(4)][c.ce.getOrientAt(4)]],
 			colorPrint[CYELLOW],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(5)][c.ce.edgeR(5)]]);
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(5)][c.ce.getOrientAt(5)]]);
 	printf("        %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][R240[c.cc.getOrientAt(0)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(0)][!c.ce.edgeR(0)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(0)][!c.ce.getOrientAt(0)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][R120[c.cc.getOrientAt(1)]]]);
 	printf("\n");
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][R240[c.cc.getOrientAt(4)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(4)][!c.ce.edgeR(4)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(4)][!c.ce.getOrientAt(4)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][R120[c.cc.getOrientAt(0)]]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][c.cc.getOrientAt(0)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(0)][c.ce.edgeR(0)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(0)][c.ce.getOrientAt(0)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][c.cc.getOrientAt(1)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][R240[c.cc.getOrientAt(1)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(5)][!c.ce.edgeR(5)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(5)][!c.ce.getOrientAt(5)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][R120[c.cc.getOrientAt(5)]]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][c.cc.getOrientAt(5)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(8)][c.ce.edgeR(8)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(8)][c.ce.getOrientAt(8)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][c.cc.getOrientAt(4)]]);
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
-			colorPrint[cubeEdgeColors[c.ce.edgeN(9)][c.ce.edgeR(9)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(9)][c.ce.getOrientAt(9)]],
 			colorPrint[CORANGE],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(1)][c.ce.edgeR(1)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(1)][!c.ce.edgeR(1)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(1)][c.ce.getOrientAt(1)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(1)][!c.ce.getOrientAt(1)]],
 			colorPrint[CBLUE],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(2)][!c.ce.edgeR(2)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(2)][c.ce.edgeR(2)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(2)][!c.ce.getOrientAt(2)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(2)][c.ce.getOrientAt(2)]],
 			colorPrint[CRED],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(10)][c.ce.edgeR(10)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(10)][!c.ce.edgeR(10)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(10)][c.ce.getOrientAt(10)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(10)][!c.ce.getOrientAt(10)]],
 			colorPrint[CGREEN],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(9)][!c.ce.edgeR(9)]]);
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(9)][!c.ce.getOrientAt(9)]]);
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][R120[c.cc.getOrientAt(6)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(6)][!c.ce.edgeR(6)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(6)][!c.ce.getOrientAt(6)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][R240[c.cc.getOrientAt(2)]]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][c.cc.getOrientAt(2)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(3)][c.ce.edgeR(3)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(3)][c.ce.getOrientAt(3)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][c.cc.getOrientAt(3)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][R120[c.cc.getOrientAt(3)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(7)][!c.ce.edgeR(7)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(7)][!c.ce.getOrientAt(7)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][R240[c.cc.getOrientAt(7)]]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][c.cc.getOrientAt(7)]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(11)][c.ce.edgeR(11)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(11)][c.ce.getOrientAt(11)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][c.cc.getOrientAt(6)]]);
 	printf("\n");
 	printf("        %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][R120[c.cc.getOrientAt(2)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(3)][!c.ce.edgeR(3)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(3)][!c.ce.getOrientAt(3)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][R240[c.cc.getOrientAt(3)]]]);
 	printf("        %s%s%s\n",
-			colorPrint[cubeEdgeColors[c.ce.edgeN(6)][c.ce.edgeR(6)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(6)][c.ce.getOrientAt(6)]],
 			colorPrint[CWHITE],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(7)][c.ce.edgeR(7)]]);
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(7)][c.ce.getOrientAt(7)]]);
 	printf("        %s%s%s\n",
 			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][R240[c.cc.getOrientAt(6)]]],
-			colorPrint[cubeEdgeColors[c.ce.edgeN(11)][!c.ce.edgeR(11)]],
+			colorPrint[cubeEdgeColors[c.ce.getPermAt(11)][!c.ce.getOrientAt(11)]],
 			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][R120[c.cc.getOrientAt(7)]]]);
 	printf("\n");
 }
@@ -2851,7 +2853,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = c.ce.edgeN(p)) != i ) {
+        while( (p = c.ce.getPermAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
                 sendRespMessage(reqFd, "edge perm %d is twice\n", p);
                 return false;
@@ -2873,7 +2875,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
 	}
 	sumOrient = 0;
 	for(int i = 0; i < 12; ++i)
-		sumOrient += c.ce.edgeR(i);
+		sumOrient += c.ce.getOrientAt(i);
 	if( sumOrient % 2 ) {
 		sendRespMessage(reqFd, "cube unsolvable due to edge orientations\n");
 		return false;
@@ -3015,9 +3017,9 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 			return false;
 		}
 		for(int j = 0; j < i; ++j) {
-			if( c.ce.edgeN(i) == c.ce.edgeN(j) ) {
+			if( c.ce.getPermAt(i) == c.ce.getPermAt(j) ) {
 				sendRespMessage(reqFd, "edge %d is twice: at %d and %d\n",
-						c.ce.edgeN(i), j, i);
+						c.ce.getPermAt(i), j, i);
 				return false;
 			}
 		}
@@ -3153,151 +3155,151 @@ static bool isBGspace(const cube &c)
     for(unsigned i = 0; i < 8; ++i)
         if( c.cc.getOrientAt(i) )
             return false;
-    switch( c.ce.edgeN(0) ) {
+    switch( c.ce.getPermAt(0) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(0) )
+            if( c.ce.getOrientAt(0) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(0) )
+            if( !c.ce.getOrientAt(0) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(1) ) {
+    switch( c.ce.getPermAt(1) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(1) )
+            if( !c.ce.getOrientAt(1) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(1) )
+            if( c.ce.getOrientAt(1) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(2) ) {
+    switch( c.ce.getPermAt(2) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(2) )
+            if( !c.ce.getOrientAt(2) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(2) )
+            if( c.ce.getOrientAt(2) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(3) ) {
+    switch( c.ce.getPermAt(3) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(3) )
+            if( c.ce.getOrientAt(3) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(3) )
+            if( !c.ce.getOrientAt(3) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(8) ) {
+    switch( c.ce.getPermAt(8) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(8) )
+            if( c.ce.getOrientAt(8) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(8) )
+            if( !c.ce.getOrientAt(8) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(9) ) {
+    switch( c.ce.getPermAt(9) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(9) )
+            if( !c.ce.getOrientAt(9) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(9) )
+            if( c.ce.getOrientAt(9) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(10) ) {
+    switch( c.ce.getPermAt(10) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(10) )
+            if( !c.ce.getOrientAt(10) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(10) )
+            if( c.ce.getOrientAt(10) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(11) ) {
+    switch( c.ce.getPermAt(11) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(11) )
+            if( c.ce.getOrientAt(11) )
                 return false;
             break;
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(11) )
+            if( !c.ce.getOrientAt(11) )
                 return false;
             break;
         default:
             return false;
     }
-    if( c.ce.edgeR(4) || c.ce.edgeR(5) || c.ce.edgeR(6) || c.ce.edgeR(7) )
+    if( c.ce.getOrientAt(4) || c.ce.getOrientAt(5) || c.ce.getOrientAt(6) || c.ce.getOrientAt(7) )
         return false;
     return true;
 }
@@ -3434,151 +3436,151 @@ static bool isYWspace(const cube &c)
     }
 
 
-    switch( c.ce.edgeN(0) ) {
+    switch( c.ce.getPermAt(0) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(0) )
+            if( c.ce.getOrientAt(0) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(0) )
+            if( !c.ce.getOrientAt(0) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(3) ) {
+    switch( c.ce.getPermAt(3) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(3) )
+            if( c.ce.getOrientAt(3) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(3) )
+            if( !c.ce.getOrientAt(3) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(4) ) {
+    switch( c.ce.getPermAt(4) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(4) )
+            if( !c.ce.getOrientAt(4) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(4) )
+            if( c.ce.getOrientAt(4) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(5) ) {
+    switch( c.ce.getPermAt(5) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(5) )
+            if( !c.ce.getOrientAt(5) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(5) )
+            if( c.ce.getOrientAt(5) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(6) ) {
+    switch( c.ce.getPermAt(6) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(6) )
+            if( !c.ce.getOrientAt(6) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(6) )
+            if( c.ce.getOrientAt(6) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(7) ) {
+    switch( c.ce.getPermAt(7) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( !c.ce.edgeR(7) )
+            if( !c.ce.getOrientAt(7) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(7) )
+            if( c.ce.getOrientAt(7) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(8) ) {
+    switch( c.ce.getPermAt(8) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(8) )
+            if( c.ce.getOrientAt(8) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(8) )
+            if( !c.ce.getOrientAt(8) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(11) ) {
+    switch( c.ce.getPermAt(11) ) {
         case 0:
         case 3:
         case 8:
         case 11:
-            if( c.ce.edgeR(11) )
+            if( c.ce.getOrientAt(11) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(11) )
+            if( !c.ce.getOrientAt(11) )
                 return false;
             break;
         default:
             return false;
     }
-    if( c.ce.edgeR(1) || c.ce.edgeR(2) || c.ce.edgeR(9) || c.ce.edgeR(10) )
+    if( c.ce.getOrientAt(1) || c.ce.getOrientAt(2) || c.ce.getOrientAt(9) || c.ce.getOrientAt(10) )
         return false;
     return true;
 }
@@ -3715,151 +3717,151 @@ static bool isORspace(const cube &c)
     }
 
 
-    switch( c.ce.edgeN(1) ) {
+    switch( c.ce.getPermAt(1) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(1) )
+            if( c.ce.getOrientAt(1) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(1) )
+            if( !c.ce.getOrientAt(1) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(2) ) {
+    switch( c.ce.getPermAt(2) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(2) )
+            if( c.ce.getOrientAt(2) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(2) )
+            if( !c.ce.getOrientAt(2) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(4) ) {
+    switch( c.ce.getPermAt(4) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(4) )
+            if( !c.ce.getOrientAt(4) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(4) )
+            if( c.ce.getOrientAt(4) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(5) ) {
+    switch( c.ce.getPermAt(5) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(5) )
+            if( !c.ce.getOrientAt(5) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(5) )
+            if( c.ce.getOrientAt(5) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(6) ) {
+    switch( c.ce.getPermAt(6) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(6) )
+            if( !c.ce.getOrientAt(6) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(6) )
+            if( c.ce.getOrientAt(6) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(7) ) {
+    switch( c.ce.getPermAt(7) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( !c.ce.edgeR(7) )
+            if( !c.ce.getOrientAt(7) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( c.ce.edgeR(7) )
+            if( c.ce.getOrientAt(7) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(9) ) {
+    switch( c.ce.getPermAt(9) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(9) )
+            if( c.ce.getOrientAt(9) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(9) )
+            if( !c.ce.getOrientAt(9) )
                 return false;
             break;
         default:
             return false;
     }
-    switch( c.ce.edgeN(10) ) {
+    switch( c.ce.getPermAt(10) ) {
         case 1:
         case 2:
         case 9:
         case 10:
-            if( c.ce.edgeR(10) )
+            if( c.ce.getOrientAt(10) )
                 return false;
             break;
         case 4:
         case 5:
         case 6:
         case 7:
-            if( !c.ce.edgeR(10) )
+            if( !c.ce.getOrientAt(10) )
                 return false;
             break;
         default:
             return false;
     }
-    if( c.ce.edgeR(0) || c.ce.edgeR(3) || c.ce.edgeR(8) || c.ce.edgeR(11) )
+    if( c.ce.getOrientAt(0) || c.ce.getOrientAt(3) || c.ce.getOrientAt(8) || c.ce.getOrientAt(11) )
         return false;
     return true;
 }
@@ -3931,7 +3933,7 @@ static bool isCubeSolvable1(const cube &c)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = c.ce.edgeN(p)) != i ) {
+        while( (p = c.ce.getPermAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
                 printf("edge perm %d is twice\n", p);
                 return false;
@@ -3953,7 +3955,7 @@ static bool isCubeSolvable1(const cube &c)
 	}
 	sumOrient = 0;
 	for(int i = 0; i < 12; ++i)
-		sumOrient += c.ce.edgeR(i);
+		sumOrient += c.ce.getOrientAt(i);
 	if( sumOrient % 2 ) {
 		printf("cube unsolvable due to edge orientations\n");
 		return false;
@@ -3970,15 +3972,15 @@ static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 4;
     for(unsigned i = 0; i < 12; ++i) {
-        if( ceRev.edgeN(i) < 4 | ceRev.edgeN(i) >= 8 ) {
+        if( ceRev.getPermAt(i) < 4 | ceRev.getPermAt(i) >= 8 ) {
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.edgeN(i)] == orientsIn[destIn] ?
-                ce.edgeR(ceRev.edgeN(i)) : !ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
+                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
             if( ++destIn == 4 )
                 destIn = 8;
         }else{
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
             ++destOut;
         }
     }
@@ -3990,16 +3992,16 @@ static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = cerepr.edgeN(p)) != i ) {
+        while( (p = cerepr.getPermAt(p)) != i ) {
             permsScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
 	if( isSwapsOdd ) {
-		unsigned p = cerepr.edgeN(6);
-        unsigned o = cerepr.edgeR(6);
-        cerepr.setPermAt(6, cerepr.edgeN(7));
-        cerepr.setOrientAt(6, cerepr.edgeR(7));
+		unsigned p = cerepr.getPermAt(6);
+        unsigned o = cerepr.getOrientAt(6);
+        cerepr.setPermAt(6, cerepr.getPermAt(7));
+        cerepr.setOrientAt(6, cerepr.getOrientAt(7));
         cerepr.setPermAt(7, p);
         cerepr.setOrientAt(7, o);
 	}
@@ -4027,18 +4029,18 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 0;
     for(unsigned i = 0; i < 12; ++i) {
-        if( orientsIn[ceRev.edgeN(i)] != 2 ) {
+        if( orientsIn[ceRev.getPermAt(i)] != 2 ) {
             while( orientsIn[destIn] == 2 )
                 ++destIn;
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.edgeN(i)] == orientsIn[destIn] ?
-                ce.edgeR(ceRev.edgeN(i)) : !ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
+                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
             ++destIn;
         }else{
             while( orientsIn[destOut] != 2 )
                 ++destOut;
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
             ++destOut;
         }
     }
@@ -4050,16 +4052,16 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = cerepr.edgeN(p)) != i ) {
+        while( (p = cerepr.getPermAt(p)) != i ) {
             permsScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
 	if( isSwapsOdd ) {
-		unsigned p = cerepr.edgeN(10);
-		unsigned o = cerepr.edgeR(10);
-        cerepr.setPermAt(10, cerepr.edgeN(9));
-        cerepr.setOrientAt(10, cerepr.edgeR(9));
+		unsigned p = cerepr.getPermAt(10);
+		unsigned o = cerepr.getOrientAt(10);
+        cerepr.setPermAt(10, cerepr.getPermAt(9));
+        cerepr.setOrientAt(10, cerepr.getOrientAt(9));
         cerepr.setPermAt(9, p);
         cerepr.setOrientAt(9, o);
 	}
@@ -4084,18 +4086,18 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 0;
     for(unsigned i = 0; i < 12; ++i) {
-        if( orientsIn[ceRev.edgeN(i)] != 2 ) {
+        if( orientsIn[ceRev.getPermAt(i)] != 2 ) {
             while( orientsIn[destIn] == 2 )
                 ++destIn;
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.edgeN(i)] == orientsIn[destIn] ?
-                ce.edgeR(ceRev.edgeN(i)) : !ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
+                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
             ++destIn;
         }else{
             while( orientsIn[destOut] != 2 )
                 ++destOut;
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.edgeR(ceRev.edgeN(i)));
+            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
             ++destOut;
         }
     }
@@ -4107,16 +4109,16 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = cerepr.edgeN(p)) != i ) {
+        while( (p = cerepr.getPermAt(p)) != i ) {
             permsScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
 	if( isSwapsOdd ) {
-		unsigned p = cerepr.edgeN(8);
-		unsigned o = cerepr.edgeR(8);
-        cerepr.setPermAt(8, cerepr.edgeN(11));
-        cerepr.setOrientAt(8, cerepr.edgeR(11));
+		unsigned p = cerepr.getPermAt(8);
+		unsigned o = cerepr.getOrientAt(8);
+        cerepr.setPermAt(8, cerepr.getPermAt(11));
+        cerepr.setOrientAt(8, cerepr.getOrientAt(11));
         cerepr.setPermAt(11, p);
         cerepr.setOrientAt(11, o);
 	}
@@ -4801,8 +4803,8 @@ static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
                     cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
                     cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                     for(unsigned td = 0; td < TCOUNT; ++td) {
-                        cubecorner_perms ccpT = cubecornerPermsTransform(ccprevsymm, td);
-                        cubecorner_orients ccoT = cubecornerOrientsTransform(ccprevsymm, ccorevsymm, td);
+                        cubecorner_perms ccpT = ccprevsymm.transform(td);
+                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoReprBG = cubecornerOrientsRepresentativeBG(ccpT, ccoT);
                         unsigned reprCOrientIdx = cornersOrientToIdx(ccoReprBG);
 
@@ -4813,7 +4815,7 @@ static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
                                 cubeedges ce = *edgeIt;
                                 cubeedges cerev = reversed ? ce.reverse() : ce;
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
-                                cubeedges ceT = cubeedges::transform(cerevsymm, td);
+                                cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = cubeedgesRepresentativeBG(ceT);
                                 if( bgSpaceCubes[depth].addCube(reprCOrientIdx, ceReprBG) )
                                     ++reprCubeCountT;
@@ -5206,8 +5208,8 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                     cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
                     cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                     for(unsigned td = 0; td < TCOUNT; ++td) {
-                        cubecorner_perms ccpT = cubecornerPermsTransform(ccprevsymm, td);
-                        cubecorner_orients ccoT = cubecornerOrientsTransform(ccprevsymm, ccorevsymm, td);
+                        cubecorner_perms ccpT = ccprevsymm.transform(td);
+                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoReprBG = cubecornerOrientsRepresentativeBG(ccpT, ccoT);
                         if( cSpaceRepr.cc.getOrients() == ccoReprBG ) {
                             for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
@@ -5216,7 +5218,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                                 cubeedges ce = *edgeIt;
                                 cubeedges cerev = reversed ? ce.reverse() : ce;
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
-                                cubeedges ceT = cubeedges::transform(cerevsymm, td);
+                                cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = cubeedgesRepresentativeBG(ceT);
                                 if( cSpaceRepr.ce == ceReprBG ) {
                                     cube cube2 = { .cc = cubecorners(ccpT, ccoT), .ce = ceT };
@@ -5330,7 +5332,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
                 cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
                 for(unsigned td = 0; td < TCOUNT; ++td) {
-                    cubecorner_perms ccpT = cubecornerPermsTransform(ccprevsymm, td);
+                    cubecorner_perms ccpT = ccprevsymm.transform(td);
                     cubecorner_perms ccpSearch = cubecorner_perms::compose(ccpT, csearchT.cc.getPerms());
 
                     for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprCubes.ccoCubesBegin();
@@ -5340,7 +5342,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                         cubecorner_orients cco = ccoReprCubes.getOrients();
                         cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
                         cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
-                        cubecorner_orients ccoT = cubecornerOrientsTransform(ccprevsymm, ccorevsymm, td);
+                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoSearch = cubecorners::orientsCompose(ccoT, csearchT.cc);
                         cubecorner_orients ccoSearchReprBG = cubecornerOrientsRepresentativeBG(
                                 ccpSearch, ccoSearch);
@@ -5352,7 +5354,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                 cubeedges ce = *edgeIt;
                                 cubeedges cerev = reversed ? ce.reverse() : ce;
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
-                                cubeedges ceT = cubeedges::transform(cerevsymm, td);
+                                cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceSearch = cubeedges::compose(ceT, csearchT.ce);
                                 cubeedges ceSearchSpaceRepr = cubeedgesRepresentativeBG(ceSearch);
 
@@ -5448,9 +5450,9 @@ static void searchMovesQuickB(const CubesReprByDepth *cubesReprByDepth,
                             cubecorner_orients cco1revsymm = symmetric1 ? cco1rev.symmetric() : cco1rev;
                             cubeedges ce1revsymm = symmetric1 ? ce1rev.symmetric() : ce1rev;
                             for(unsigned td1 = 0; td1 < TCOUNT; ++td1) {
-                                cubecorner_perms ccp1T = cubecornerPermsTransform(ccp1revsymm, td1);
-                                cubecorner_orients cco1T = cubecornerOrientsTransform(ccp1revsymm, cco1revsymm, td1);
-                                cubeedges ce1T = cubeedges::transform(ce1revsymm, td1);
+                                cubecorner_perms ccp1T = ccp1revsymm.transform(td1);
+                                cubecorner_orients cco1T = cco1revsymm.transform(ccp1revsymm, td1);
+                                cubeedges ce1T = ce1revsymm.transform(td1);
 
                                 cube c1T = { .cc = cubecorners(ccp1T, cco1T), .ce = ce1T };
                                 bool isDup = std::find(cubesChecked.begin(), cubesChecked.end(), c1T) != cubesChecked.end();
