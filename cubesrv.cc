@@ -4365,21 +4365,19 @@ static bool searchMovesInSpaceB(const CubesReprByDepth &cubesReprByDepthBG,
 static int searchMovesInSpace(const cube &cSpace, unsigned searchTd, unsigned threadCount, unsigned movesMax,
         int fdReq, std::string &moves)
 {
-    for(unsigned depthMax = 0; depthMax <= TWOPHASE_DEPTH2_MAX; ++depthMax) {
+    for(unsigned depthSearch = 0; depthSearch <= 2*TWOPHASE_DEPTH2_MAX && depthSearch <= movesMax; ++depthSearch) {
+        unsigned depth = depthSearch / 2;
+        unsigned depthMax = depthSearch - depth;
         const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(depthMax, threadCount, fdReq);
         if( cubesReprByDepthBG == NULL )
             return -1;
-        if( depthMax > 0 ) {
-            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchTd, depthMax-1, depthMax, moves) )
-                return 2*depthMax-1;
-        }
-        if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchTd, depthMax, depthMax, moves) )
-            return 2*depthMax;
+        if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchTd, depth, depthMax, moves) )
+            return depthSearch;
     }
     const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(TWOPHASE_DEPTH2_MAX, threadCount, fdReq);
     if( cubesReprByDepthBG == NULL )
         return -1;
-    for(unsigned depth = 1; depth <= TWOPHASE_DEPTH2_MAX; ++depth) {
+    for(unsigned depth = 1; depth <= TWOPHASE_DEPTH2_MAX && 2*TWOPHASE_DEPTH2_MAX + depth <= movesMax; ++depth) {
         if( searchMovesInSpaceB(*cubesReprByDepthBG, cSpace, searchTd, depth, TWOPHASE_DEPTH2_MAX, moves) )
             return 2*TWOPHASE_DEPTH2_MAX + depth;
     }
@@ -4485,7 +4483,6 @@ int QuickSearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBu
     int movesMax;
     CubesReprAtDepth::ccpcubes_iter cornerPermIt;
     mutexLock();
-    movesMax = m_movesMax;
     if( m_movesMax >= 0 && m_ccpItNext != m_ccpItEnd && !isStopRequestedNoLock() ) {
         cornerPermIt = m_ccpItNext++;
         movesMax = m_movesMax;
