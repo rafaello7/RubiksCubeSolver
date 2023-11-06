@@ -547,67 +547,25 @@ cubecorner_orients cubecorner_orients::reverse(cubecorner_perms ccp) const {
 	return res;
 }
 
-class cubecorners {
+struct cubecorners {
 	cubecorner_perms perms;
 	cubecorner_orients orients;
-public:
-	cubecorners() {}
-	cubecorners(const cubecorner_perms &perms, const cubecorner_orients &orients)
-		: perms(perms), orients(orients) {}
-	cubecorners(unsigned corner0perm, unsigned corner0orient,
-			unsigned corner1perm, unsigned corner1orient,
-			unsigned corner2perm, unsigned corner2orient,
-			unsigned corner3perm, unsigned corner3orient,
-			unsigned corner4perm, unsigned corner4orient,
-			unsigned corner5perm, unsigned corner5orient,
-			unsigned corner6perm, unsigned corner6orient,
-			unsigned corner7perm, unsigned corner7orient);
 
-	unsigned getPermAt(unsigned idx) const { return perms.getAt(idx); }
-	void setPermAt(unsigned idx, unsigned char perm) { perms.setAt(idx, perm); }
-	unsigned getOrientAt(unsigned idx) const { return orients.getAt(idx); }
-	void setOrientAt(unsigned idx, unsigned char orient) { orients.setAt(idx, orient); }
-	cubecorner_perms getPerms() const { return perms; }
-	cubecorner_orients getOrients() const { return orients; }
-	void setOrients(unsigned orts) { orients.set(orts); }
-    static cubecorner_orients orientsCompose(cubecorner_orients cco1,
-            const cubecorners &cc2) {
-        return cubecorner_orients::compose(cco1, cc2.perms, cc2.orients);
-    }
-    static cubecorners compose(const cubecorners &cc1, const cubecorners &cc2) {
-        return cubecorners(cubecorner_perms::compose(cc1.perms, cc2.perms),
-                cubecorner_orients::compose(cc1.orients, cc2.perms, cc2.orients));
-    }
-    cubecorners symmetric() const {
-        return cubecorners(perms.symmetric(), orients.symmetric());
-    }
-    cubecorners reverse() const {
-        return cubecorners(perms.reverse(), orients.reverse(perms));
-    }
-
-	bool operator==(const cubecorners &cc) const {
-		return perms == cc.perms && orients == cc.orients;
-	}
-	bool operator<(const cubecorners &cc) const {
-		return perms < cc.perms || perms == cc.perms && orients < cc.orients;
-	}
+    cubecorners(unsigned corner0perm, unsigned corner0orient,
+            unsigned corner1perm, unsigned corner1orient,
+            unsigned corner2perm, unsigned corner2orient,
+            unsigned corner3perm, unsigned corner3orient,
+            unsigned corner4perm, unsigned corner4orient,
+            unsigned corner5perm, unsigned corner5orient,
+            unsigned corner6perm, unsigned corner6orient,
+            unsigned corner7perm, unsigned corner7orient)
+        : perms(corner0perm, corner1perm, corner2perm, corner3perm, corner4perm, corner5perm,
+                corner6perm, corner7perm),
+        orients(corner0orient, corner1orient, corner2orient,
+                corner3orient, corner4orient, corner5orient, corner6orient, corner7orient)
+        {
+        }
 };
-
-cubecorners::cubecorners(unsigned corner0perm, unsigned corner0orient,
-			unsigned corner1perm, unsigned corner1orient,
-			unsigned corner2perm, unsigned corner2orient,
-			unsigned corner3perm, unsigned corner3orient,
-			unsigned corner4perm, unsigned corner4orient,
-			unsigned corner5perm, unsigned corner5orient,
-			unsigned corner6perm, unsigned corner6orient,
-			unsigned corner7perm, unsigned corner7orient)
-
-	: perms(corner0perm, corner1perm, corner2perm, corner3perm, corner4perm, corner5perm,
-			corner6perm, corner7perm),
-	orients(corner0orient, corner1orient, corner2orient,
-			corner3orient, corner4orient, corner5orient, corner6orient, corner7orient)
-{
-}
 
 class cubeedges {
 	unsigned long edges;
@@ -1204,60 +1162,80 @@ unsigned short cubeedges::getOrientIdx() const {
 }
 
 struct cube {
-	cubecorners cc;
+	cubecorner_perms ccp;
+    cubecorner_orients cco;
 	cubeedges ce;
 
     static cube compose(const cube &c1, const cube &c2) {
-        return { .cc = cubecorners::compose(c1.cc, c2.cc),
-                 .ce = cubeedges::compose(c1.ce, c2.ce) };
+        return {
+            .ccp = cubecorner_perms::compose(c1.ccp, c2.ccp),
+            .cco = cubecorner_orients::compose(c1.cco, c2.ccp, c2.cco),
+            .ce = cubeedges::compose(c1.ce, c2.ce)
+        };
     }
     cube symmetric() const {
-        return { .cc = cc.symmetric(), .ce = ce.symmetric() };
+        return {
+            .ccp = ccp.symmetric(),
+            .cco = cco.symmetric(),
+            .ce = ce.symmetric()
+        };
     }
     cube reverse() const {
-        return { .cc = cc.reverse(), .ce = ce.reverse() };
+        return {
+            .ccp = ccp.reverse(),
+            .cco = cco.reverse(ccp),
+            .ce = ce.reverse()
+        };
     }
 
 	bool operator==(const cube &c) const;
 	bool operator<(const cube &c) const;
+
 };
 
 bool cube::operator==(const cube &c) const
 {
-	return cc == c.cc && ce == c.ce;
+	return ccp == c.ccp && cco == c.cco && ce == c.ce;
 }
 
 bool cube::operator<(const cube &c) const
 {
-	return cc < c.cc || cc == c.cc && ce < c.ce;
+	return ccp < c.ccp || ccp == c.ccp && cco < c.cco ||
+        ccp == c.ccp && cco == c.cco && ce < c.ce;
+}
+
+static cube mkcube(const cubecorners &cc, const cubeedges &ce) {
+    return { .ccp = cc.perms, .cco = cc.orients, .ce = ce };
 }
 
 const struct cube csolved = {
-	.cc = cubecorners(
-		0, 0,  1, 0,
-		2, 0,  3, 0,
-		4, 0,  5, 0,
-		6, 0,  7, 0
-	),
-	.ce = cubeedges(
-		0, 0,
-		1, 0,
-		2, 0,
-		3, 0,
-		4, 0,
-		5, 0,
-		6, 0,
-		7, 0,
-		8, 0,
-		9, 0,
-		10, 0,
-		11, 0
-	)
+    mkcube(
+        cubecorners(
+            0, 0,  1, 0,
+            2, 0,  3, 0,
+            4, 0,  5, 0,
+            6, 0,  7, 0
+        ),
+        cubeedges(
+            0, 0,
+            1, 0,
+            2, 0,
+            3, 0,
+            4, 0,
+            5, 0,
+            6, 0,
+            7, 0,
+            8, 0,
+            9, 0,
+            10, 0,
+            11, 0
+        )
+    )
 };
 
 const struct cube crotated[RCOUNT] = {
-	{ // ORANGECW
-		.cc = cubecorners(
+	mkcube( // ORANGECW
+		cubecorners(
 			4, 1,
 			1, 0,
 			0, 2,
@@ -1267,7 +1245,7 @@ const struct cube crotated[RCOUNT] = {
 			2, 1,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 4, 1,
 			 2, 0,
@@ -1281,8 +1259,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // ORANGE180
-		.cc = cubecorners(
+	),mkcube( // ORANGE180
+		cubecorners(
 			6, 0,
 			1, 0,
 			4, 0,
@@ -1292,7 +1270,7 @@ const struct cube crotated[RCOUNT] = {
 			0, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 9, 0,
 			 2, 0,
@@ -1306,8 +1284,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // ORANGECCW
-		.cc = cubecorners(
+	),mkcube( // ORANGECCW
+		cubecorners(
 			2, 1,
 			1, 0,
 			6, 2,
@@ -1317,7 +1295,7 @@ const struct cube crotated[RCOUNT] = {
 			4, 1,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 6, 1,
 			 2, 0,
@@ -1331,8 +1309,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // REDCW
-		.cc = cubecorners(
+	),mkcube( // REDCW
+		cubecorners(
 			0, 0,
 			3, 2,
 			2, 0,
@@ -1342,7 +1320,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			5, 2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 7, 1,
@@ -1356,8 +1334,8 @@ const struct cube crotated[RCOUNT] = {
 			 5, 1,
 			11, 0
 		)
-	},{ // RED180
-		.cc = cubecorners(
+	),mkcube( // RED180
+		cubecorners(
 			0, 0,
 			7, 0,
 			2, 0,
@@ -1367,7 +1345,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			1, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			10, 0,
@@ -1381,8 +1359,8 @@ const struct cube crotated[RCOUNT] = {
 			 2, 0,
 			11, 0
 		)
-	},{ // REDCCW
-		.cc = cubecorners(
+	),mkcube( // REDCCW
+		cubecorners(
 			0, 0,
 			5, 2,
 			2, 0,
@@ -1392,7 +1370,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			3, 2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 5, 1,
@@ -1406,8 +1384,8 @@ const struct cube crotated[RCOUNT] = {
 			 7, 1,
 			11, 0
 		)
-	},{ // YELLOWCW
-		.cc = cubecorners(
+	),mkcube( // YELLOWCW
+		cubecorners(
 			1, 2,
 			5, 1,
 			2, 0,
@@ -1417,7 +1395,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 5, 1,
 			 1, 0,
 			 2, 0,
@@ -1431,8 +1409,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // YELLOW180
-		.cc = cubecorners(
+	),mkcube( // YELLOW180
+		cubecorners(
 			5, 0,
 			4, 0,
 			2, 0,
@@ -1442,7 +1420,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 8, 0,
 			 1, 0,
 			 2, 0,
@@ -1456,8 +1434,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // YELLOWCCW
-		.cc = cubecorners(
+	),mkcube( // YELLOWCCW
+		cubecorners(
 			4, 2,
 			0, 1,
 			2, 0,
@@ -1467,7 +1445,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 4, 1,
 			 1, 0,
 			 2, 0,
@@ -1481,8 +1459,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // WHITECW
-		.cc = cubecorners(
+	),mkcube( // WHITECW
+		cubecorners(
 			0, 0,
 			1, 0,
 			6, 1,
@@ -1492,7 +1470,7 @@ const struct cube crotated[RCOUNT] = {
 			7, 2,
 			3, 1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1506,8 +1484,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			 7, 1
 		)
-	},{ // WHITE180
-		.cc = cubecorners(
+	),mkcube( // WHITE180
+		cubecorners(
 			0, 0,
 			1, 0,
 			7, 0,
@@ -1517,7 +1495,7 @@ const struct cube crotated[RCOUNT] = {
 			3, 0,
 			2, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1531,8 +1509,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			 3, 0
 		)
-	},{ // WHITECCW
-		.cc = cubecorners(
+	),mkcube( // WHITECCW
+		cubecorners(
 			0, 0,
 			1, 0,
 			3, 1,
@@ -1542,7 +1520,7 @@ const struct cube crotated[RCOUNT] = {
 			2, 2,
 			6, 1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1556,8 +1534,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			 6, 1
 		)
-	},{ // GREENCW
-		.cc = cubecorners(
+	),mkcube( // GREENCW
+		cubecorners(
 			0, 0,
 			1, 0,
 			2, 0,
@@ -1567,7 +1545,7 @@ const struct cube crotated[RCOUNT] = {
 			4, 0,
 			6, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1581,8 +1559,8 @@ const struct cube crotated[RCOUNT] = {
 			11, 1,
 			 9, 1
 		)
-	},{ // GREEN180
-		.cc = cubecorners(
+	),mkcube( // GREEN180
+		cubecorners(
 			0, 0,
 			1, 0,
 			2, 0,
@@ -1592,7 +1570,7 @@ const struct cube crotated[RCOUNT] = {
 			5, 0,
 			4, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1606,8 +1584,8 @@ const struct cube crotated[RCOUNT] = {
 			 9, 0,
 			 8, 0
 		)
-	},{ // GREENCCW
-		.cc = cubecorners(
+	),mkcube( // GREENCCW
+		cubecorners(
 			0, 0,
 			1, 0,
 			2, 0,
@@ -1617,7 +1595,7 @@ const struct cube crotated[RCOUNT] = {
 			7, 0,
 			5, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0, 0,
 			 1, 0,
 			 2, 0,
@@ -1631,8 +1609,8 @@ const struct cube crotated[RCOUNT] = {
 			 8, 1,
 			10, 1
 		)
-	},{ // BLUECW
-		.cc = cubecorners(
+	),mkcube( // BLUECW
+		cubecorners(
 			2, 0,
 			0, 0,
 			3, 0,
@@ -1642,7 +1620,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 1, 1,
 			 3, 1,
 			 0, 1,
@@ -1656,8 +1634,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // BLUE180
-		.cc = cubecorners(
+	),mkcube( // BLUE180
+		cubecorners(
 			3, 0,
 			2, 0,
 			1, 0,
@@ -1667,7 +1645,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 3, 0,
 			 2, 0,
 			 1, 0,
@@ -1681,8 +1659,8 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	},{ // BLUECCW
-		.cc = cubecorners(
+	),mkcube( // BLUECCW
+		cubecorners(
 			1, 0,
 			3, 0,
 			0, 0,
@@ -1692,7 +1670,7 @@ const struct cube crotated[RCOUNT] = {
 			6, 0,
 			7, 0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 2, 1,
 			 0, 1,
 			 3, 1,
@@ -1706,7 +1684,7 @@ const struct cube crotated[RCOUNT] = {
 			10, 0,
 			11, 0
 		)
-	}
+	)
 };
 
 //   Y
@@ -1714,8 +1692,8 @@ const struct cube crotated[RCOUNT] = {
 //   W
 const struct cube ctransformed[TCOUNT] = {
     csolved,
-	{ // O B Y G W R, TD_C0_7_CW
-		.cc = cubecorners(
+	mkcube( // O B Y G W R, TD_C0_7_CW
+		cubecorners(
 			 0,  2,
 			 4,  1,
 			 1,  1,
@@ -1725,7 +1703,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 3,  2,
 			 7,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 4,  0,
 			 0,  0,
 			 8,  0,
@@ -1739,8 +1717,8 @@ const struct cube ctransformed[TCOUNT] = {
 			11,  0,
 			 7,  0
 		)
-	},{ // B Y O W R G, TD_C0_7_CCW
-		.cc = cubecorners(
+	),mkcube( // B Y O W R G, TD_C0_7_CCW
+		cubecorners(
 			 0,  1,
 			 2,  2,
 			 4,  2,
@@ -1750,7 +1728,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 5,  1,
 			 7,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 1,  0,
 			 4,  0,
 			 6,  0,
@@ -1764,8 +1742,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 7,  0,
 			10,  0
 		)
-    },{ // B W R Y O G, TD_C1_6_CW
-		.cc = cubecorners(
+    ),mkcube( // B W R Y O G, TD_C1_6_CW
+		cubecorners(
 			3, 1,
 			1, 2,
 			7, 2,
@@ -1775,7 +1753,7 @@ const struct cube ctransformed[TCOUNT] = {
 			6, 1,
 			4, 2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 2, 0,
 			 7, 0,
 			 5, 0,
@@ -1789,8 +1767,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 4, 0,
 			 9, 0
 		)
-	},{ // R G Y B W O, TD_C1_6_CCW
-        .cc = cubecorners(
+	),mkcube( // R G Y B W O, TD_C1_6_CCW
+        cubecorners(
              5, 2,
              1, 1,
              4, 1,
@@ -1800,7 +1778,7 @@ const struct cube ctransformed[TCOUNT] = {
              6, 2,
              2, 1
         ),
-        .ce = cubeedges(
+        cubeedges(
              5, 0,
              8, 0,
              0, 0,
@@ -1814,8 +1792,8 @@ const struct cube ctransformed[TCOUNT] = {
              3, 0,
              6, 0
         )
-	},{ // G W O Y R B, TD_C2_5_CW
-		.cc = cubecorners(
+	),mkcube( // G W O Y R B, TD_C2_5_CW
+		cubecorners(
 			 6,  1,
 			 4,  2,
 			 2,  2,
@@ -1825,7 +1803,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 3,  1,
 			 1,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 9,  0,
 			 6,  0,
 			 4,  0,
@@ -1839,8 +1817,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 5,  0,
 			 2,  0
 		)
-	},{ // R B W G Y O, TD_C2_5_CCW
-		.cc = cubecorners(
+	),mkcube( // R B W G Y O, TD_C2_5_CCW
+		cubecorners(
 			 3,  2,
 			 7,  1,
 			 2,  1,
@@ -1850,7 +1828,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 0,  2,
 			 4,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 7,  0,
 			 3,  0,
 			11,  0,
@@ -1864,8 +1842,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 8,  0,
 			 4,  0
 		)
-	},{ // O G W B Y R, TD_C3_4_CW
-		.cc = cubecorners(
+	),mkcube( // O G W B Y R, TD_C3_4_CW
+		cubecorners(
 			 6,  2,
 			 2,  1,
 			 7,  1,
@@ -1875,7 +1853,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 5,  2,
 			 1,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 6,  0,
 			11,  0,
 			 3,  0,
@@ -1889,8 +1867,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 0,  0,
 			 5,  0
 		)
-	},{ // G Y R W O B, TD_C3_4_CCW
-		.cc = cubecorners(
+	),mkcube( // G Y R W O B, TD_C3_4_CCW
+		cubecorners(
 			 5,  1,
 			 7,  2,
 			 1,  2,
@@ -1900,7 +1878,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 0,  1,
 			 2,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			10,  0,
 			 5,  0,
 			 7,  0,
@@ -1914,8 +1892,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 6,  0,
 			 1,  0
 		)
-	},{ // O W B Y G R, TD_BG_CW
-		.cc = cubecorners(
+	),mkcube( // O W B Y G R, TD_BG_CW
+		cubecorners(
 			 2,  0,
 			 0,  0,
 			 3,  0,
@@ -1925,7 +1903,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 7,  0,
 			 5,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 1,  1,
 			 3,  1,
 			 0,  1,
@@ -1939,8 +1917,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 8,  1,
 			10,  1
 		)
-	},{ // W R B O G Y, TD_BG_180
-		.cc = cubecorners(
+	),mkcube( // W R B O G Y, TD_BG_180
+		cubecorners(
 			 3,  0,
 			 2,  0,
 			 1,  0,
@@ -1950,7 +1928,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 5,  0,
 			 4,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 3,  0,
 			 2,  0,
 			 1,  0,
@@ -1964,8 +1942,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 9,  0,
 			 8,  0
 		)
-	},{ // R Y B W G O, TD_BG_CCW
-		.cc = cubecorners(
+	),mkcube( // R Y B W G O, TD_BG_CCW
+		cubecorners(
 			 1,  0,
 			 3,  0,
 			 0,  0,
@@ -1975,7 +1953,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 4,  0,
 			 6,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 2,  1,
 			 0,  1,
 			 3,  1,
@@ -1989,8 +1967,8 @@ const struct cube ctransformed[TCOUNT] = {
 			11,  1,
 			 9,  1
 		)
-	},{ // Y B R G O W, TD_YW_CW
-		.cc = cubecorners(
+	),mkcube( // Y B R G O W, TD_YW_CW
+		cubecorners(
 			 1,  2,
 			 5,  1,
 			 3,  1,
@@ -2000,7 +1978,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 2,  2,
 			 6,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 5,  1,
 			 2,  1,
 			10,  1,
@@ -2014,8 +1992,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 9,  1,
 			 6,  1
 		)
-	},{ // Y R G O B W, TD_YW_180
-		.cc = cubecorners(
+	),mkcube( // Y R G O B W, TD_YW_180
+		cubecorners(
 			 5,  0,
 			 4,  0,
 			 7,  0,
@@ -2025,7 +2003,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 3,  0,
 			 2,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 8,  0,
 			10,  0,
 			 9,  0,
@@ -2039,8 +2017,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 1,  0,
 			 3,  0
 		)
-	},{ // Y G O B R W, TD_YW_CCW
-		.cc = cubecorners(
+	),mkcube( // Y G O B R W, TD_YW_CCW
+		cubecorners(
 			 4,  2,
 			 0,  1,
 			 6,  1,
@@ -2050,7 +2028,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 7,  2,
 			 3,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 4,  1,
 			 9,  1,
 			 1,  1,
@@ -2064,8 +2042,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 2,  1,
 			 7,  1
 		)
-	},{ // B O W R Y G, TD_OR_CW
-		.cc = cubecorners(
+	),mkcube( // B O W R Y G, TD_OR_CW
+		cubecorners(
 			 2,  1,
 			 3,  2,
 			 6,  2,
@@ -2075,7 +2053,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 4,  1,
 			 5,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 3,  1,
 			 6,  1,
 			 7,  1,
@@ -2089,8 +2067,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 5,  1,
 			 8,  1
 		)
-	},{ // W O G R B Y, TD_OR_180
-		.cc = cubecorners(
+	),mkcube( // W O G R B Y, TD_OR_180
+		cubecorners(
 			 6,  0,
 			 7,  0,
 			 4,  0,
@@ -2100,7 +2078,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 0,  0,
 			 1,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			11,  0,
 			 9,  0,
 			10,  0,
@@ -2114,8 +2092,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 2,  0,
 			 0,  0
 		)
-	},{ // G O Y R W B, TD_OR_CCW
-		.cc = cubecorners(
+	),mkcube( // G O Y R W B, TD_OR_CCW
+		cubecorners(
 			 4,  1,
 			 5,  2,
 			 0,  2,
@@ -2125,7 +2103,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 2,  1,
 			 3,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 8,  1,
 			 4,  1,
 			 5,  1,
@@ -2139,8 +2117,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 7,  1,
 			 3,  1
 		)
-	},{ // B R Y O W G, TD_E0_11
-		.cc = cubecorners(
+	),mkcube( // B R Y O W G, TD_E0_11
+		cubecorners(
 			 1,  1,
 			 0,  2,
 			 5,  2,
@@ -2150,7 +2128,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 7,  1,
 			 6,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 0,  1,
 			 5,  1,
 			 4,  1,
@@ -2164,8 +2142,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 6,  1,
 			11,  1
 		)
-	},{ // W B O G R Y, TD_E1_10
-		.cc = cubecorners(
+	),mkcube( // W B O G R Y, TD_E1_10
+		cubecorners(
 			 2,  2,
 			 6,  1,
 			 0,  1,
@@ -2175,7 +2153,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 1,  2,
 			 5,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 6,  1,
 			 1,  1,
 			 9,  1,
@@ -2189,8 +2167,8 @@ const struct cube ctransformed[TCOUNT] = {
 			10,  1,
 			 5,  1
 		)
-	},{ // W G R B O Y, TD_E2_9
-		.cc = cubecorners(
+	),mkcube( // W G R B O Y, TD_E2_9
+		cubecorners(
 			 7,  2,
 			 3,  1,
 			 5,  1,
@@ -2200,7 +2178,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 4,  2,
 			 0,  1
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 7,  1,
 			10,  1,
 			 2,  1,
@@ -2214,8 +2192,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 1,  1,
 			 4,  1
 		)
-	},{ // G R W O Y B, TD_E3_8
-		.cc = cubecorners(
+	),mkcube( // G R W O Y B, TD_E3_8
+		cubecorners(
 			 7,  1,
 			 6,  2,
 			 3,  2,
@@ -2225,7 +2203,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 1,  1,
 			 0,  2
 		),
-		.ce = cubeedges(
+		cubeedges(
 			11,  1,
 			 7,  1,
 			 6,  1,
@@ -2239,8 +2217,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 4,  1,
 			 0,  1
 		)
-	},{ // O Y G W B R, TD_E4_7
-		.cc = cubecorners(
+	),mkcube( // O Y G W B R, TD_E4_7
+		cubecorners(
 			 4,  0,
 			 6,  0,
 			 5,  0,
@@ -2250,7 +2228,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 1,  0,
 			 3,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			 9,  1,
 			 8,  1,
 			11,  1,
@@ -2264,8 +2242,8 @@ const struct cube ctransformed[TCOUNT] = {
 			 3,  1,
 			 2,  1
 		)
-	},{ // R W G Y B O, TD_E5_6
-		.cc = cubecorners(
+	),mkcube( // R W G Y B O, TD_E5_6
+		cubecorners(
 			 7,  0,
 			 5,  0,
 			 6,  0,
@@ -2275,7 +2253,7 @@ const struct cube ctransformed[TCOUNT] = {
 			 2,  0,
 			 0,  0
 		),
-		.ce = cubeedges(
+		cubeedges(
 			10,  1,
 			11,  1,
 			 8,  1,
@@ -2289,31 +2267,34 @@ const struct cube ctransformed[TCOUNT] = {
 			 0,  1,
 			 1,  1
 		)
-	}
+	)
 };
 
 static cube cubeTransform(const cube &c, unsigned idx)
 {
     const cube &ctrans = ctransformed[idx];
-    cubecorners cc1 = cubecorners::compose(ctrans.cc, c.cc);
+    cubecorner_perms ccp1 = cubecorner_perms::compose(ctrans.ccp, c.ccp);
+    cubecorner_orients cco1 = cubecorner_orients::compose(ctrans.cco, c.ccp, c.cco);
     cubeedges ce1 = cubeedges::compose(ctrans.ce, c.ce);
+
     const cube &ctransRev = ctransformed[transformReverse(idx)];
-    cubecorners cc2 = cubecorners::compose(cc1, ctransRev.cc);
+    cubecorner_perms ccp2 = cubecorner_perms::compose(ccp1, ctransRev.ccp);
+    cubecorner_orients cco2 = cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
     cubeedges ce2 = cubeedges::compose(ce1, ctransRev.ce);
-	return { .cc = cc2, .ce = ce2 };
+	return { .ccp = ccp2, .cco = cco2, .ce = ce2 };
 }
 
 static cubecorner_perms cubecornerPermsTransform1(cubecorner_perms ccp, int idx)
 {
-    cubecorner_perms ccp1 = cubecorner_perms::compose(ctransformed[idx].cc.getPerms(), ccp);
+    cubecorner_perms ccp1 = cubecorner_perms::compose(ctransformed[idx].ccp, ccp);
 	return cubecorner_perms::compose(ccp1,
-            ctransformed[transformReverse(idx)].cc.getPerms());
+            ctransformed[transformReverse(idx)].ccp);
 }
 
 cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
 {
-    cubecorner_perms cctr = ctransformed[transformDir].cc.getPerms();
-    cubecorner_perms ccrtr = ctransformed[transformReverse(transformDir)].cc.getPerms();
+    cubecorner_perms cctr = ctransformed[transformDir].ccp;
+    cubecorner_perms ccrtr = ctransformed[transformReverse(transformDir)].ccp;
 	cubecorner_perms res;
 	for(int cno = 0; cno < 8; ++cno) {
 		res.setAt(cno, cctr.getAt(this->getAt(ccrtr.getAt(cno))));
@@ -2323,8 +2304,9 @@ cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
 
 cubecorner_orients cubecorner_orients::transform(cubecorner_perms ccp, unsigned transformDir) const
 {
-    cubecorner_orients cco1 = cubecorner_orients::compose(ctransformed[transformDir].cc.getOrients(), ccp, *this);
-	return cubecorners::orientsCompose(cco1, ctransformed[transformReverse(transformDir)].cc);
+    cubecorner_orients cco1 = cubecorner_orients::compose(ctransformed[transformDir].cco, ccp, *this);
+    const cube &ctransRev = ctransformed[transformReverse(transformDir)];
+	return cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
 }
 
 cubeedges cubeedges::transform(int idx) const
@@ -2475,8 +2457,8 @@ static void permReprInit()
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
                 cubecorner_perms permchk = symmetric ? permr.symmetric() : permr;
                 for(unsigned short td = 0; td < TCOUNT; ++td) {
-                    cubecorner_perms cctr = ctransformed[td].cc.getPerms();
-                    cubecorner_perms ccrtr = ctransformed[transformReverse(td)].cc.getPerms();
+                    cubecorner_perms cctr = ctransformed[td].ccp;
+                    cubecorner_perms ccrtr = ctransformed[transformReverse(td)].ccp;
                     cubecorner_perms cand;
                     for(int cno = 0; cno < 8; ++cno)
                         cand.setAt(cno, cctr.getAt(permchk.getAt(ccrtr.getAt(cno))));
@@ -2742,11 +2724,11 @@ static cubeedges cubeedgesComposedRepresentative(cubeedges ce, const std::vector
 static cube cubeRepresentative(const cube &c) {
     std::vector<EdgeReprCandidateTransform> transform;
 
-    cubecorner_perms ccpRepr = cubecornerPermsRepresentative(c.cc.getPerms());
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(c.cc.getPerms(),
-            c.cc.getOrients(), transform);
+    cubecorner_perms ccpRepr = cubecornerPermsRepresentative(c.ccp);
+    cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(c.ccp,
+            c.cco, transform);
     cubeedges ceRepr = cubeedgesRepresentative(c.ce, transform);
-    return { .cc = cubecorners(ccpRepr, ccoRepr), .ce = ceRepr };
+    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
 static void cubePrint(const cube &c)
@@ -2762,31 +2744,31 @@ static void cubePrint(const cube &c)
 
 	printf("\n");
 	printf("        %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][R120[c.cc.getOrientAt(4)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(4)][R120[c.cco.getAt(4)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(8)][!c.ce.getOrientAt(8)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][R240[c.cc.getOrientAt(5)]]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(5)][R240[c.cco.getAt(5)]]]);
 	printf("        %s%s%s\n",
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(4)][c.ce.getOrientAt(4)]],
 			colorPrint[CYELLOW],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(5)][c.ce.getOrientAt(5)]]);
 	printf("        %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][R240[c.cc.getOrientAt(0)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(0)][R240[c.cco.getAt(0)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(0)][!c.ce.getOrientAt(0)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][R120[c.cc.getOrientAt(1)]]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(1)][R120[c.cco.getAt(1)]]]);
 	printf("\n");
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][R240[c.cc.getOrientAt(4)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(4)][R240[c.cco.getAt(4)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(4)][!c.ce.getOrientAt(4)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][R120[c.cc.getOrientAt(0)]]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(0)][c.cc.getOrientAt(0)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(0)][R120[c.cco.getAt(0)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(0)][c.cco.getAt(0)]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(0)][c.ce.getOrientAt(0)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][c.cc.getOrientAt(1)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(1)][R240[c.cc.getOrientAt(1)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(1)][c.cco.getAt(1)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(1)][R240[c.cco.getAt(1)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(5)][!c.ce.getOrientAt(5)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][R120[c.cc.getOrientAt(5)]]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(5)][c.cc.getOrientAt(5)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(5)][R120[c.cco.getAt(5)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(5)][c.cco.getAt(5)]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(8)][c.ce.getOrientAt(8)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(4)][c.cc.getOrientAt(4)]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(4)][c.cco.getAt(4)]]);
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(9)][c.ce.getOrientAt(9)]],
 			colorPrint[CORANGE],
@@ -2801,31 +2783,31 @@ static void cubePrint(const cube &c)
 			colorPrint[CGREEN],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(9)][!c.ce.getOrientAt(9)]]);
 	printf(" %s%s%s %s%s%s %s%s%s %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][R120[c.cc.getOrientAt(6)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(6)][R120[c.cco.getAt(6)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(6)][!c.ce.getOrientAt(6)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][R240[c.cc.getOrientAt(2)]]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][c.cc.getOrientAt(2)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(2)][R240[c.cco.getAt(2)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(2)][c.cco.getAt(2)]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(3)][c.ce.getOrientAt(3)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][c.cc.getOrientAt(3)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][R120[c.cc.getOrientAt(3)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(3)][c.cco.getAt(3)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(3)][R120[c.cco.getAt(3)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(7)][!c.ce.getOrientAt(7)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][R240[c.cc.getOrientAt(7)]]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][c.cc.getOrientAt(7)]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(7)][R240[c.cco.getAt(7)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(7)][c.cco.getAt(7)]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(11)][c.ce.getOrientAt(11)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][c.cc.getOrientAt(6)]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(6)][c.cco.getAt(6)]]);
 	printf("\n");
 	printf("        %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(2)][R120[c.cc.getOrientAt(2)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(2)][R120[c.cco.getAt(2)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(3)][!c.ce.getOrientAt(3)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(3)][R240[c.cc.getOrientAt(3)]]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(3)][R240[c.cco.getAt(3)]]]);
 	printf("        %s%s%s\n",
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(6)][c.ce.getOrientAt(6)]],
 			colorPrint[CWHITE],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(7)][c.ce.getOrientAt(7)]]);
 	printf("        %s%s%s\n",
-			colorPrint[cubeCornerColors[c.cc.getPermAt(6)][R240[c.cc.getOrientAt(6)]]],
+			colorPrint[cubeCornerColors[c.ccp.getAt(6)][R240[c.cco.getAt(6)]]],
 			colorPrint[cubeEdgeColors[c.ce.getPermAt(11)][!c.ce.getOrientAt(11)]],
-			colorPrint[cubeCornerColors[c.cc.getPermAt(7)][R120[c.cc.getOrientAt(7)]]]);
+			colorPrint[cubeCornerColors[c.ccp.getAt(7)][R120[c.cco.getAt(7)]]]);
 	printf("\n");
 }
 
@@ -2838,7 +2820,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = c.cc.getPermAt(p)) != i ) {
+        while( (p = c.ccp.getAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
                 sendRespMessage(reqFd, "corner perm %d is twice\n", p);
                 return false;
@@ -2868,7 +2850,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
 	}
 	unsigned sumOrient = 0;
 	for(int i = 0; i < 8; ++i)
-		sumOrient += c.cc.getOrientAt(i);
+		sumOrient += c.cco.getAt(i);
 	if( sumOrient % 3 ) {
 		sendRespMessage(reqFd, "cube unsolvable due to corner orientations\n");
 		return false;
@@ -2948,8 +2930,8 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 					match = false;
 			}
 			if( match ) {
-				c.cc.setPermAt(i, n);
-				c.cc.setOrientAt(i, 0);
+				c.ccp.setAt(i, n);
+				c.cco.setAt(i, 0);
 				break;
 			}
 			match = true;
@@ -2959,8 +2941,8 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 					match = false;
 			}
 			if( match ) {
-				c.cc.setPermAt(i, n);
-				c.cc.setOrientAt(i, 1);
+				c.ccp.setAt(i, n);
+				c.cco.setAt(i, 1);
 				break;
 			}
 			match = true;
@@ -2970,8 +2952,8 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 					match = false;
 			}
 			if( match ) {
-				c.cc.setPermAt(i, n);
-				c.cc.setOrientAt(i, 2);
+				c.ccp.setAt(i, n);
+				c.cco.setAt(i, 2);
 				break;
 			}
 		}
@@ -2980,9 +2962,9 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 			return false;
 		}
 		for(int j = 0; j < i; ++j) {
-			if( c.cc.getPermAt(i) == c.cc.getPermAt(j) ) {
+			if( c.ccp.getAt(i) == c.ccp.getAt(j) ) {
 				sendRespMessage(reqFd, "corner %d is twice: at %d and %d\n",
-						c.cc.getPermAt(i), j, i);
+						c.ccp.getAt(i), j, i);
 				return false;
 			}
 		}
@@ -3153,7 +3135,7 @@ static bool isRotateKind(unsigned spaceKind, unsigned rotateDir) {
 static bool isBGspace(const cube &c)
 {
     for(unsigned i = 0; i < 8; ++i)
-        if( c.cc.getOrientAt(i) )
+        if( c.cco.getAt(i) )
             return false;
     switch( c.ce.getPermAt(0) ) {
         case 0:
@@ -3306,131 +3288,131 @@ static bool isBGspace(const cube &c)
 
 static bool isYWspace(const cube &c)
 {
-    switch(c.cc.getPermAt(0)) {
+    switch(c.ccp.getAt(0)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(0) != 0 )
+        if( c.cco.getAt(0) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(0) != 2 )
+        if( c.cco.getAt(0) != 2 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(1)) {
+    switch(c.ccp.getAt(1)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(1) != 1 )
+        if( c.cco.getAt(1) != 1 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(1) != 0 )
+        if( c.cco.getAt(1) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(2)) {
+    switch(c.ccp.getAt(2)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(2) != 1 )
+        if( c.cco.getAt(2) != 1 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(2) != 0 )
+        if( c.cco.getAt(2) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(3)) {
+    switch(c.ccp.getAt(3)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(3) != 0 )
+        if( c.cco.getAt(3) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(3) != 2 )
+        if( c.cco.getAt(3) != 2 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(4)) {
+    switch(c.ccp.getAt(4)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(4) != 1 )
+        if( c.cco.getAt(4) != 1 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(4) != 0 )
+        if( c.cco.getAt(4) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(5)) {
+    switch(c.ccp.getAt(5)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(5) != 0 )
+        if( c.cco.getAt(5) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(5) != 2 )
+        if( c.cco.getAt(5) != 2 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(6)) {
+    switch(c.ccp.getAt(6)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(6) != 0 )
+        if( c.cco.getAt(6) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(6) != 2 )
+        if( c.cco.getAt(6) != 2 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(7)) {
+    switch(c.ccp.getAt(7)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(7) != 1 )
+        if( c.cco.getAt(7) != 1 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(7) != 0 )
+        if( c.cco.getAt(7) != 0 )
             return false;
         break;
     }
@@ -3587,131 +3569,131 @@ static bool isYWspace(const cube &c)
 
 static bool isORspace(const cube &c)
 {
-    switch(c.cc.getPermAt(0)) {
+    switch(c.ccp.getAt(0)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(0) != 0 )
+        if( c.cco.getAt(0) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(0) != 1 )
+        if( c.cco.getAt(0) != 1 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(1)) {
+    switch(c.ccp.getAt(1)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(1) != 2 )
+        if( c.cco.getAt(1) != 2 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(1) != 0 )
+        if( c.cco.getAt(1) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(2)) {
+    switch(c.ccp.getAt(2)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(2) != 2 )
+        if( c.cco.getAt(2) != 2 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(2) != 0 )
+        if( c.cco.getAt(2) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(3)) {
+    switch(c.ccp.getAt(3)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(3) != 0 )
+        if( c.cco.getAt(3) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(3) != 1 )
+        if( c.cco.getAt(3) != 1 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(4)) {
+    switch(c.ccp.getAt(4)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(4) != 2 )
+        if( c.cco.getAt(4) != 2 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(4) != 0 )
+        if( c.cco.getAt(4) != 0 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(5)) {
+    switch(c.ccp.getAt(5)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(5) != 0 )
+        if( c.cco.getAt(5) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(5) != 1 )
+        if( c.cco.getAt(5) != 1 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(6)) {
+    switch(c.ccp.getAt(6)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(6) != 0 )
+        if( c.cco.getAt(6) != 0 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(6) != 1 )
+        if( c.cco.getAt(6) != 1 )
             return false;
         break;
     }
-    switch(c.cc.getPermAt(7)) {
+    switch(c.ccp.getAt(7)) {
     case 0:
     case 3:
     case 5:
     case 6:
-        if( c.cc.getOrientAt(7) != 2 )
+        if( c.cco.getAt(7) != 2 )
             return false;
         break;
     case 1:
     case 2:
     case 4:
     case 7:
-        if( c.cc.getOrientAt(7) != 0 )
+        if( c.cco.getAt(7) != 0 )
             return false;
         break;
     }
@@ -3918,7 +3900,7 @@ static bool isCubeSolvable1(const cube &c)
             continue;
         permsScanned |= 1 << i;
         int p = i;
-        while( (p = c.cc.getPermAt(p)) != i ) {
+        while( (p = c.ccp.getAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
                 printf("corner perm %d is twice\n", p);
                 return false;
@@ -3948,7 +3930,7 @@ static bool isCubeSolvable1(const cube &c)
 	}
 	unsigned sumOrient = 0;
 	for(int i = 0; i < 8; ++i)
-		sumOrient += c.cc.getOrientAt(i);
+		sumOrient += c.cco.getAt(i);
 	if( sumOrient % 3 ) {
 		printf("cube unsolvable due to corner orientations\n");
 		return false;
@@ -4065,8 +4047,8 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
         cerepr.setPermAt(9, p);
         cerepr.setOrientAt(9, o);
 	}
-    cube cchk = { .cc = csolved.cc, .ce = cerepr };
-    cube c = { .cc = csolved.cc, .ce = ce };
+    cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
+    cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
     if( !isYWspace(cube::compose(c.reverse(), cchk)) ) {
         printf("fatal: YW cube representative is not congruent\n");
         exit(1);
@@ -4122,8 +4104,8 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
         cerepr.setPermAt(11, p);
         cerepr.setOrientAt(11, o);
 	}
-    cube cchk = { .cc = csolved.cc, .ce = cerepr };
-    cube c = { .cc = csolved.cc, .ce = ce };
+    cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
+    cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
     if( !isORspace(cube::compose(c.reverse(), cchk)) ) {
         printf("fatal: OR cube representative is not congruent\n");
         exit(1);
@@ -4136,27 +4118,27 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
 }
 
 static cube cubeRepresentativeBG(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.cc.getPerms();
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeBG(c.cc.getPerms(),
-            c.cc.getOrients());
+    cubecorner_perms ccpRepr = csolved.ccp;
+    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeBG(c.ccp,
+            c.cco);
     cubeedges ceRepr = cubeedgesRepresentativeBG(c.ce);
-    return { .cc = cubecorners(ccpRepr, ccoRepr), .ce = ceRepr };
+    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
 static cube cubeRepresentativeYW(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.cc.getPerms();
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeYW(c.cc.getPerms(),
-            c.cc.getOrients());
+    cubecorner_perms ccpRepr = csolved.ccp;
+    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeYW(c.ccp,
+            c.cco);
     cubeedges ceRepr = cubeedgesRepresentativeYW(c.ce);
-    return { .cc = cubecorners(ccpRepr, ccoRepr), .ce = ceRepr };
+    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
 static cube cubeRepresentativeOR(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.cc.getPerms();
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeOR(c.cc.getPerms(),
-            c.cc.getOrients());
+    cubecorner_perms ccpRepr = csolved.ccp;
+    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeOR(c.ccp,
+            c.cco);
     cubeedges ceRepr = cubeedgesRepresentativeOR(c.ce);
-    return { .cc = cubecorners(ccpRepr, ccoRepr), .ce = ceRepr };
+    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
 const char spaceKindName[SPACECOUNT][3] = { "BG", "YW", "OR" };
@@ -4496,8 +4478,8 @@ static std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &
 	std::vector<int> rotateDirs;
     std::vector<int>::iterator insertPos = rotateDirs.end();
     cube crepr = cubeRepresentative(c);
-    unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.cc.getPerms());
-    unsigned corientIdx = cornersOrientToIdx(crepr.cc.getOrients());
+    unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.ccp);
+    unsigned corientIdx = cornersOrientToIdx(crepr.cco);
 	unsigned depth = 0;
 	while( true ) {
         const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
@@ -4518,16 +4500,16 @@ static std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &
 		while( cm < RCOUNT ) {
 			cc1 = cube::compose(cc, crotated[cm]);
             cube cc1repr = cubeRepresentative(cc1);
-            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.cc.getPerms());
-            corientIdx = cornersOrientToIdx(cc1repr.cc.getOrients());
+            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
+            corientIdx = cornersOrientToIdx(cc1repr.cco);
             const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(corientIdx);
             if( ccoReprCubes.containsCubeEdges(cc1repr.ce) )
                 break;
 			cc1 = cube::compose(ccRev, crotated[cm]);
             cc1repr = cubeRepresentative(cc1);
-            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.cc.getPerms());
-            corientIdx = cornersOrientToIdx(cc1repr.cc.getOrients());
+            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
+            corientIdx = cornersOrientToIdx(cc1repr.cco);
             const CornerPermReprCubes &ccpReprCubesRev = cubesByDepth[depth].getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubesRev = ccpReprCubesRev.cornerOrientCubesAt(corientIdx);
             if( ccoReprCubesRev.containsCubeEdges(cc1repr.ce) ) {
@@ -4671,8 +4653,8 @@ static void addCubesT(
             for(int rd = 0; rd < RCOUNT; ++rd) {
                 for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
                     cubecorner_perms ccpNew = reversed ?
-                        cubecorner_perms::compose(crotated[rd].cc.getPerms(), ccp) :
-                        cubecorner_perms::compose(ccp, crotated[rd].cc.getPerms());
+                        cubecorner_perms::compose(crotated[rd].ccp, ccp) :
+                        cubecorner_perms::compose(ccp, crotated[rd].ccp);
                     unsigned cornerPermReprIdxNew = cubecornerPermRepresentativeIdx(ccpNew);
                     if( cornerPermReprIdxNew % threadCount == threadNo ) {
                         const CornerPermReprCubes *ccpReprCubesNewP = depth == 1 ? NULL : &(*cubesReprByDepth)[depth-2].getAt(cornerPermReprIdxNew);
@@ -4683,8 +4665,8 @@ static void addCubesT(
                             const CornerOrientReprCubes &corientReprCubesC = *ccoCubesItC;
                             cubecorner_orients cco = corientReprCubesC.getOrients();
                             cubecorner_orients ccoNew = reversed ?
-                                cubecorner_orients::compose(crotated[rd].cc.getOrients(), ccp, cco) :
-                                cubecorners::orientsCompose(cco, crotated[rd].cc);
+                                cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
+                                cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
                             cubecorner_orients ccoReprNew = cubecornerOrientsRepresentative(ccpNew, ccoNew, otransformNew);
                             unsigned corientIdxNew = cornersOrientToIdx(ccoReprNew);
                             const CornerOrientReprCubes *corientReprCubesNewP = ccpReprCubesNewP == NULL ? NULL :
@@ -4698,7 +4680,7 @@ static void addCubesT(
 
                                 if( onlyInSpace ) {
                                     // TODO: split check into cco+ce
-                                    cube c = { .cc = cubecorners(ccp, cco), .ce = ce };
+                                    cube c = { .ccp = ccp, .cco = cco, .ce = ce };
                                     bool isBG = isBGspace(c);
                                     bool isYW = isYWspace(c);
                                     bool isOR = isORspace(c);
@@ -4744,11 +4726,11 @@ static bool addCubes(
 {
     if( depth == 0 ) {
         // insert the solved cube
-        unsigned cornerPermReprIdx = cubecornerPermRepresentativeIdx(csolved.cc.getPerms());
+        unsigned cornerPermReprIdx = cubecornerPermRepresentativeIdx(csolved.ccp);
         CornerPermReprCubes &ccpCubes = cubesReprByDepth[0].add(cornerPermReprIdx);
         std::vector<EdgeReprCandidateTransform> otransform;
-        cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(csolved.cc.getPerms(),
-                csolved.cc.getOrients(), otransform);
+        cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(csolved.ccp,
+                csolved.cco, otransform);
         unsigned ccoIdx = cornersOrientToIdx(ccoRepr);
         CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoIdx);
         cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
@@ -4912,10 +4894,10 @@ static bool containsCube(const CubesReprAtDepth &cubesRepr, const cube &c)
 {
     std::vector<EdgeReprCandidateTransform> otransform;
 
-    unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(c.cc.getPerms());
+    unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(c.ccp);
     const CornerPermReprCubes &ccpReprSearchCubes = cubesRepr.getAt(ccpReprSearchIdx);
-    cubecorner_orients ccoSearchRepr = cubecornerOrientsRepresentative(c.cc.getPerms(),
-            c.cc.getOrients(), otransform);
+    cubecorner_orients ccoSearchRepr = cubecornerOrientsRepresentative(c.ccp,
+            c.cco, otransform);
     unsigned corientIdxSearch = cornersOrientToIdx(ccoSearchRepr);
     const CornerOrientReprCubes &ccoReprSearchCubes =
         ccpReprSearchCubes.cornerOrientCubesAt(corientIdxSearch);
@@ -4937,7 +4919,7 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
         for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
             for(unsigned td = 0; td < TCOUNT; ++td) {
                 const cube cSearchT = cubeTransform(symmetric ? csearchSymm : csearch, td);
-                cubecorner_perms ccpSearch = cubecorner_perms::compose(ccprev, cSearchT.cc.getPerms());
+                cubecorner_perms ccpSearch = cubecorner_perms::compose(ccprev, cSearchT.ccp);
                 unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(ccpSearch);
                 const CornerPermReprCubes &ccpReprSearchCubes =
                     cubesReprByDepth[depthMax].getAt(ccpReprSearchIdx);
@@ -4948,7 +4930,7 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
                     const CornerOrientReprCubes &ccoReprCubes = *ccoCubesIt;
                     cubecorner_orients cco = ccoReprCubes.getOrients();
                     cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
-                    cubecorner_orients ccoSearch = cubecorners::orientsCompose(ccorev, cSearchT.cc);
+                    cubecorner_orients ccoSearch = cubecorner_orients::compose(ccorev, cSearchT.ccp, cSearchT.cco);
                     cubecorner_orients ccoSearchRepr = cubecornerOrientsComposedRepresentative(
                             ccpSearch, ccoSearch, cSearchT.ce, otransform);
                     unsigned corientIdxSearch = cornersOrientToIdx(ccoSearchRepr);
@@ -4966,8 +4948,8 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
                     }
                     if( !cerev.isNil() ) {
                         cubeedges ceSearch = cubeedges::compose(cerev, cSearchT.ce);
-                        cube cSearch = { .cc = cubecorners(ccpSearch, ccoSearch), .ce = ceSearch };
-                        cube c = { .cc = cubecorners(ccprev, ccorev), .ce = cerev };
+                        cube cSearch = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
+                        cube c = { .ccp = ccprev, .cco = ccorev, .ce = cerev };
                         // cube found: cSearch = c ⊙  (csearch rev/symm/tr)
                         // rewriting equation:
                         //  cSearch ⊙  (cSearch rev) = csolved = c ⊙  (csearch rev/symm/tr) ⊙  (cSearch rev)
@@ -5072,7 +5054,7 @@ static void searchMovesTb(const CubesReprByDepth *cubesReprByDepth,
                         edge1It != ccoCubes1.edgeEnd(); ++edge1It)
                 {
                     const cubeedges ce1 = *edge1It;
-                    cube c1 = { .cc = cubecorners(ccp1, cco1), .ce = ce1 };
+                    cube c1 = { .ccp = ccp1, .cco = cco1, .ce = ce1 };
                     std::vector<cube> cubesChecked;
                     for(unsigned reversed1 = 0; reversed1 < (USEREVERSE ? 2 : 1); ++reversed1) {
                         cube c1r = reversed1 ? c1.reverse() : c1;
@@ -5211,7 +5193,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                         cubecorner_perms ccpT = ccprevsymm.transform(td);
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoReprBG = cubecornerOrientsRepresentativeBG(ccpT, ccoT);
-                        if( cSpaceRepr.cc.getOrients() == ccoReprBG ) {
+                        if( cSpaceRepr.cco == ccoReprBG ) {
                             for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
                                     edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
                             {
@@ -5221,7 +5203,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                                 cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = cubeedgesRepresentativeBG(ceT);
                                 if( cSpaceRepr.ce == ceReprBG ) {
-                                    cube cube2 = { .cc = cubecorners(ccpT, ccoT), .ce = ceT };
+                                    cube cube2 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
                                     // cube1 ⊙  csearch = cube2 ⊙  cSpace
                                     // cSpace = (cube2 rev) ⊙  cube1 ⊙  csearch
                                     // csearch = (cube1 rev) ⊙  cube2 ⊙  cSpace
@@ -5333,7 +5315,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                 cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
                 for(unsigned td = 0; td < TCOUNT; ++td) {
                     cubecorner_perms ccpT = ccprevsymm.transform(td);
-                    cubecorner_perms ccpSearch = cubecorner_perms::compose(ccpT, csearchT.cc.getPerms());
+                    cubecorner_perms ccpSearch = cubecorner_perms::compose(ccpT, csearchT.ccp);
 
                     for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprCubes.ccoCubesBegin();
                             ccoCubesIt != ccpReprCubes.ccoCubesEnd(); ++ccoCubesIt)
@@ -5343,7 +5325,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                         cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
                         cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        cubecorner_orients ccoSearch = cubecorners::orientsCompose(ccoT, csearchT.cc);
+                        cubecorner_orients ccoSearch = cubecorner_orients::compose(ccoT, csearchT.ccp, csearchT.cco);
                         cubecorner_orients ccoSearchReprBG = cubecornerOrientsRepresentativeBG(
                                 ccpSearch, ccoSearch);
                         unsigned searchReprCOrientIdx = cornersOrientToIdx(ccoSearchReprBG);
@@ -5365,12 +5347,12 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                     sendRespMessage(fdReq, "found %s space cube at depth %d\n",
                                             transformToSpace[searchTd], depth+depthMax);
                                     */
-                                    cube cSearch1 = { .cc = cubecorners(ccpSearch, ccoSearch), .ce = ceSearch };
+                                    cube cSearch1 = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
                                     std::string inspaceWithCube2Moves;
                                     int moveCount = searchPhase1Cube2(cubesReprByDepth, cSearch1, searchTd, depthMax,
                                             movesMax-depth, catchFirst, fdReq, threadCount, inspaceWithCube2Moves);
                                     if( moveCount >= 0 ) {
-                                        cube cube1 = { .cc = cubecorners(ccpT, ccoT), .ce = ceT };
+                                        cube cube1 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
                                         cube cube1T = cubeTransform(cube1, transformReverse(searchTd));
                                         std::string cube1Moves = printMoves(cubesReprByDepth, cube1T);
                                         std::string moves = inspaceWithCube2Moves + cube1Moves + cubeMovesAppend;
@@ -5454,16 +5436,17 @@ static void searchMovesQuickB(const CubesReprByDepth *cubesReprByDepth,
                                 cubecorner_orients cco1T = cco1revsymm.transform(ccp1revsymm, td1);
                                 cubeedges ce1T = ce1revsymm.transform(td1);
 
-                                cube c1T = { .cc = cubecorners(ccp1T, cco1T), .ce = ce1T };
+                                cube c1T = { .ccp = ccp1T, .cco = cco1T, .ce = ce1T };
                                 bool isDup = std::find(cubesChecked.begin(), cubesChecked.end(), c1T) != cubesChecked.end();
                                 if( isDup )
                                     continue;
                                 cubesChecked.push_back(c1T);
 
-                                cubecorner_perms ccp1Search = cubecorner_perms::compose(ccp1T, csearch->cc.getPerms());
-                                cubecorner_orients cco1Search = cubecorners::orientsCompose(cco1T, csearch->cc);
+                                cubecorner_perms ccp1Search = cubecorner_perms::compose(ccp1T, csearch->ccp);
+                                cubecorner_orients cco1Search = cubecorner_orients::compose(cco1T,
+                                        csearch->ccp, csearch->cco);
                                 cubeedges ce1Search = cubeedges::compose(ce1T, csearch->ce);
-                                cube c1Search = { .cc = cubecorners(ccp1Search, cco1Search), .ce = ce1Search };
+                                cube c1Search = { .ccp = ccp1Search, .cco = cco1Search, .ce = ce1Search };
                                 std::string cube1Moves = printMoves(*cubesReprByDepth, c1T);
 
                                 if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
