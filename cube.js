@@ -1558,7 +1558,7 @@ async function searchMoves(c) {
         document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
 
         let qparamcube=cubeToParamText(c);
-        let qparammode = solvequick.checked ? 'q' : solvedeep.checked ? 'd' : 'o';
+        let qparammode = solvequick.checked ? 'q' : solveqmulti.checked ? 'm' : 'o';
         let a = await fetch('/?' + qparammode + '=' + qparamcube);
         let b = a.body.getReader();
         const utf8Decoder = new TextDecoder("utf-8");
