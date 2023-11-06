@@ -5,7 +5,8 @@ The program solves Rubik's cube.
 The program has two modes of operation: optimal and quick. In optimal mode
 it finds solutions having minimal possible number of steps. In quick mode
 it finds solutions quickly, but they can be far from optimal. In quick
-mode the solution can be up to 30 steps long.
+mode the solution can be (theoretically) up to 30 steps long. In
+practice the length rarely exceeds 25 steps.
 
 ## Requirements
 
