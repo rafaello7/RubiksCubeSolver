@@ -4536,19 +4536,19 @@ static std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &
 
 class ProgressBase {
     static std::mutex m_progressMutex;
-    static bool m_isCancelRequested;
+    static bool m_isStopRequested;
 protected:
     static void mutexLock();
-    static bool isCancelRequestedNoLock() { return m_isCancelRequested; }
+    static bool isStopRequestedNoLock() { return m_isStopRequested; }
     static void mutexUnlock();
 public:
-    static void requestCancel();
-    static void requestUncancel();
-    static bool isCancelRequested();
+    static void requestStop();
+    static void requestRestart();
+    static bool isStopRequested();
 };
 
 std::mutex ProgressBase::m_progressMutex;
-bool ProgressBase::m_isCancelRequested;
+bool ProgressBase::m_isStopRequested;
 
 void ProgressBase::mutexLock() {
     m_progressMutex.lock();
@@ -4558,24 +4558,24 @@ void ProgressBase::mutexUnlock() {
     m_progressMutex.unlock();
 }
 
-void ProgressBase::requestCancel()
+void ProgressBase::requestStop()
 {
     mutexLock();
-    m_isCancelRequested = true;
+    m_isStopRequested = true;
     mutexUnlock();
 }
 
-void ProgressBase::requestUncancel()
+void ProgressBase::requestRestart()
 {
     mutexLock();
-    m_isCancelRequested = false;
+    m_isStopRequested = false;
     mutexUnlock();
 }
 
-bool ProgressBase::isCancelRequested()
+bool ProgressBase::isStopRequested()
 {
     mutexLock();
-    bool res = m_isCancelRequested;
+    bool res = m_isStopRequested;
     mutexUnlock();
     return res;
 }
@@ -4604,12 +4604,12 @@ bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
     unsigned long cubeCountTot;
     unsigned processedCount;
     bool isFinish;
-    bool isCancelRequested;
+    bool isStopRequested;
     mutexLock();
     cubeCountTot = m_cubeCount += cubeCount;
     processedCount = ++m_processedCount;
     isFinish = m_isFinish;
-    isCancelRequested = isCancelRequestedNoLock();
+    isStopRequested = isStopRequestedNoLock();
     mutexUnlock();
     if( m_depth >= 9 && !isFinish ) {
         unsigned procCountNext = 100 * (processedCount+1) / m_processCount;
@@ -4618,7 +4618,7 @@ bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
             sendRespMessage(reqFd, "progress: depth %u cubes %llu, %u%%\n",
                     m_depth, cubeCountTot, 100 * processedCount / m_processCount);
     }
-    return isCancelRequested;
+    return isStopRequested;
 }
 
 void AddCubesProgress::threadFinished(int reqFd)
@@ -4750,13 +4750,13 @@ static bool addCubes(
         for(int t = 1; t < threadCount; ++t)
             threads[t].join();
     }
-    bool isCancelRequested = ProgressBase::isCancelRequested();
-    if( isCancelRequested )
+    bool isStopRequested = ProgressBase::isStopRequested();
+    if( isStopRequested )
         sendRespMessage(reqFd, "canceled\n");
     else
         sendRespMessage(reqFd, "depth %d %scubes=%lu\n", depth, onlyInSpace? "in-space " : "",
                 cubesReprByDepth[depth].size());
-    return isCancelRequested;
+    return isStopRequested;
 }
 
 static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
@@ -4854,7 +4854,7 @@ bool SearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf)
     mutexLock();
     if( ccpItBuf == NULL )
         m_isFinish = true;
-    res = !m_isFinish && m_ccpItNext != m_ccpItEnd && !isCancelRequestedNoLock();
+    res = !m_isFinish && m_ccpItNext != m_ccpItEnd && !isStopRequestedNoLock();
     if( res )
         cornerPermIt = m_ccpItNext++;
     else
@@ -5018,12 +5018,12 @@ static bool searchMovesOptimalA(const CubesReprByDepth &cubesReprByDepth,
         sendRespMessage(fdReq, "-- %d moves --\n", depth+depthMax);
         return true;
     }
-    bool isCancelRequested = ProgressBase::isCancelRequested();
-    if( isCancelRequested )
+    bool isStopRequested = ProgressBase::isStopRequested();
+    if( isStopRequested )
         sendRespMessage(fdReq, "canceled\n");
     else
         sendRespMessage(fdReq, "depth %d end\n", depth+depthMax);
-    return isCancelRequested;
+    return isStopRequested;
 }
 
 static void searchMovesTb(const CubesReprByDepth *cubesReprByDepth,
@@ -5107,12 +5107,12 @@ static bool searchMovesOptimalB(const CubesReprByDepth &cubesReprByDepth,
         sendRespMessage(fdReq, "-- %d moves --\n", 2*DEPTH_MAX+depth);
         return true;
     }
-    bool isCancelRequested = ProgressBase::isCancelRequested();
-    if( isCancelRequested )
+    bool isStopRequested = ProgressBase::isStopRequested();
+    if( isStopRequested )
         sendRespMessage(fdReq, "canceled\n");
     else
         sendRespMessage(fdReq, "depth %d end\n", 2*DEPTH_MAX+depth);
-    return isCancelRequested;
+    return isStopRequested;
 }
 
 static const CubesReprByDepth *getCubesInSpace(unsigned depth, int threadCount, int reqFd)
@@ -5259,7 +5259,7 @@ int QuickDeepSearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccp
     CubesReprAtDepth::ccpcubes_iter cornerPermIt;
     mutexLock();
     movesMax = m_movesMax;
-    if( m_movesMax >= 0 && m_ccpItNext != m_ccpItEnd && !isCancelRequestedNoLock() ) {
+    if( m_movesMax >= 0 && m_ccpItNext != m_ccpItEnd && !isStopRequestedNoLock() ) {
         cornerPermIt = m_ccpItNext++;
         movesMax = m_movesMax;
     }else
@@ -5362,7 +5362,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                 }
                             }
                         }
-                        if( searchProgress->isCancelRequested() )
+                        if( searchProgress->isStopRequested() )
                             return true;
                     }
                 }
@@ -5576,7 +5576,7 @@ static void searchMovesQuickDeep(const cube &csearch, int fdReq, unsigned thread
             if( moveCount == 0 )
                 goto finish;
         }
-        if( searchProgress.isCancelRequested() )
+        if( searchProgress.isStopRequested() )
             goto finish;
         sendRespMessage(fdReq, "depth %u end\n", depthSearch);
     }
@@ -5609,7 +5609,7 @@ static void searchMovesQuickDeep(const cube &csearch, int fdReq, unsigned thread
             if( moveCount == 0 )
                 break;
         }
-        if( searchProgress.isCancelRequested() )
+        if( searchProgress.isStopRequested() )
             break;
         sendRespMessage(fdReq, "depth %u end\n", depthSearch);
     }
@@ -5702,8 +5702,8 @@ static void processCubeReq(int fdReq, const char *reqParam)
 {
     static std::mutex solverMutex;
 
-    if( !strncmp(reqParam, "cancel", 6) ) {
-        ProgressBase::requestCancel();
+    if( !strncmp(reqParam, "stop", 4) ) {
+        ProgressBase::requestStop();
         char respHeader[] =
             "HTTP/1.1 200 OK\r\n"
             "Content-length: 0\r\n"
@@ -5713,7 +5713,7 @@ static void processCubeReq(int fdReq, const char *reqParam)
         return;
     }
     if( solverMutex.try_lock() ) {
-        ProgressBase::requestUncancel();
+        ProgressBase::requestRestart();
         char respHeader[] =
             "HTTP/1.1 200 OK\r\n"
             "Content-type: text/plain\r\n"
