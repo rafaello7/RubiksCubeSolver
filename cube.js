@@ -2482,7 +2482,7 @@ onload = () => {
     cubelistloaddialogcancel.addEventListener('click', cubelistLoadDialogCancel);
     cubelistloadfromfile.addEventListener('click', cubelistLoadFromFile);
     cubelistsavetofile.addEventListener('click', cubelistSaveToFile);
-    cubelistselect.addEventListener('click', cubelistChange);
+    cubelistselect.addEventListener('change', cubelistChange);
     let crestore = localStorage.getItem('cube');
     if( crestore ) {
         let cr = crestore.split(' ');
