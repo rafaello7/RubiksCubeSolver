@@ -1548,7 +1548,7 @@ function cubeToSaveText(c)
     return res;
 }
 
-async function searchMoves(c) {
+async function searchMoves(c, qparammode) {
     try {
         startTime = lastTime = Date.now();
         moves = [];
@@ -1558,7 +1558,6 @@ async function searchMoves(c) {
         document.querySelectorAll('.movebtn').forEach(function(el) { el.textContent = ''; });
 
         let qparamcube=cubeToParamText(c);
-        let qparammode = solvequick.checked ? 'q' : solveqmulti.checked ? 'm' : 'o';
         let a = await fetch('/?' + qparammode + '=' + qparamcube);
         let b = a.body.getReader();
         const utf8Decoder = new TextDecoder("utf-8");
@@ -2282,13 +2281,15 @@ function doNew() {
 function searchSolution() {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
 	let c = getDisplayedCube();
+    let qparammode = solvequick.checked ? 'q' : solveqmulti.checked ? 'm' : 'o';
     localStorage.setItem('cube', `${c.cc.getPerms()} ${c.cc.getOrients()} ${c.ce.get()}`);
+    localStorage.setItem('solvemode', qparammode);
     if( c.equals(csolved) )
         dolog('err', "already solved\n");
     else{
         document.querySelectorAll('.manipmodeonly,.changingcube').forEach((e) => {e.disabled = true;});
         stopbtn.disabled = false;
-        searchMoves(c);
+        searchMoves(c, qparammode);
     }
 }
 
@@ -2296,7 +2297,7 @@ function searchStop() {
     fetch('/?stop');
 }
 
-function cubelistloadFromText(txt) {
+function cubelistloadFromText(txt, isFromLocalStorage) {
     cubelistselect.innerHTML = '';
     for(let line of txt.split('\n')) {
         let cubeStr = line.trim();
@@ -2306,6 +2307,11 @@ function cubelistloadFromText(txt) {
             opt.textContent = cubeStr;
             cubelistselect.append(opt);
         }
+    }
+    if( !isFromLocalStorage ) {
+        cubelistitemno.value = '';
+        localStorage.setItem('cubelist', txt);
+        localStorage.setItem('cubelistitemno', '');
     }
 }
 
@@ -2324,14 +2330,21 @@ function cubelistAddCurrent() {
     opt.textContent = qparamcube;
     cubelistselect.insertAdjacentElement('afterbegin', opt);
     cubelistselect.selectedIndex = 0;
+    cubelistitemno.value = '1';
     let cubelistText = cubelistToText();
     localStorage.setItem('cubelist', cubelistText);
 }
 
 function cubelistRemove() {
+    let curSel = cubelistselect.selectedIndex;
     let removeOpts = Array.from(cubelistselect.selectedOptions);
     for(opt of removeOpts)
         opt.remove();
+    if( curSel >= 0 && curSel < cubelistselect.length )
+        cubelistselect.selectedIndex = curSel;
+    cubelistChange();
+    let cubelistText = cubelistToText();
+    localStorage.setItem('cubelist', cubelistText);
 }
 
 function cubelistLoad() {
@@ -2341,7 +2354,6 @@ function cubelistLoad() {
 function cubelistLoadDialogOk() {
     cubelistloaddialog.close();
     cubelistloadFromText(cubelistloaddialogtext.value);
-    localStorage.setItem('cubelist', cubelistloaddialogtext.value);
 }
 
 function cubelistLoadDialogCancel() {
@@ -2358,7 +2370,6 @@ function cubelistLoadFromFile() {
         let file = await fileHandle.getFile();
         let val = await file.text();
         cubelistloadFromText(val);
-        localStorage.setItem('cubelist', val);
     }, function() {});
 }
 
@@ -2381,7 +2392,10 @@ function cubelistChange() {
         let c = cubeFromString(cubelistselect.value);
         if( c )
             displayCube(c);
-    }
+        cubelistitemno.value = cubelistselect.selectedIndex+1;
+    }else
+        cubelistitemno.value = '';
+    localStorage.setItem('cubelistitemno', cubelistitemno.value);
 }
 
 onload = () => {
@@ -2468,14 +2482,31 @@ onload = () => {
     cubelistloaddialogcancel.addEventListener('click', cubelistLoadDialogCancel);
     cubelistloadfromfile.addEventListener('click', cubelistLoadFromFile);
     cubelistsavetofile.addEventListener('click', cubelistSaveToFile);
-    cubelistselect.addEventListener('change', cubelistChange);
+    cubelistselect.addEventListener('click', cubelistChange);
     let crestore = localStorage.getItem('cube');
     if( crestore ) {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
         displayCube(c);
     }
+    switch( localStorage.getItem('solvemode') ) {
+        case 'q':
+            solvequick.checked = true;
+            break;
+        case 'm':
+            solveqmulti.checked = true;
+            break;
+        default:
+            solveoptimal.checked = true;
+            break;
+    }
     crestore = localStorage.getItem('cubelist');
-    if( crestore )
-        cubelistloadFromText(crestore);
+    if( crestore ) {
+        cubelistloadFromText(crestore, true);
+        let itemNo = localStorage.getItem('cubelistitemno');
+        if( itemNo > 0 && itemNo <= cubelistselect.length ) {
+            cubelistselect.selectedIndex = itemNo-1;
+            cubelistitemno.value = itemNo;
+        }
+    }
 }

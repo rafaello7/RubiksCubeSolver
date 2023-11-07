@@ -450,6 +450,10 @@ h3 {
     gap: 1em;
 }
 
+#cubelistitemno {
+    width: 3em;
+}
+
 #cubelistselect {
     width: 100%;
 }
@@ -462,7 +466,7 @@ h3 {
 #movebuttons {
     display: flex;
     flex-direction: column;
-    gap: 1px;
+    justify-content: space-between;
 }
 
 #movebuttons > button {
