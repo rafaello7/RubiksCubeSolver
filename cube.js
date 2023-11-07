@@ -441,33 +441,76 @@ class cube {
 
     static fromScrambleStr(s) {
         const rotateMapFromExtFmt = new Map([
-            [ 'L1', ORANGECW ],
-            [ 'L2', ORANGE180],
-            [ 'L3', ORANGECCW],
-            [ 'R1', REDCW    ],
-            [ 'R2', RED180   ],
-            [ 'R3', REDCCW   ],
+            [ 'L1', BLUECW   ],
+            [ 'L2', BLUE180  ],
+            [ 'L3', BLUECCW  ],
+            [ 'R1', GREENCW  ],
+            [ 'R2', GREEN180 ],
+            [ 'R3', GREENCCW ],
             [ 'U1', YELLOWCW ],
             [ 'U2', YELLOW180],
             [ 'U3', YELLOWCCW],
             [ 'D1', WHITECW  ],
             [ 'D2', WHITE180 ],
             [ 'D3', WHITECCW ],
-            [ 'B1', GREENCW  ],
-            [ 'B2', GREEN180 ],
-            [ 'B3', GREENCCW ],
-            [ 'F1', BLUECW   ],
-            [ 'F2', BLUE180  ],
-            [ 'F3', BLUECCW  ],
+            [ 'B1', ORANGECW ],
+            [ 'B2', ORANGE180],
+            [ 'B3', ORANGECCW],
+            [ 'F1', REDCW    ],
+            [ 'F2', RED180   ],
+            [ 'F3', REDCCW   ],
         ]);
 
         let rescube = csolved;
-        for(let i = 0; i+1 < s.length; i+=2) {
-            let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
-            if( mappedVal != undefined )
-                rescube = cube.compose(rescube, crotated[mappedVal])
-            else
-                dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
+        let i = 0;
+        while(i+1 < s.length) {
+            if( /\S/.test(s[i]) ) {
+                let mappedVal = rotateMapFromExtFmt.get(s.substring(i, i+2));
+                if( mappedVal != undefined )
+                    rescube = cube.compose(rescube, crotated[mappedVal])
+                else
+                    dolog('err', `Unkown move: ${s.substring(i, i+2)}`);
+                i+=2;
+            }else
+                ++i;
+        }
+        return rescube;
+    }
+
+    static fromScrambleStrReversed(s) {
+        const rotateMapFromExtFmt = new Map([
+            [ 'L3', BLUECW   ],
+            [ 'L2', BLUE180  ],
+            [ 'L1', BLUECCW  ],
+            [ 'R3', GREENCW  ],
+            [ 'R2', GREEN180 ],
+            [ 'R1', GREENCCW ],
+            [ 'U3', YELLOWCW ],
+            [ 'U2', YELLOW180],
+            [ 'U1', YELLOWCCW],
+            [ 'D3', WHITECW  ],
+            [ 'D2', WHITE180 ],
+            [ 'D1', WHITECCW ],
+            [ 'B3', ORANGECW ],
+            [ 'B2', ORANGE180],
+            [ 'B1', ORANGECCW],
+            [ 'F3', REDCW    ],
+            [ 'F2', RED180   ],
+            [ 'F1', REDCCW   ],
+        ]);
+
+        let rescube = csolved;
+        let i = s.length - 1;
+        while(i > 0) {
+            if( /\S/.test(s[i]) ) {
+                let mappedVal = rotateMapFromExtFmt.get(s.substring(i-1, i+1));
+                if( mappedVal != undefined )
+                    rescube = cube.compose(rescube, crotated[mappedVal])
+                else
+                    dolog('err', `Unkown move: ${s.substring(i-1, i+1)}`);
+                i-=2;
+            }else
+                --i;
         }
         return rescube;
     }
@@ -1203,6 +1246,32 @@ struct elemLoc {
 };
 */
 
+function mapColorsOnSqaresFromExt(ext) {
+    // external format:
+    //     U                Yellow
+    //   L F R B   =   Blue   Red   Green Orange
+    //     D                 White
+    // sequence:
+    //    yellow   green    red      white    blue     orange
+    //  UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
+    let squaremap = [
+         2,  5,  8,  1,  4,  7,  0,  3,  6, // upper -> yellow
+        45, 46, 47, 48, 49, 50, 51, 52, 53, // back -> orange
+        36, 37, 38, 39, 40, 41, 42, 43, 44, // left -> blue
+        18, 19, 20, 21, 22, 23, 24, 25, 26, // front -> red
+         9, 10, 11, 12, 13, 14, 15, 16, 17, // right -> green
+        33, 30, 27, 34, 31, 28, 35, 32, 29  // down -> white
+    ];
+    let colormap = new Map([
+        ['U', 'Y'], ['R', 'G'], ['F', 'R'],
+        ['D', 'W'], ['L', 'B'], ['B', 'O']
+    ]);
+    let res = '';
+    for(let i = 0; i < 54; ++i)
+        res += colormap.get(ext[squaremap[i]]);
+    return res;
+}
+
 function cubeFromColorsOnSquares(text)
 {
 	const /*elemLoc*/ cornerLocMap = [
@@ -1387,11 +1456,16 @@ function cubeFromColorsOnSquares(text)
 
 function cubeFromString(s) {
     document.querySelectorAll('.log').forEach((e) => {e.textContent = ''});
-    let rescube;
-    if( /[Yy]/.test(s) ) {
+    let rescube = null;
+    if( /^[YOBRGW]{4}Y[YOBRGW]{8}O[YOBRGW]{8}B[YOBRGW]{8}R[YOBRGW]{8}G[YOBRGW]{8}W[YOBRGW]{4}$/.test(s) ) {
         rescube = cubeFromColorsOnSquares(s);
-    }else{
+    }else if( /^[URFDLB]{4}U[URFDLB]{8}R[URFDLB]{8}F[URFDLB]{8}D[URFDLB]{8}L[URFDLB]{8}B[URFDLB]{4}$/.test(s) ) {
+        let fromExt = mapColorsOnSqaresFromExt(s);
+        rescube = cubeFromColorsOnSquares(fromExt);
+    }else if( /^([FBLRUD][123]|\s)*$/.test(s) ) {
         rescube = cube.fromScrambleStr(s);
+    }else{
+        dolog('err', 'format not recognized');
     }
     return rescube;
 }
@@ -2348,6 +2422,7 @@ function cubelistRemove() {
 }
 
 function cubelistLoad() {
+    cubelistloaddialogtext.value = cubelistToText();
     cubelistloaddialog.showModal();
 }
 
