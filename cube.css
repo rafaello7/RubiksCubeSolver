@@ -14,6 +14,12 @@ h3 {
     gap: 1em;
 }
 
+#splitleftpane {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
 #cubewithcontrols {
     display: grid;
     grid-template-columns: min-content 1fr min-content;
@@ -44,13 +50,38 @@ h3 {
     flex-direction: column;
 }
 
-#rotatewalls {
-    display: grid;
-    grid-template-columns: repeat(4, min-content);
+.controlsarea {
     background-color: aliceblue;
     border-style: solid;
     border-color: aquamarine;
+}
+
+.controlsarea > div:first-child {
+     border-bottom-style: solid;
+     border-color: aquamarine;
+}
+
+#rotatewalls {
+    display: grid;
+    grid-template-columns: repeat(4, min-content);
     justify-content: center;
+}
+
+#rotatecube {
+    display: grid;
+    grid-template-columns: repeat(3, min-content) 1fr;
+    gap: 2px;
+    align-items: center;
+    justify-items: center;
+}
+
+#rotatecubetitle {
+     grid-column: 1/-1;
+     justify-self: stretch;
+}
+
+#angle {
+    width: 5ex;
 }
 
 #rotatewalls > div {
@@ -59,28 +90,6 @@ h3 {
 
 #rotatewalls > div > button {
     height: 1.5em;
-}
-
-#rotatecube {
-    display: grid;
-    grid-template-columns: repeat(3, min-content) 1fr;
-    gap: 2px;
-    border-style: solid;
-    border-color: aquamarine;
-    background-color: aliceblue;
-    align-items: center;
-    justify-items: center;
-}
-
-#rotatecubetitle {
-     grid-column: 1/-1;
-     justify-self: stretch;
-     border-bottom-style: solid;
-     border-color: aquamarine;
-}
-
-#angle {
-    width: 5ex;
 }
 
 #container {
@@ -436,6 +445,20 @@ h3 {
     display: none;
 }
 
+#cubelisttitle {
+    display: flex;
+    gap: 1em;
+}
+
+#cubelistselect {
+    width: 100%;
+}
+
+#cubelistloaddialogtext {
+    width: 40em;
+    height: 30em;
+}
+
 #movebuttons {
     display: flex;
     flex-direction: column;
@@ -469,23 +492,6 @@ h3 {
     overflow-y: scroll;
 }
 
-#loadsavebtns {
-    display: flex;
-    gap: 1ex;
-}
-
-#loadonlybtn {
-    display: none;
-}
-
-#loadinput {
-    width: 44em;
-}
-
-#loadinput:invalid {
-    background-color: #ffe8eb;
-}
-
 @media (prefers-color-scheme: dark) {
     body {
         background-color: #330;
@@ -505,9 +511,6 @@ h3 {
     }
     .currentmv {
         background-color: #a95;
-    }
-    #loadinput:invalid {
-        background-color: rebeccapurple;
     }
 }
 

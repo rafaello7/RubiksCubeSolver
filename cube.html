@@ -8,7 +8,7 @@
 	<body>
         <h3>Cube Solver</h3>
         <div id='split'>
-            <div>
+            <div id='splitleftpane'>
                 <div id='cubewithcontrols'>
                     <div id='controls'>
                         <div id='editbuttons'>
@@ -16,14 +16,15 @@
                             <button id='stopbtn' disabled>Stop</button>
                             <button id='solvebtn' class='changingcube'>Solve</button>
                         </div>
-                        <div id='solvemodebuttons'>
+                        <div id='solvemodebuttons' class='controlsarea'>
+                            <div>Mode</div>
                             <label><input type='radio' name='solvemode' id='solveoptimal' checked>Optimal</label>
                             <label><input type='radio' name='solvemode' id='solvequick'>Quick</label>
                             <label><input type='radio' name='solvemode' id='solveqmulti'>Quick Multi</label>
                         </div>
-                        <div id='rotatecube'>
+                        <div id='rotatecube' class='controlsarea'>
                             <div id='rotatecubetitle'>Rotate Cube&emsp;
-                            <input type='number' min='15' max='90' step='15' value='90' id='angle'>&deg;
+                                <input type='number' min='15' max='90' step='15' value='90' id='angle'>&deg;
                             </div>
                             <div></div>
                             <button id='rxubutton'>&UpArrow;</button>
@@ -40,7 +41,7 @@
                             <div></div>
                             <button id='rzlbutton'>&#x2B6F;</button>
                         </div>
-                        <div id='rotatewalls'>
+                        <div id='rotatewalls' class='controlsarea'>
                             <div style='grid-column: 1/-1'>Rotate Wall</div>
                             <div class='cblue'>Blue</div>
                             <div class='cblue'><button class='changingcube' id='rbluewall270'>&#x21b6;</button></div>
@@ -505,17 +506,17 @@
                         </div>
                     </div>
                 </div>
-                <p>
-                    <button id='loadfrominputbtn' class='changingcube'>Load:</button>
-                    <input id='loadinput' type='text' class='changingcube'
-                           title='F1B2U3L1... or YOBRGW...' spellcheck='false'
-                           pattern='([FBLRUD][123])*|[YOBRGW]{4}Y[YOBRGW]{8}O[YOBRGW]{8}B[YOBRGW]{8}R[YOBRGW]{8}G[YOBRGW]{8}W[YOBRGW]{4}'>
-                </p>
-                <p id='loadsavebtns'>
-                    <button id='loadfromfilebtn' class='changingcube'>Load From File</button>
-                    <button id='savetofilebtn' class='changingcube'>Save To File</button>
-                </p>
-                <div id='loadonlybtn' class='changingcube'>Load from file: <input id='cubefile' type='file' accept='text/plain'></div>
+                <div id='cubelist' class='controlsarea'>
+                    <div id='cubelisttitle'>
+                        <div>Cube List</div>
+                        <button id='cubelistaddcurrent'>Add Current</button>
+                        <button id='cubelistremove'>Remove</button>
+                        <button id='cubelistload'>Load</button>
+                        <button id='cubelistloadfromfile'>Load From File</button>
+                        <button id='cubelistsavetofile'>Save To File</button>
+                    </div>
+                    <select id='cubelistselect' multiple size="8"></select>
+                </div>
             </div>
             <div id='movebuttons'>
                 <button id='movebuttonini' class='currentmv changingcube'>Initial</button>
@@ -558,5 +559,12 @@
                 <p id='solutions' class='log'></p>
             </div>
         </div>
+        <dialog id='cubelistloaddialog'>
+            <div>
+                <textarea id='cubelistloaddialogtext'></textarea>
+            </div>
+            <button id='cubelistloaddialogok'>OK</button>
+            <button id='cubelistloaddialogcancel'>Cancel</button>
+        </dialog>
 	</body>
 </html>

@@ -2185,7 +2185,7 @@ function applyFixedColorsToImg()
         }
     }
     solvebtn.disabled = ! isFilled;
-    savetofilebtn.disabled = ! isFilled;
+    cubelistaddcurrent.disabled = ! isFilled;
 }
 
 function selectColors(ev) {
@@ -2296,69 +2296,99 @@ function searchStop() {
     fetch('/?stop');
 }
 
-function loadFromFile() {
+function cubelistloadFromText(txt) {
+    cubelistselect.innerHTML = '';
+    for(let line of txt.split('\n')) {
+        let cubeStr = line.trim();
+        if( cubeStr ) {
+            let opt = document.createElement('option');
+            opt.value = cubeStr;
+            opt.textContent = cubeStr;
+            cubelistselect.append(opt);
+        }
+    }
+}
+
+function cubelistToText() {
+    let txt = '';
+    for(let opt of cubelistselect.options)
+        txt += opt.value + '\n';
+    return txt;
+}
+
+function cubelistAddCurrent() {
+	let c = getDisplayedCube();
+    let qparamcube = cubeToParamText(c);
+    let opt = document.createElement('option');
+    opt.value = qparamcube;
+    opt.textContent = qparamcube;
+    cubelistselect.insertAdjacentElement('afterbegin', opt);
+    cubelistselect.selectedIndex = 0;
+    let cubelistText = cubelistToText();
+    localStorage.setItem('cubelist', cubelistText);
+}
+
+function cubelistRemove() {
+    let removeOpts = Array.from(cubelistselect.selectedOptions);
+    for(opt of removeOpts)
+        opt.remove();
+}
+
+function cubelistLoad() {
+    cubelistloaddialog.showModal();
+}
+
+function cubelistLoadDialogOk() {
+    cubelistloaddialog.close();
+    cubelistloadFromText(cubelistloaddialogtext.value);
+    localStorage.setItem('cubelist', cubelistloaddialogtext.value);
+}
+
+function cubelistLoadDialogCancel() {
+    cubelistloaddialog.close();
+}
+
+function cubelistLoadFromFile() {
     showOpenFilePicker({
         types: [ {
-            description: 'saved cube',
+            description: 'saved cube list',
             accept: { 'text/plain': [ '.txt' ] }
         } ]
     }).then(async function ( [fileHandle] ) {
         let file = await fileHandle.getFile();
         let val = await file.text();
-        let c = cubeFromString(val);
-        if( c )
-            displayCube(c);
+        cubelistloadFromText(val);
+        localStorage.setItem('cubelist', val);
     }, function() {});
 }
 
-function saveToFile() {
-    let fileSeq = localStorage.getItem('fileseq');
-    if( !fileSeq )
-        fileSeq = '1';
-    let fname = 'c' + fileSeq + '.txt';
+function cubelistSaveToFile() {
     showSaveFilePicker({
-        suggestedName: fname,
+        suggestedName: 'cubelist.txt',
         types: [ {
-            description: 'saved cube',
+            description: 'saved cube list',
             accept: { 'text/plain': [ '.txt' ] }
         } ]
     }).then(async function(fileHandle) {
         const fout = await fileHandle.createWritable();
-        let saveText = cubeToSaveText(getDisplayedCube());
-        await fout.write(saveText);
+        await fout.write(cubelistToText());
         await fout.close();
-        localStorage.setItem('fileseq', +fileSeq+1);
     }, function() {});
 }
 
-function loadFromFile1(ev) {
-    let file = ev.target.files[0];
-    file.text().then((val) => {
-        let c = cubeFromString(val);
+function cubelistChange() {
+    if( cubelistselect.value ) {
+        let c = cubeFromString(cubelistselect.value);
         if( c )
             displayCube(c);
-    });
-}
-
-function loadFromInput(ev) {
-    if( ev.type == 'keydown' && ev.key != 'Enter' )
-        return;
-    err.textContent = '';
-    let c = cubeFromString(loadinput.value);
-    if( c )
-        displayCube(c);
+    }
 }
 
 onload = () => {
     if( window['showOpenFilePicker'] == undefined ) {
-        loadsavebtns.style.display = 'none';
-        loadonlybtn.style.display = 'block';
+        cubelistloadfromfile.style.display = 'none';
+        cubelistsavetofile.style.display = 'none';
     }
-    loadfromfilebtn.addEventListener('click', loadFromFile);
-    savetofilebtn.addEventListener('click', saveToFile);
-    cubefile.addEventListener('change', loadFromFile1);
-    loadfrominputbtn.addEventListener('click', loadFromInput);
-    loadinput.addEventListener('keydown', loadFromInput);
     document.querySelector('#rxubutton').addEventListener('click', (ev) => {
         let angle = document.querySelector('#angle').value * Math.PI / 180;
         let c = Math.cos(angle);
@@ -2431,10 +2461,21 @@ onload = () => {
     btnnew.addEventListener('click', doNew);
     solvebtn.addEventListener('click', searchSolution);
     stopbtn.addEventListener('click', searchStop);
+    cubelistaddcurrent.addEventListener('click', cubelistAddCurrent);
+    cubelistremove.addEventListener('click', cubelistRemove);
+    cubelistload.addEventListener('click', cubelistLoad);
+    cubelistloaddialogok.addEventListener('click', cubelistLoadDialogOk);
+    cubelistloaddialogcancel.addEventListener('click', cubelistLoadDialogCancel);
+    cubelistloadfromfile.addEventListener('click', cubelistLoadFromFile);
+    cubelistsavetofile.addEventListener('click', cubelistSaveToFile);
+    cubelistselect.addEventListener('change', cubelistChange);
     let crestore = localStorage.getItem('cube');
     if( crestore ) {
         let cr = crestore.split(' ');
         let c = new cube(new cubecorners(+cr[0], +cr[1]), new cubeedges(BigInt(cr[2])));
         displayCube(c);
     }
+    crestore = localStorage.getItem('cubelist');
+    if( crestore )
+        cubelistloadFromText(crestore);
 }
