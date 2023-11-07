@@ -415,6 +415,9 @@ public:
 	bool operator==(const cubecorner_orients &cco) const { return orients == cco.orients; }
 	bool operator!=(const cubecorner_orients &cco) const { return orients != cco.orients; }
 	bool operator<(const cubecorner_orients &cco) const { return orients < cco.orients; }
+    bool isBGspace() const;
+    bool isYWspace(cubecorner_perms) const;
+    bool isORspace(cubecorner_perms) const;
 };
 
 cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1orient,
@@ -553,6 +556,58 @@ cubecorner_orients cubecorner_orients::reverse(cubecorner_perms ccp) const {
 	return res;
 }
 
+bool cubecorner_orients::isBGspace() const {
+    return orients == 0;
+}
+
+bool cubecorner_orients::isYWspace(cubecorner_perms ccp) const {
+    const unsigned orients0356[8] = { 0, 1, 1, 0, 1, 0, 0, 1 };
+    const unsigned orients1247[8] = { 2, 0, 0, 2, 0, 2, 2, 0 };
+    for(unsigned i = 0; i < 8; ++i) {
+        switch(ccp.getAt(i)) {
+            case 0:
+            case 3:
+            case 5:
+            case 6:
+                if( getAt(i) != orients0356[i] )
+                    return false;
+                break;
+            case 1:
+            case 2:
+            case 4:
+            case 7:
+                if( getAt(i) != orients1247[i] )
+                    return false;
+                break;
+        }
+    }
+    return true;
+}
+
+bool cubecorner_orients::isORspace(cubecorner_perms ccp) const {
+    const unsigned orients0356[8] = { 0, 2, 2, 0, 2, 0, 0, 2 };
+    const unsigned orients1247[8] = { 1, 0, 0, 1, 0, 1, 1, 0 };
+    for(unsigned i = 0; i < 8; ++i) {
+        switch(ccp.getAt(i)) {
+            case 0:
+            case 3:
+            case 5:
+            case 6:
+                if( getAt(i) != orients0356[i] )
+                    return false;
+                break;
+            case 1:
+            case 2:
+            case 4:
+            case 7:
+                if( getAt(i) != orients1247[i] )
+                    return false;
+                break;
+        }
+    }
+    return true;
+}
+
 struct cubecorners {
 	cubecorner_perms perms;
 	cubecorner_orients orients;
@@ -622,6 +677,9 @@ public:
     unsigned long get() const { return edges; }
     void set(unsigned long e) { edges = e; }
     bool isNil() const { return edges == 0; }
+    bool isBGspace() const;
+    bool isYWspace() const;
+    bool isORspace() const;
 };
 
 cubeedges::cubeedges(
@@ -1160,6 +1218,99 @@ unsigned short cubeedges::getOrientIdx() const {
 	return res;
 }
 
+bool cubeedges::isBGspace() const {
+    const unsigned orients03811[12] = { 0, 1, 1, 0, 2, 2, 2, 2, 0, 1, 1, 0 };
+    const unsigned orients12910[12] = { 1, 0, 0, 1, 2, 2, 2, 2, 1, 0, 0, 1 };
+    for(unsigned i = 0; i < 12; ++i) {
+        if( i < 4 || i >= 8 ) {
+            switch( getPermAt(i) ) {
+                case 0:
+                case 3:
+                case 8:
+                case 11:
+                    if( getOrientAt(i) != orients03811[i] )
+                        return false;
+                    break;
+                case 1:
+                case 2:
+                case 9:
+                case 10:
+                    if( getOrientAt(i) != orients12910[i] )
+                        return false;
+                    break;
+                default:
+                    return false;
+            }
+        }else{
+            if( getOrientAt(i) )
+                return false;
+        }
+    }
+    return true;
+}
+
+bool cubeedges::isYWspace() const {
+    const unsigned orients03811[12] = { 0, 2, 2, 0, 1, 1, 1, 1, 0, 2, 2, 0 };
+    const unsigned orients4567[12]  = { 1, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 1 };
+    for(unsigned i = 0; i < 12; ++i) {
+        if( orients03811[i] == 2 ) {
+            if( getOrientAt(i) )
+                return false;
+        }else{
+            switch( getPermAt(i) ) {
+                case 0:
+                case 3:
+                case 8:
+                case 11:
+                    if( getOrientAt(i) != orients03811[i] )
+                        return false;
+                    break;
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    if( getOrientAt(i) != orients4567[i] )
+                        return false;
+                    break;
+                default:
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
+bool cubeedges::isORspace() const {
+    const unsigned orients12910[12] = { 2, 0, 0, 2, 1, 1, 1, 1, 2, 0, 0, 2 };
+    const unsigned orients4567[12]  = { 2, 1, 1, 2, 0, 0, 0, 0, 2, 1, 1, 2 };
+    for(unsigned i = 0; i < 12; ++i) {
+        if( orients12910[i] == 2 ) {
+            if( getOrientAt(i) )
+                return false;
+        }else{
+            switch( getPermAt(i) ) {
+                case 1:
+                case 2:
+                case 9:
+                case 10:
+                    if( getOrientAt(i) != orients12910[i] )
+                        return false;
+                    break;
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    if( getOrientAt(i) != orients4567[i] )
+                        return false;
+                    break;
+                default:
+                    return false;
+            }
+        }
+    }
+    return true;
+}
+
 struct cube {
 	cubecorner_perms ccp;
     cubecorner_orients cco;
@@ -1189,6 +1340,9 @@ struct cube {
     cube transform(unsigned transformDir) const;
 	bool operator==(const cube &c) const;
 	bool operator<(const cube &c) const;
+    bool isBGspace() const { return cco.isBGspace() && ce.isBGspace(); }
+    bool isYWspace() const { return cco.isYWspace(ccp) && ce.isYWspace(); }
+    bool isORspace() const { return cco.isORspace(ccp) && ce.isORspace(); }
 };
 
 bool cube::operator==(const cube &c) const
@@ -2288,733 +2442,6 @@ static bool isRotateKind(unsigned spaceKind, unsigned rotateDir) {
     return false;
 }
 
-static bool isBGspace(const cube &c)
-{
-    for(unsigned i = 0; i < 8; ++i)
-        if( c.cco.getAt(i) )
-            return false;
-    switch( c.ce.getPermAt(0) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(0) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(0) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(1) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(1) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(1) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(2) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(2) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(2) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(3) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(3) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(3) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(8) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(8) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(8) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(9) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(9) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(9) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(10) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(10) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(10) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(11) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(11) )
-                return false;
-            break;
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(11) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    if( c.ce.getOrientAt(4) || c.ce.getOrientAt(5) || c.ce.getOrientAt(6) || c.ce.getOrientAt(7) )
-        return false;
-    return true;
-}
-
-static bool isYWspace(const cube &c)
-{
-    switch(c.ccp.getAt(0)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(0) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(0) != 2 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(1)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(1) != 1 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(1) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(2)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(2) != 1 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(2) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(3)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(3) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(3) != 2 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(4)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(4) != 1 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(4) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(5)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(5) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(5) != 2 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(6)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(6) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(6) != 2 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(7)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(7) != 1 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(7) != 0 )
-            return false;
-        break;
-    }
-
-
-    switch( c.ce.getPermAt(0) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(0) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(0) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(3) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(3) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(3) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(4) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(4) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(4) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(5) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(5) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(5) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(6) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(6) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(6) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(7) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( !c.ce.getOrientAt(7) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(7) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(8) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(8) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(8) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(11) ) {
-        case 0:
-        case 3:
-        case 8:
-        case 11:
-            if( c.ce.getOrientAt(11) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(11) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    if( c.ce.getOrientAt(1) || c.ce.getOrientAt(2) || c.ce.getOrientAt(9) || c.ce.getOrientAt(10) )
-        return false;
-    return true;
-}
-
-static bool isORspace(const cube &c)
-{
-    switch(c.ccp.getAt(0)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(0) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(0) != 1 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(1)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(1) != 2 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(1) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(2)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(2) != 2 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(2) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(3)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(3) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(3) != 1 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(4)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(4) != 2 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(4) != 0 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(5)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(5) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(5) != 1 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(6)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(6) != 0 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(6) != 1 )
-            return false;
-        break;
-    }
-    switch(c.ccp.getAt(7)) {
-    case 0:
-    case 3:
-    case 5:
-    case 6:
-        if( c.cco.getAt(7) != 2 )
-            return false;
-        break;
-    case 1:
-    case 2:
-    case 4:
-    case 7:
-        if( c.cco.getAt(7) != 0 )
-            return false;
-        break;
-    }
-
-
-    switch( c.ce.getPermAt(1) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(1) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(1) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(2) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(2) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(2) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(4) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(4) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(4) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(5) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(5) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(5) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(6) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(6) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(6) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(7) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( !c.ce.getOrientAt(7) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( c.ce.getOrientAt(7) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(9) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(9) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(9) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    switch( c.ce.getPermAt(10) ) {
-        case 1:
-        case 2:
-        case 9:
-        case 10:
-            if( c.ce.getOrientAt(10) )
-                return false;
-            break;
-        case 4:
-        case 5:
-        case 6:
-        case 7:
-            if( !c.ce.getOrientAt(10) )
-                return false;
-            break;
-        default:
-            return false;
-    }
-    if( c.ce.getOrientAt(0) || c.ce.getOrientAt(3) || c.ce.getOrientAt(8) || c.ce.getOrientAt(11) )
-        return false;
-    return true;
-}
-
-static bool isSpaceCube(unsigned spaceKind, const cube &c) {
-    switch( spaceKind ) {
-        case SPACEBG:
-            return isBGspace(c);
-        case SPACEYW:
-            return isYWspace(c);
-        default:
-            return isORspace(c);
-    }
-}
-
 static cubecorner_orients cubecornerOrientsRepresentativeBG(cubecorner_perms ccp, cubecorner_orients cco)
 {
     cubecorner_orients orepr;
@@ -3205,7 +2632,7 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
 	}
     cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
     cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
-    if( !isYWspace(cube::compose(c.reverse(), cchk)) ) {
+    if( !cube::compose(c.reverse(), cchk).isYWspace() ) {
         printf("fatal: YW cube representative is not congruent\n");
         exit(1);
     }
@@ -3262,7 +2689,7 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
 	}
     cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
     cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
-    if( !isORspace(cube::compose(c.reverse(), cchk)) ) {
+    if( !cube::compose(c.reverse(), cchk).isORspace() ) {
         printf("fatal: OR cube representative is not congruent\n");
         exit(1);
     }
@@ -3820,6 +3247,19 @@ static void addCubesT(
                         {
                             const CornerOrientReprCubes &corientReprCubesC = *ccoCubesItC;
                             cubecorner_orients cco = corientReprCubesC.getOrients();
+                            bool isBGorient, isYWorient, isORorient;
+                            if( onlyInSpace ) {
+                                isBGorient = cco.isBGspace();
+                                isYWorient = cco.isYWspace(ccp);
+                                isORorient = cco.isORspace(ccp);
+                                if( !isBGorient && !isYWorient && !isRotateKind(SPACEOR, rd) )
+                                    continue;
+                                if( !isBGorient && !isORorient && !isRotateKind(SPACEYW, rd) )
+                                    continue;
+                                if( !isYWorient && !isORorient && !isRotateKind(SPACEBG, rd) )
+                                    continue;
+                            }else
+                                isBGorient = isYWorient = isORorient = false;
                             cubecorner_orients ccoNew = reversed ?
                                 cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
                                 cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
@@ -3835,16 +3275,14 @@ static void addCubesT(
                                 const cubeedges ce = *edgeIt;
 
                                 if( onlyInSpace ) {
-                                    // TODO: split check into cco+ce
-                                    cube c = { .ccp = ccp, .cco = cco, .ce = ce };
-                                    bool isBG = isBGspace(c);
-                                    bool isYW = isYWspace(c);
-                                    bool isOR = isORspace(c);
-                                    if( !isBG && !isYW && !isRotateKind(SPACEOR, rd) )
+                                    bool isBGcube = isBGorient && ce.isBGspace();
+                                    bool isYWcube = isYWorient && ce.isYWspace();
+                                    bool isORcube = isORorient && ce.isORspace();
+                                    if( !isBGcube && !isYWcube && !isRotateKind(SPACEOR, rd) )
                                         continue;
-                                    if( !isBG && !isOR && !isRotateKind(SPACEYW, rd) )
+                                    if( !isBGcube && !isORcube && !isRotateKind(SPACEYW, rd) )
                                         continue;
-                                    if( !isYW && !isOR && !isRotateKind(SPACEBG, rd) )
+                                    if( !isYWcube && !isORcube && !isRotateKind(SPACEBG, rd) )
                                         continue;
                                 }
 
