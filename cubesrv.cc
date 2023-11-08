@@ -297,6 +297,7 @@ public:
 	unsigned get() const { return perms; }
 	void set(unsigned pms) { perms = pms; }
     static cubecorner_perms compose(cubecorner_perms, cubecorner_perms);
+    static cubecorner_perms compose3(cubecorner_perms, cubecorner_perms, cubecorner_perms);
     cubecorner_perms symmetric() const {
         unsigned permsRes = perms ^ 0x924924;
         cubecorner_perms ccpres;
@@ -323,8 +324,112 @@ cubecorner_perms::cubecorner_perms(unsigned corner0perm, unsigned corner1perm,
 cubecorner_perms cubecorner_perms::compose(cubecorner_perms ccp1, cubecorner_perms ccp2)
 {
     cubecorner_perms res;
+#ifdef USE_ASM
+    unsigned long tmp1;
+
+    asm(// store ccp1 in xmm1
+        "pdep %[depPerm], %q[ccp1], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        // store ccp2 in xmm2
+        "pdep %[depPerm], %q[ccp2], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
+        // permute; result in xmm1
+        "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
+        // store xmm1 in res
+        "vpextrq $0, %%xmm1, %[tmp1]\n"
+        "pext %[depPerm], %[tmp1], %q[res]\n"
+            : [res]      "=r"  (res.perms),
+              [tmp1]     "=&r" (tmp1)
+            : [ccp1]     "r"   (ccp1.perms),
+              [ccp2]     "r"   (ccp2.perms),
+              [depPerm]  "r"   (0x0707070707070707ul)
+            : "xmm1", "xmm2"
+       );
+#ifdef ASMCHECK
+    cubecorner_perms chk = res;
+    res.perms = 0;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
     for(unsigned i = 0; i < 8; ++i)
         res.perms |= ccp1.getAt(ccp2.getAt(i)) << 3*i;
+#endif
+#ifdef ASMCHECK
+    if( res.perms != chk.perms ) {
+        flockfile(stdout);
+        printf("corner perms compose mismatch!\n");
+        printf("ccp1 = 0x%x;\n", ccp1.perms);
+        printf("ccp2 = 0x%x;\n", ccp2.perms);
+        printf("exp  = 0x%x;\n", res.perms);
+        printf("got  = 0x%x;\n", chk.perms);
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return res;
+}
+
+cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_perms ccp2,
+        cubecorner_perms ccp3)
+{
+    cubecorner_perms res;
+#ifdef USE_ASM
+    unsigned long tmp1;
+
+    asm(// store ccp2 in xmm1
+        "pdep %[depPerm], %q[ccp2], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        // store ccp3 in xmm2
+        "pdep %[depPerm], %q[ccp3], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
+        // permute; result in xmm2
+        "vpshufb %%xmm2, %%xmm1, %%xmm2\n"
+        // store ccp1 in xmm1
+        "pdep %[depPerm], %q[ccp1], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
+        // permute; result in xmm1
+        "vpshufb %%xmm2, %%xmm1, %%xmm1\n"
+        // store xmm1 in res
+        "vpextrq $0, %%xmm1, %[tmp1]\n"
+        "pext %[depPerm], %[tmp1], %q[res]\n"
+            : [res]      "=r"  (res.perms),
+              [tmp1]     "=&r" (tmp1)
+            : [ccp1]     "r"   (ccp1.perms),
+              [ccp2]     "r"   (ccp2.perms),
+              [ccp3]     "r"   (ccp3.perms),
+              [depPerm]  "r"   (0x0707070707070707ul)
+            : "xmm1", "xmm2"
+       );
+#ifdef ASMCHECK
+    cubecorner_perms chk = res;
+    res.perms = 0;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+#if 0
+    res = compose(compose(ccp1, ccp2), ccp3);
+#else
+    for(int i = 0; i < 8; ++i) {
+        unsigned corner3perm = ccp3.perms >> 3 * i & 0x7;
+        unsigned long corner2perm = ccp2.perms >> 3 * corner3perm & 0x7;
+        unsigned long corner1perm = ccp1.perms >> 3 * corner2perm & 0x7;
+        res.perms |= corner1perm << 3*i;
+    }
+#endif
+#endif
+#ifdef ASMCHECK
+    if( res.perms != chk.perms ) {
+        flockfile(stdout);
+        printf("corner perms compose3 mismatch!\n");
+        printf("ccp1 = 0x%x;\n", ccp1.perms);
+        printf("ccp2 = 0x%x;\n", ccp2.perms);
+        printf("ccp3 = 0x%x;\n", ccp3.perms);
+        printf("exp  = 0x%x;\n", res.perms);
+        printf("got  = 0x%x;\n", chk.perms);
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
     return res;
 }
 
@@ -490,8 +595,8 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
         printf("cco1        = 0x%x;\n", cco1.get());
         printf("ccp2        = 0x%x;\n", ccp2.get());
         printf("cco2        = 0x%x;\n", cco2.get());
-        printf("exp.orients = 0x%lx;\n", resOrients);
-        printf("got.orients = 0x%lx;\n", chkOrients);
+        printf("exp.orients = 0x%x;\n", resOrients);
+        printf("got.orients = 0x%x;\n", chkOrients);
         funlockfile(stdout);
         exit(1);
     }
@@ -1591,11 +1696,7 @@ cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
 {
     cubecorner_perms cctr = ctransformed[transformDir].ccp;
     cubecorner_perms ccrtr = ctransformed[transformReverse(transformDir)].ccp;
-	cubecorner_perms res;
-	for(int cno = 0; cno < 8; ++cno) {
-		res.setAt(cno, cctr.getAt(this->getAt(ccrtr.getAt(cno))));
-    }
-    return res;
+    return cubecorner_perms::compose3(cctr, *this, ccrtr);
 }
 
 cubecorner_orients cubecorner_orients::transform(cubecorner_perms ccp, unsigned transformDir) const
@@ -1767,11 +1868,7 @@ static void permReprInit()
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
                 cubecorner_perms permchk = symmetric ? permr.symmetric() : permr;
                 for(unsigned short td = 0; td < TCOUNT; ++td) {
-                    cubecorner_perms cctr = ctransformed[td].ccp;
-                    cubecorner_perms ccrtr = ctransformed[transformReverse(td)].ccp;
-                    cubecorner_perms cand;
-                    for(int cno = 0; cno < 8; ++cno)
-                        cand.setAt(cno, cctr.getAt(permchk.getAt(ccrtr.getAt(cno))));
+                    cubecorner_perms cand = permchk.transform(td);
                     if( td+reversed+symmetric == 0 || cand < permRepr ) {
                         permRepr = cand;
                         transform.clear();
