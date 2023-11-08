@@ -4139,7 +4139,7 @@ static const CubesReprByDepth *getReprCubes(unsigned depth, int threadCount, int
 
 static const SpaceReprCubes *getBGSpaceReprCubes(unsigned depth, int threadCount, int reqFd)
 {
-    static SpaceReprCubes bgSpaceCubes[7];
+    static SpaceReprCubes bgSpaceCubes[TWOPHASE_DEPTH1_MAX+1];
     static unsigned spaceDepthCount = 0;
     bool isCanceled = false;
 
