@@ -2771,15 +2771,17 @@ static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 4;
     for(unsigned i = 0; i < 12; ++i) {
-        if( ceRev.getPermAt(i) < 4 | ceRev.getPermAt(i) >= 8 ) {
+        unsigned ipos = ceRev.getPermAt(i);
+        unsigned orient = ce.getOrientAt(ipos);
+        if( ipos < 4 | ipos >= 8 ) {
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
-                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destIn,
+                    orientsIn[ipos] == orientsIn[destIn] ?  orient : !orient);
             if( ++destIn == 4 )
                 destIn = 8;
         }else{
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destOut, orient);
             ++destOut;
         }
     }
@@ -2828,18 +2830,19 @@ static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 0;
     for(unsigned i = 0; i < 12; ++i) {
-        if( orientsIn[ceRev.getPermAt(i)] != 2 ) {
+        unsigned ipos = ceRev.getPermAt(i);
+        if( orientsIn[ipos] != 2 ) {
             while( orientsIn[destIn] == 2 )
                 ++destIn;
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
-                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
+                ce.getOrientAt(ipos) : !ce.getOrientAt(ipos));
             ++destIn;
         }else{
             while( orientsIn[destOut] != 2 )
                 ++destOut;
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destOut, ce.getOrientAt(ipos));
             ++destOut;
         }
     }
@@ -2885,18 +2888,19 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
     cubeedges ceRev = ce.reverse();
     unsigned destIn = 0, destOut = 0;
     for(unsigned i = 0; i < 12; ++i) {
-        if( orientsIn[ceRev.getPermAt(i)] != 2 ) {
+        unsigned ipos = ceRev.getPermAt(i);
+        if( orientsIn[ipos] != 2 ) {
             while( orientsIn[destIn] == 2 )
                 ++destIn;
             cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ceRev.getPermAt(i)] == orientsIn[destIn] ?
-                ce.getOrientAt(ceRev.getPermAt(i)) : !ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
+                ce.getOrientAt(ipos) : !ce.getOrientAt(ipos));
             ++destIn;
         }else{
             while( orientsIn[destOut] != 2 )
                 ++destOut;
             cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.getOrientAt(ceRev.getPermAt(i)));
+            cerepr.setOrientAt(destOut, ce.getOrientAt(ipos));
             ++destOut;
         }
     }
