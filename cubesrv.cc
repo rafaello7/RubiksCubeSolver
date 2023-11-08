@@ -397,7 +397,7 @@ cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_pe
             : [ccp1]     "r"   (ccp1.perms),
               [ccp2]     "r"   (ccp2.perms),
               [ccp3]     "r"   (ccp3.perms),
-              [depPerm]  "r"   (0x0707070707070707ul)
+              [depPerm]  "r"   (0x707070707070707ul)
             : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
@@ -508,6 +508,9 @@ public:
 	void set(unsigned orts) { orients = orts; }
     static cubecorner_orients compose(cubecorner_orients cco1,
             cubecorner_perms ccp2, cubecorner_orients cco2);
+    static cubecorner_orients compose3(cubecorner_orients cco1,
+            cubecorner_perms ccp2, cubecorner_orients cco2,
+            cubecorner_perms ccp3, cubecorner_orients cco3);
     cubecorner_orients symmetric() const {
         cubecorner_orients ccores;
         // set orient 2 -> 1, 1 -> 2, 0 unchanged
@@ -538,7 +541,7 @@ cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1o
 cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
             cubecorner_perms ccp2, cubecorner_orients cco2)
 {
-	unsigned short resOrients = 0;
+    cubecorner_orients res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm(
@@ -563,46 +566,132 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
         "pext %[depOrient], %[tmp1], %[tmp1]\n"
         "mov %w[tmp1], %[resOrients]\n"
         "vzeroupper\n"
-        : [resOrients]  "=r"  (resOrients),
+        : [resOrients]  "=r"  (res.orients),
           [tmp1]        "=&r" (tmp1)
-        : [cco1]        "r"   ((unsigned long)cco1.get()),
+        : [cco1]        "r"   ((unsigned long)cco1.orients),
           [ccp2]        "r"   ((unsigned long)ccp2.get()),
-          [cco2]        "r"   ((unsigned long)cco2.get()),
+          [cco2]        "r"   ((unsigned long)cco2.orients),
           [depPerm]     "rm"  (0x707070707070707ul),
           [depOrient]   "rm"  (0x303030303030303ul),
           [mod3]        "rm"  (0x100020100)
         : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    unsigned short chkOrients = resOrients;
-    resOrients = 0;
+    cubecorner_orients chk = res;
+    res.orients = 0;
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
 	static const unsigned char MOD3[] = { 0, 1, 2, 0, 1 };
 	for(int i = 0; i < 8; ++i) {
         unsigned cc2Perm = ccp2.get() >> 3*i & 7;
-        unsigned cc2Orient = cco2.get() >> 2*i & 3;
-        unsigned cco1Orient = cco1.get() >> 2*cc2Perm & 3;
+        unsigned cc2Orient = cco2.orients >> 2*i & 3;
+        unsigned cco1Orient = cco1.orients >> 2*cc2Perm & 3;
         unsigned resOrient = MOD3[cco1Orient + cc2Orient];
-        resOrients |= resOrient << 2 * i;
+        res.orients |= resOrient << 2 * i;
     }
 #endif
 #ifdef ASMCHECK
-    if( resOrients != chkOrients ) {
+    if( res.orients != chk.orients ) {
         flockfile(stdout);
         printf("corners compose mismatch!\n");
-        printf("cco1        = 0x%x;\n", cco1.get());
+        printf("cco1        = 0x%x;\n", cco1.orients);
         printf("ccp2        = 0x%x;\n", ccp2.get());
-        printf("cco2        = 0x%x;\n", cco2.get());
-        printf("exp.orients = 0x%x;\n", resOrients);
-        printf("got.orients = 0x%x;\n", chkOrients);
+        printf("cco2        = 0x%x;\n", cco2.orients);
+        printf("exp.orients = 0x%x;\n", res.orients);
+        printf("got.orients = 0x%x;\n", chk.orients);
         funlockfile(stdout);
         exit(1);
     }
 #endif  // ASMCHECK
+	return res;
+}
+
+cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
+            cubecorner_perms ccp2, cubecorner_orients cco2,
+            cubecorner_perms ccp3, cubecorner_orients cco3)
+{
     cubecorner_orients res;
-    res.set(resOrients);
+#ifdef USE_ASM
+    unsigned long tmp1;
+    asm(
+        // store ccp3 in xmm3
+        "pdep %[depPerm], %[ccp3], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm3\n"
+        // store cco2 in xmm2
+        "pdep %[depOrient], %[cco2], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm2\n"
+        // permute the cco2; result in xmm1 (cco2orient)
+        "vpshufb %%xmm3, %%xmm2, %%xmm1\n"
+        // store cco3 in xmm2
+        "pdep %[depOrient], %[cco3], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm2\n"
+        // add the orients, result in xmm1 (cco2orient + cco3orient)
+        "vpaddb %%xmm2, %%xmm1, %%xmm1\n"
+        // store ccp2 in xmm2
+        "pdep %[depPerm], %[ccp2], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm2\n"
+        // permute the ccp2; result in xmm3 (midperm)
+        "vpshufb %%xmm3, %%xmm2, %%xmm3\n"
+        // store cco1 in xmm2
+        "pdep %[depOrient], %[cco1], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm2\n"
+        // permute the cco1; result in xmm2 (cco1orient)
+        "vpshufb %%xmm3, %%xmm2, %%xmm2\n"
+        // add the orients
+        "vpaddb %%xmm2, %%xmm1, %%xmm1\n"
+        // calculate modulo 3
+        "vmovd %[mod3], %%xmm2\n"
+        "vpshufb %%xmm1, %%xmm2, %%xmm2\n"
+        // store result
+        "vmovq %%xmm2, %[tmp1]\n"
+        "pext %[depOrient], %[tmp1], %[tmp1]\n"
+        "mov %w[tmp1], %[resOrients]\n"
+        "vzeroupper\n"
+        : [resOrients]  "=r"  (res.orients),
+          [tmp1]        "=&r" (tmp1)
+        : [cco1]        "r"   ((unsigned long)cco1.orients),
+          [ccp2]        "r"   ((unsigned long)ccp2.get()),
+          [cco2]        "r"   ((unsigned long)cco2.orients),
+          [ccp3]        "r"   ((unsigned long)ccp3.get()),
+          [cco3]        "r"   ((unsigned long)cco3.orients),
+          [depPerm]     "rm"  (0x707070707070707ul),
+          [depOrient]   "rm"  (0x303030303030303ul),
+          [mod3]        "rm"  (0x20100020100ul)
+        : "xmm1", "xmm2"
+       );
+#ifdef ASMCHECK
+    cubecorner_orients chk = res;
+    res.orients = 0;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+	static const unsigned char MOD3[] = { 0, 1, 2, 0, 1, 2, 0 };
+	for(int i = 0; i < 8; ++i) {
+        unsigned ccp3Perm = ccp3.get() >> 3*i & 7;
+        unsigned cco3orient = cco3.orients >> 2*i & 3;
+        unsigned midperm = ccp2.get() >> 3*ccp3Perm & 7;
+        unsigned cco2orient = cco2.orients >> 2*ccp3Perm & 3;
+        unsigned cco1orient = cco1.orients >> 2*midperm & 3;
+        unsigned resorient = MOD3[cco1orient + cco2orient + cco3orient];
+        res.orients |= resorient << 2 * i;
+    }
+#endif
+#ifdef ASMCHECK
+    if( res.orients != chk.orients ) {
+        flockfile(stdout);
+        printf("corner orients compose3 mismatch!\n");
+        printf("cco1        = 0x%x;\n", cco1.orients);
+        printf("ccp2        = 0x%x;\n", ccp2.get());
+        printf("cco2        = 0x%x;\n", cco2.orients);
+        printf("ccp3        = 0x%x;\n", ccp3.get());
+        printf("cco3        = 0x%x;\n", cco3.orients);
+        printf("exp.orients = 0x%x;\n", res.orients);
+        printf("got.orients = 0x%x;\n", chk.orients);
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
 	return res;
 }
 
@@ -1701,9 +1790,9 @@ cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
 
 cubecorner_orients cubecorner_orients::transform(cubecorner_perms ccp, unsigned transformDir) const
 {
-    cubecorner_orients cco1 = cubecorner_orients::compose(ctransformed[transformDir].cco, ccp, *this);
+    const cube &ctrans = ctransformed[transformDir];
     const cube &ctransRev = ctransformed[transformReverse(transformDir)];
-	return cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
+	return cubecorner_orients::compose3(ctrans.cco, ccp, *this, ctransRev.ccp, ctransRev.cco);
 }
 
 cubeedges cubeedges::transform(int idx) const
