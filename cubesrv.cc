@@ -526,6 +526,7 @@ public:
     bool isBGspace() const;
     bool isYWspace(cubecorner_perms) const;
     bool isORspace(cubecorner_perms) const;
+    cubecorner_orients representativeBG(cubecorner_perms) const;
 };
 
 cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1orient,
@@ -800,6 +801,61 @@ bool cubecorner_orients::isORspace(cubecorner_perms ccp) const {
         }
     }
     return true;
+}
+
+cubecorner_orients cubecorner_orients::representativeBG(cubecorner_perms ccp) const
+{
+    cubecorner_orients orepr;
+#ifdef USE_ASM
+    unsigned long tmp1;
+    asm (
+        // xmm2[63:0] := 2*perm
+        "pdep %[depPermx2], %q[perms], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
+        // xmm1[63:0] := cco
+        "pdep %[depOrient], %q[cco], %[tmp1]\n"
+        "vmovq %[tmp1], %%xmm1\n"
+        // ymm1 = cco << 2*perm
+        "vpmovzxbd %%xmm1, %%ymm1\n"        // expand to 32 bytes
+        "vpmovzxbd %%xmm2, %%ymm2\n"
+        "vpsllvd %%ymm2, %%ymm1, %%ymm1\n"  // shift
+
+        // perform horizontal OR on ymm1
+        "vextracti128 $1, %%ymm1, %%xmm2\n" // move ymm1[255:128] to xmm2[128:0]
+        "vpor %%xmm2, %%xmm1, %%xmm1\n"     // ymm1[128:0] | ymm1[255:128]
+        "vpshufd $0x4e, %%xmm1, %%xmm2\n"   // move xmm1[128:63] to xmm2[63:0]; 0x4e = 0q1032 (quaternary)
+        "vpor %%xmm2, %%xmm1, %%xmm1\n"     // xmm1[63:0] | xmm1[127:64]
+        "vphaddd %%xmm1, %%xmm1, %%xmm1\n"  // xmm1[31:0] + xmm1[63:32]
+        "vpextrw $0, %%xmm1, %q[orepr]\n"
+        : [orepr]       "=r"    (orepr.orients),
+          [tmp1]        "=&r"   (tmp1)
+        : [perms]       "r"     (ccp.get()),
+          [cco]         "r"     (this->orients),
+          [depPermx2]   "rm"    (0xe0e0e0e0e0e0e0eul),
+          [depOrient]   "rm"    (0x303030303030303ul)
+        : "ymm1", "ymm2"
+        );
+#ifdef ASMCHECK
+    cubecorner_orients chk = orepr;
+    orepr.orients = 0;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    for(unsigned i = 0; i < 8; ++i)
+        orepr.orients |= (orients >> 2*i & 3) << 2*ccp.getAt(i);
+#endif
+#ifdef ASMCHECK
+    if( orepr.orients != chk.orients ) {
+        flockfile(stdout);
+        printf("corner orients representativeBG mismatch!\n");
+        printf("this.orients = 0x%o;\n", orients);
+        printf("exp.orients  = 0x%o;\n", orepr.orients);
+        printf("got.orients  = 0x%o;\n", chk.orients);
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return orepr;
 }
 
 struct cubecorners {
@@ -2628,14 +2684,6 @@ static bool isRotateKind(unsigned spaceKind, unsigned rotateDir) {
     return false;
 }
 
-static cubecorner_orients cubecornerOrientsRepresentativeBG(cubecorner_perms ccp, cubecorner_orients cco)
-{
-    cubecorner_orients orepr;
-    for(unsigned i = 0; i < 8; ++i)
-        orepr.setAt(ccp.getAt(i), cco.getAt(i));
-    return orepr;
-}
-
 static cubecorner_orients cubecornerOrientsRepresentativeYW(cubecorner_perms ccp, cubecorner_orients cco)
 {
     unsigned orients[8] = { 2, 1, 1, 2, 1, 2, 2, 1 };
@@ -2888,8 +2936,7 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
 
 static cube cubeRepresentativeBG(const cube &c) {
     cubecorner_perms ccpRepr = csolved.ccp;
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeBG(c.ccp,
-            c.cco);
+    cubecorner_orients ccoRepr = c.cco.representativeBG(c.ccp);
     cubeedges ceRepr = cubeedgesRepresentativeBG(c.ce);
     return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
@@ -3567,7 +3614,7 @@ static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
                     for(unsigned td = 0; td < TCOUNT; ++td) {
                         cubecorner_perms ccpT = ccprevsymm.transform(td);
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        cubecorner_orients ccoReprBG = cubecornerOrientsRepresentativeBG(ccpT, ccoT);
+                        cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
                         unsigned reprCOrientIdx = cornersOrientToIdx(ccoReprBG);
 
                         if( reprCOrientIdx % threadCount == threadNo ) {
@@ -4040,7 +4087,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                     for(unsigned td = 0; td < TCOUNT; ++td) {
                         cubecorner_perms ccpT = ccprevsymm.transform(td);
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        cubecorner_orients ccoReprBG = cubecornerOrientsRepresentativeBG(ccpT, ccoT);
+                        cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
                         if( cSpaceRepr.cco == ccoReprBG ) {
                             for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
                                     edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
@@ -4173,8 +4220,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                         cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoSearch = cubecorner_orients::compose(ccoT, csearchT.ccp, csearchT.cco);
-                        cubecorner_orients ccoSearchReprBG = cubecornerOrientsRepresentativeBG(
-                                ccpSearch, ccoSearch);
+                        cubecorner_orients ccoSearchReprBG = ccoSearch.representativeBG(ccpSearch);
                         unsigned searchReprCOrientIdx = cornersOrientToIdx(ccoSearchReprBG);
                         if( bgSpaceCubes[depthMax].containsCCOrients(searchReprCOrientIdx) ) {
                             for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
