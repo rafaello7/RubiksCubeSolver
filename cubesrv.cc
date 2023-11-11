@@ -4271,6 +4271,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                     cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
                     cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                     cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
+                    std::vector<cubeedges> ceTarr;
                     for(unsigned srchItem = 0; srchItem < csearchTarr[0].size(); ++srchItem) {
                         for(unsigned searchTd = 0; searchTd < 3; ++searchTd) {
                             const cube &csearchT = csearchTarr[searchTd][srchItem];
@@ -4280,16 +4281,20 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                             cubecorner_orients ccoSearchReprBG = ccoSearch.representativeBG(ccpSearch);
                             unsigned short searchReprCOrientIdx = ccoSearchReprBG.getOrientIdx();
                             if( (*bgSpaceCubes)[depthMax].containsCCOrients(searchReprCOrientIdx) ) {
-                                for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
-                                        edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
-                                {
-                                    cubeedges ce = *edgeIt;
-                                    cubeedges cerev = reversed ? ce.reverse() : ce;
-                                    cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
-                                    cubeedges ceT = cerevsymm.transform(td);
+                                if( ceTarr.empty() ) {
+                                    for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
+                                            edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
+                                    {
+                                        cubeedges ce = *edgeIt;
+                                        cubeedges cerev = reversed ? ce.reverse() : ce;
+                                        cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
+                                        cubeedges ceT = cerevsymm.transform(td);
+                                        ceTarr.push_back(ceT);
+                                    }
+                                }
+                                for(const cubeedges &ceT : ceTarr) {
                                     cubeedges ceSearch = cubeedges::compose(ceT, csearchT.ce);
                                     cubeedges ceSearchSpaceRepr = ceSearch.representativeBG();
-
                                     if( (*bgSpaceCubes)[depthMax].containsCubeedges(
                                                 searchReprCOrientIdx, ceSearchSpaceRepr) )
                                     {
