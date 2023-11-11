@@ -930,6 +930,7 @@ public:
     bool isBGspace() const;
     bool isYWspace() const;
     bool isORspace() const;
+    cubeedges representativeBG() const;
 };
 
 cubeedges::cubeedges(
@@ -1559,6 +1560,50 @@ bool cubeedges::isORspace() const {
         }
     }
     return true;
+}
+
+cubeedges cubeedges::representativeBG() const
+{
+    cubeedges cerepr;
+    const unsigned orientsIn = 0x6060;
+
+    cubeedges ceRev = reverse();
+    unsigned destIn = 0, destOut = 4, permOutSum = 0;
+    for(unsigned i = 0; i < 12; ++i) {
+        unsigned ipos = ceRev.getPermAt(i);
+        unsigned long item = edges >> 5*ipos & 0x1f;
+        if( ipos < 4 | ipos >= 8 ) {
+            item ^= (orientsIn>>ipos ^ orientsIn>>destIn) & 0x10;
+            cerepr.edges |= item << 5*destIn;
+            ++destIn;
+            destIn += destIn & 0x4; // if destIn == 4 then destIn := 8
+        }else{
+            permOutSum += i;
+            if( destOut == 7 && permOutSum & 1 ) {
+                // fix permutation parity
+                unsigned long item6 = cerepr.edges >> 6*5 & 0x1f;
+                cerepr.edges &= ~(0x1ful << 30);
+                cerepr.edges |= item6 << 7*5;
+                --destOut;
+            }
+            cerepr.edges |= item << 5*destOut;
+            ++destOut;
+        }
+    }
+#if 0
+    cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
+    cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
+    // someSpace = (c rev) ⊙  ccchk
+    if( !cube::compose(c.reverse(), cchk).isBGspace() ) {
+        printf("fatal: BG cube representative is not congruent\n");
+        exit(1);
+    }
+    if( !isCubeSolvable1(cchk) ) {
+        printf("fatal: BG cube representative is unsolvable\n");
+        exit(1);
+    }
+#endif
+    return cerepr;
 }
 
 struct cube {
@@ -2762,66 +2807,6 @@ static bool isCubeSolvable1(const cube &c)
     return true;
 }
 
-
-static cubeedges cubeedgesRepresentativeBG(cubeedges ce)
-{
-    cubeedges cerepr;
-    unsigned orientsIn[12] = { 0, 1, 1, 0, 2, 2, 2, 2, 0, 1, 1, 0 };
-
-    cubeedges ceRev = ce.reverse();
-    unsigned destIn = 0, destOut = 4;
-    for(unsigned i = 0; i < 12; ++i) {
-        unsigned ipos = ceRev.getPermAt(i);
-        unsigned orient = ce.getOrientAt(ipos);
-        if( ipos < 4 | ipos >= 8 ) {
-            cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn,
-                    orientsIn[ipos] == orientsIn[destIn] ?  orient : !orient);
-            if( ++destIn == 4 )
-                destIn = 8;
-        }else{
-            cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, orient);
-            ++destOut;
-        }
-    }
-    // make the cube solvable
-    bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
-    for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
-            continue;
-        permsScanned |= 1 << i;
-        int p = i;
-        while( (p = cerepr.getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
-            isSwapsOdd = !isSwapsOdd;
-        }
-    }
-	if( isSwapsOdd ) {
-		unsigned p = cerepr.getPermAt(6);
-        unsigned o = cerepr.getOrientAt(6);
-        cerepr.setPermAt(6, cerepr.getPermAt(7));
-        cerepr.setOrientAt(6, cerepr.getOrientAt(7));
-        cerepr.setPermAt(7, p);
-        cerepr.setOrientAt(7, o);
-	}
-#if 0
-    cube cchk = { .cc = csolved.cc, .ce = cerepr };
-    cube c = { .cc = csolved.cc, .ce = ce };
-    // someSpace = (c rev) ⊙  ccchk
-    if( !isBGspace(cube::compose(c.reverse(), cchk)) ) {
-        printf("fatal: BG cube representative is not congruent\n");
-        exit(1);
-    }
-    if( !isCubeSolvable1(cchk) ) {
-        printf("fatal: BG cube representative is unsolvable\n");
-        exit(1);
-    }
-#endif
-    return cerepr;
-}
-
 static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
 {
     cubeedges cerepr;
@@ -2941,7 +2926,7 @@ static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
 static cube cubeRepresentativeBG(const cube &c) {
     cubecorner_perms ccpRepr = csolved.ccp;
     cubecorner_orients ccoRepr = c.cco.representativeBG(c.ccp);
-    cubeedges ceRepr = cubeedgesRepresentativeBG(c.ce);
+    cubeedges ceRepr = c.ce.representativeBG();
     return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
@@ -3672,7 +3657,7 @@ static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
                                 cubeedges cerev = reversed ? ce.reverse() : ce;
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
                                 cubeedges ceT = cerevsymm.transform(td);
-                                cubeedges ceReprBG = cubeedgesRepresentativeBG(ceT);
+                                cubeedges ceReprBG = ceT.representativeBG();
                                 if( (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG) )
                                     ++reprCubeCountT;
                             }
@@ -4159,7 +4144,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
                                 cubeedges cerev = reversed ? ce.reverse() : ce;
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
                                 cubeedges ceT = cerevsymm.transform(td);
-                                cubeedges ceReprBG = cubeedgesRepresentativeBG(ceT);
+                                cubeedges ceReprBG = ceT.representativeBG();
                                 if( cSpaceRepr.ce == ceReprBG ) {
                                     cube cube2 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
                                     // cube1 ⊙  csearch = cube2 ⊙  cSpace
@@ -4294,7 +4279,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
                                 cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceSearch = cubeedges::compose(ceT, csearchT.ce);
-                                cubeedges ceSearchSpaceRepr = cubeedgesRepresentativeBG(ceSearch);
+                                cubeedges ceSearchSpaceRepr = ceSearch.representativeBG();
 
                                 if( (*bgSpaceCubes)[depthMax].containsCubeedges(
                                             searchReprCOrientIdx, ceSearchSpaceRepr) )
@@ -4338,7 +4323,7 @@ static void searchMovesQuickA0(const CubesReprByDepth &cubesReprByDepth,
         cube csearchT = csearch.transform(searchTd);
         cubecorner_orients ccoSearchReprBG = csearchT.cco.representativeBG(csearchT.ccp);
         unsigned searchReprCOrientIdx = cornersOrientToIdx(ccoSearchReprBG);
-        cubeedges ceSearchSpaceRepr = cubeedgesRepresentativeBG(csearchT.ce);
+        cubeedges ceSearchSpaceRepr = csearchT.ce.representativeBG();
 
         if( (*bgSpaceCubes)[depthMax].containsCubeedges(searchReprCOrientIdx, ceSearchSpaceRepr) ) {
             std::string inspaceWithCube2Moves;
