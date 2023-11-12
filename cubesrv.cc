@@ -3626,7 +3626,12 @@ static void addBGSpaceReprCubesT(const CubesReprByDepth *cubesReprByDepth,
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
                                 cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = ceT.representativeBG();
-                                if( (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG) )
+                                bool isAtLowerDepth = false;
+                                for(unsigned d1 = 0; d1 < depth && !isAtLowerDepth; ++d1)
+                                    isAtLowerDepth = (*bgSpaceCubes)[d1].containsCubeedges(
+                                            reprCOrientIdx, ceReprBG);
+                                if( !isAtLowerDepth &&
+                                        (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG) )
                                     ++reprCubeCountT;
                             }
                         }
