@@ -528,6 +528,8 @@ public:
     bool isYWspace(cubecorner_perms) const;
     bool isORspace(cubecorner_perms) const;
     cubecorner_orients representativeBG(cubecorner_perms) const;
+    cubecorner_orients representativeYW(cubecorner_perms) const;
+    cubecorner_orients representativeOR(cubecorner_perms) const;
 };
 
 cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1orient,
@@ -867,6 +869,30 @@ cubecorner_orients cubecorner_orients::representativeBG(cubecorner_perms ccp) co
     return orepr;
 }
 
+cubecorner_orients cubecorner_orients::representativeYW(cubecorner_perms ccp) const
+{
+    unsigned oadd[8] = { 2, 1, 1, 2, 1, 2, 2, 1 };
+    cubecorner_orients orepr;
+    cubecorner_perms ccpRev = ccp.reverse();
+    for(unsigned i = 0; i < 8; ++i) {
+        unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
+        orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
+    }
+    return orepr;
+}
+
+cubecorner_orients cubecorner_orients::representativeOR(cubecorner_perms ccp) const
+{
+    unsigned oadd[8] = { 1, 2, 2, 1, 2, 1, 1, 2 };
+    cubecorner_orients orepr;
+    cubecorner_perms ccpRev = ccp.reverse();
+    for(unsigned i = 0; i < 8; ++i) {
+        unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
+        orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
+    }
+    return orepr;
+}
+
 struct cubecorners {
 	cubecorner_perms perms;
 	cubecorner_orients orients;
@@ -940,6 +966,8 @@ public:
     bool isYWspace() const;
     bool isORspace() const;
     cubeedges representativeBG() const;
+    cubeedges representativeYW() const;
+    cubeedges representativeOR() const;
 };
 
 cubeedges::cubeedges(
@@ -1571,6 +1599,38 @@ bool cubeedges::isORspace() const {
     return true;
 }
 
+static bool isCeReprSolvable(const cubeedges &ce)
+{
+    bool isSwapsOdd = false;
+    unsigned permsScanned = 0;
+    for(int i = 0; i < 12; ++i) {
+        if( permsScanned & 1 << i )
+            continue;
+        permsScanned |= 1 << i;
+        int p = i;
+        while( (p = ce.getPermAt(p)) != i ) {
+            if( permsScanned & 1 << p ) {
+                printf("edge perm %d is twice\n", p);
+                return false;
+            }
+            permsScanned |= 1 << p;
+            isSwapsOdd = !isSwapsOdd;
+        }
+    }
+	if( isSwapsOdd ) {
+		printf("cubeedges unsolvable due to permutation parity\n");
+		return false;
+	}
+	unsigned sumOrient = 0;
+	for(int i = 0; i < 12; ++i)
+		sumOrient += ce.getOrientAt(i);
+	if( sumOrient % 2 ) {
+		printf("cubeedges unsolvable due to edge orientations\n");
+		return false;
+	}
+    return true;
+}
+
 cubeedges cubeedges::representativeBG() const
 {
     cubeedges cerepr;
@@ -1615,6 +1675,110 @@ cubeedges cubeedges::representativeBG() const
     return cerepr;
 }
 
+cubeedges cubeedges::representativeYW() const
+{
+    cubeedges cerepr;
+    unsigned orientsIn[12] = { 1, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 1 };
+
+    cubeedges ceRev = reverse();
+    unsigned destIn = 0, destOut = 0;
+    for(unsigned i = 0; i < 12; ++i) {
+        unsigned ipos = ceRev.getPermAt(i);
+        if( orientsIn[ipos] != 2 ) {
+            while( orientsIn[destIn] == 2 )
+                ++destIn;
+            cerepr.setPermAt(destIn, i);
+            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
+                getOrientAt(ipos) : !getOrientAt(ipos));
+            ++destIn;
+        }else{
+            while( orientsIn[destOut] != 2 )
+                ++destOut;
+            cerepr.setPermAt(destOut, i);
+            cerepr.setOrientAt(destOut, getOrientAt(ipos));
+            ++destOut;
+        }
+    }
+    // make the cube solvable
+    bool isSwapsOdd = false;
+    unsigned permsScanned = 0;
+    for(int i = 0; i < 12; ++i) {
+        if( permsScanned & 1 << i )
+            continue;
+        permsScanned |= 1 << i;
+        int p = i;
+        while( (p = cerepr.getPermAt(p)) != i ) {
+            permsScanned |= 1 << p;
+            isSwapsOdd = !isSwapsOdd;
+        }
+    }
+	if( isSwapsOdd ) {
+		unsigned p = cerepr.getPermAt(10);
+		unsigned o = cerepr.getOrientAt(10);
+        cerepr.setPermAt(10, cerepr.getPermAt(9));
+        cerepr.setOrientAt(10, cerepr.getOrientAt(9));
+        cerepr.setPermAt(9, p);
+        cerepr.setOrientAt(9, o);
+	}
+    if( !isCeReprSolvable(*this) ) {
+        printf("fatal: YW cube repesentative is unsolvable\n");
+        exit(1);
+    }
+    return cerepr;
+}
+
+cubeedges cubeedges::representativeOR() const
+{
+    cubeedges cerepr;
+    unsigned orientsIn[12] = { 2, 0, 0, 2, 1, 1, 1, 1, 2, 0, 0, 2 };
+
+    cubeedges ceRev = reverse();
+    unsigned destIn = 0, destOut = 0;
+    for(unsigned i = 0; i < 12; ++i) {
+        unsigned ipos = ceRev.getPermAt(i);
+        if( orientsIn[ipos] != 2 ) {
+            while( orientsIn[destIn] == 2 )
+                ++destIn;
+            cerepr.setPermAt(destIn, i);
+            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
+                getOrientAt(ipos) : !getOrientAt(ipos));
+            ++destIn;
+        }else{
+            while( orientsIn[destOut] != 2 )
+                ++destOut;
+            cerepr.setPermAt(destOut, i);
+            cerepr.setOrientAt(destOut, getOrientAt(ipos));
+            ++destOut;
+        }
+    }
+    // make the cube solvable
+    bool isSwapsOdd = false;
+    unsigned permsScanned = 0;
+    for(int i = 0; i < 12; ++i) {
+        if( permsScanned & 1 << i )
+            continue;
+        permsScanned |= 1 << i;
+        int p = i;
+        while( (p = cerepr.getPermAt(p)) != i ) {
+            permsScanned |= 1 << p;
+            isSwapsOdd = !isSwapsOdd;
+        }
+    }
+	if( isSwapsOdd ) {
+		unsigned p = cerepr.getPermAt(8);
+		unsigned o = cerepr.getOrientAt(8);
+        cerepr.setPermAt(8, cerepr.getPermAt(11));
+        cerepr.setOrientAt(8, cerepr.getOrientAt(11));
+        cerepr.setPermAt(11, p);
+        cerepr.setOrientAt(11, o);
+	}
+    if( !isCeReprSolvable(*this) ) {
+        printf("fatal: OR cube repesentative is unsolvable\n");
+        exit(1);
+    }
+    return cerepr;
+}
+
 struct cube {
 	cubecorner_perms ccp;
     cubecorner_orients cco;
@@ -1647,6 +1811,9 @@ struct cube {
     bool isBGspace() const { return cco.isBGspace() && ce.isBGspace(); }
     bool isYWspace() const { return cco.isYWspace(ccp) && ce.isYWspace(); }
     bool isORspace() const { return cco.isORspace(ccp) && ce.isORspace(); }
+    cube representativeBG() const;
+    cube representativeYW() const;
+    cube representativeOR() const;
 };
 
 bool cube::operator==(const cube &c) const
@@ -1664,8 +1831,26 @@ const struct cube csolved = {
     .ccp =   cubecorner_perms(0, 1, 2, 3, 4, 5, 6, 7),
     .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
     .ce  = cubeedges(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
-            0,0,0,0,0,0,0,0,0,0,0,0)
+                     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0)
 };
+
+cube cube::representativeBG() const {
+    cubecorner_orients ccoRepr = cco.representativeBG(ccp);
+    cubeedges ceRepr = ce.representativeBG();
+    return { .ccp = csolved.ccp, .cco = ccoRepr, .ce = ceRepr };
+}
+
+cube cube::representativeYW() const {
+    cubecorner_orients ccoRepr = cco.representativeYW(ccp);
+    cubeedges ceRepr = ce.representativeYW();
+    return { .ccp = csolved.ccp, .cco = ccoRepr, .ce = ceRepr };
+}
+
+cube cube::representativeOR() const {
+    cubecorner_orients ccoRepr = cco.representativeOR(ccp);
+    cubeedges ceRepr = ce.representativeOR();
+    return { .ccp = csolved.ccp, .cco = ccoRepr, .ce = ceRepr };
+}
 
 const struct cube crotated[RCOUNT] = {
     {   // ORANGECW
@@ -2728,223 +2913,6 @@ static bool isRotateKind(unsigned spaceKind, unsigned rotateDir) {
             break;
     }
     return false;
-}
-
-static cubecorner_orients cubecornerOrientsRepresentativeYW(cubecorner_perms ccp, cubecorner_orients cco)
-{
-    unsigned orients[8] = { 2, 1, 1, 2, 1, 2, 2, 1 };
-    cubecorner_orients orepr;
-    cubecorner_perms ccpRev = ccp.reverse();
-    for(unsigned i = 0; i < 8; ++i) {
-        unsigned toAdd = orients[i] == orients[ccpRev.getAt(i)] ? 0 : orients[i];
-        orepr.setAt(i, (cco.getAt(ccpRev.getAt(i))+toAdd) % 3);
-    }
-    return orepr;
-}
-
-static cubecorner_orients cubecornerOrientsRepresentativeOR(cubecorner_perms ccp, cubecorner_orients cco)
-{
-    unsigned orients[8] = { 1, 2, 2, 1, 2, 1, 1, 2 };
-    cubecorner_orients orepr;
-    cubecorner_perms ccpRev = ccp.reverse();
-    for(unsigned i = 0; i < 8; ++i) {
-        unsigned toAdd = orients[i] == orients[ccpRev.getAt(i)] ? 0 : orients[i];
-        orepr.setAt(i, (cco.getAt(ccpRev.getAt(i))+toAdd) % 3);
-    }
-    return orepr;
-}
-
-static bool isCubeSolvable1(const cube &c)
-{
-    bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
-    for(int i = 0; i < 8; ++i) {
-        if( permsScanned & 1 << i )
-            continue;
-        permsScanned |= 1 << i;
-        int p = i;
-        while( (p = c.ccp.getAt(p)) != i ) {
-            if( permsScanned & 1 << p ) {
-                printf("corner perm %d is twice\n", p);
-                return false;
-            }
-            permsScanned |= 1 << p;
-            isSwapsOdd = !isSwapsOdd;
-        }
-    }
-    permsScanned = 0;
-    for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
-            continue;
-        permsScanned |= 1 << i;
-        int p = i;
-        while( (p = c.ce.getPermAt(p)) != i ) {
-            if( permsScanned & 1 << p ) {
-                printf("edge perm %d is twice\n", p);
-                return false;
-            }
-            permsScanned |= 1 << p;
-            isSwapsOdd = !isSwapsOdd;
-        }
-    }
-	if( isSwapsOdd ) {
-		printf("cube unsolvable due to permutation parity\n");
-		return false;
-	}
-	unsigned sumOrient = 0;
-	for(int i = 0; i < 8; ++i)
-		sumOrient += c.cco.getAt(i);
-	if( sumOrient % 3 ) {
-		printf("cube unsolvable due to corner orientations\n");
-		return false;
-	}
-	sumOrient = 0;
-	for(int i = 0; i < 12; ++i)
-		sumOrient += c.ce.getOrientAt(i);
-	if( sumOrient % 2 ) {
-		printf("cube unsolvable due to edge orientations\n");
-		return false;
-	}
-    return true;
-}
-
-static cubeedges cubeedgesRepresentativeYW(cubeedges ce)
-{
-    cubeedges cerepr;
-    unsigned orientsIn[12] = { 1, 2, 2, 1, 0, 0, 0, 0, 1, 2, 2, 1 };
-
-    cubeedges ceRev = ce.reverse();
-    unsigned destIn = 0, destOut = 0;
-    for(unsigned i = 0; i < 12; ++i) {
-        unsigned ipos = ceRev.getPermAt(i);
-        if( orientsIn[ipos] != 2 ) {
-            while( orientsIn[destIn] == 2 )
-                ++destIn;
-            cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
-                ce.getOrientAt(ipos) : !ce.getOrientAt(ipos));
-            ++destIn;
-        }else{
-            while( orientsIn[destOut] != 2 )
-                ++destOut;
-            cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.getOrientAt(ipos));
-            ++destOut;
-        }
-    }
-    // make the cube solvable
-    bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
-    for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
-            continue;
-        permsScanned |= 1 << i;
-        int p = i;
-        while( (p = cerepr.getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
-            isSwapsOdd = !isSwapsOdd;
-        }
-    }
-	if( isSwapsOdd ) {
-		unsigned p = cerepr.getPermAt(10);
-		unsigned o = cerepr.getOrientAt(10);
-        cerepr.setPermAt(10, cerepr.getPermAt(9));
-        cerepr.setOrientAt(10, cerepr.getOrientAt(9));
-        cerepr.setPermAt(9, p);
-        cerepr.setOrientAt(9, o);
-	}
-    cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
-    cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
-    if( !cube::compose(c.reverse(), cchk).isYWspace() ) {
-        printf("fatal: YW cube representative is not congruent\n");
-        exit(1);
-    }
-    if( !isCubeSolvable1(cchk) ) {
-        printf("fatal: YW cube repesentative is unsolvable\n");
-        exit(1);
-    }
-    return cerepr;
-}
-
-static cubeedges cubeedgesRepresentativeOR(cubeedges ce)
-{
-    cubeedges cerepr;
-    unsigned orientsIn[12] = { 2, 0, 0, 2, 1, 1, 1, 1, 2, 0, 0, 2 };
-
-    cubeedges ceRev = ce.reverse();
-    unsigned destIn = 0, destOut = 0;
-    for(unsigned i = 0; i < 12; ++i) {
-        unsigned ipos = ceRev.getPermAt(i);
-        if( orientsIn[ipos] != 2 ) {
-            while( orientsIn[destIn] == 2 )
-                ++destIn;
-            cerepr.setPermAt(destIn, i);
-            cerepr.setOrientAt(destIn, orientsIn[ipos] == orientsIn[destIn] ?
-                ce.getOrientAt(ipos) : !ce.getOrientAt(ipos));
-            ++destIn;
-        }else{
-            while( orientsIn[destOut] != 2 )
-                ++destOut;
-            cerepr.setPermAt(destOut, i);
-            cerepr.setOrientAt(destOut, ce.getOrientAt(ipos));
-            ++destOut;
-        }
-    }
-    // make the cube solvable
-    bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
-    for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
-            continue;
-        permsScanned |= 1 << i;
-        int p = i;
-        while( (p = cerepr.getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
-            isSwapsOdd = !isSwapsOdd;
-        }
-    }
-	if( isSwapsOdd ) {
-		unsigned p = cerepr.getPermAt(8);
-		unsigned o = cerepr.getOrientAt(8);
-        cerepr.setPermAt(8, cerepr.getPermAt(11));
-        cerepr.setOrientAt(8, cerepr.getOrientAt(11));
-        cerepr.setPermAt(11, p);
-        cerepr.setOrientAt(11, o);
-	}
-    cube cchk = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = cerepr };
-    cube c = { .ccp = csolved.ccp, .cco = csolved.cco, .ce = ce };
-    if( !cube::compose(c.reverse(), cchk).isORspace() ) {
-        printf("fatal: OR cube representative is not congruent\n");
-        exit(1);
-    }
-    if( !isCubeSolvable1(cchk) ) {
-        printf("fatal: OR cube repesentative is unsolvable\n");
-        exit(1);
-    }
-    return cerepr;
-}
-
-static cube cubeRepresentativeBG(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.ccp;
-    cubecorner_orients ccoRepr = c.cco.representativeBG(c.ccp);
-    cubeedges ceRepr = c.ce.representativeBG();
-    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
-}
-
-static cube cubeRepresentativeYW(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.ccp;
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeYW(c.ccp,
-            c.cco);
-    cubeedges ceRepr = cubeedgesRepresentativeYW(c.ce);
-    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
-}
-
-static cube cubeRepresentativeOR(const cube &c) {
-    cubecorner_perms ccpRepr = csolved.ccp;
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentativeOR(c.ccp,
-            c.cco);
-    cubeedges ceRepr = cubeedgesRepresentativeOR(c.ce);
-    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
 }
 
 const char spaceKindName[SPACECOUNT][3] = { "BG", "YW", "OR" };
@@ -4112,7 +4080,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cub
         unsigned searchTd, unsigned cube2Depth, unsigned movesMax, bool catchFirst, int fdReq,
         unsigned threadCount, std::string &moves)
 {
-    cube cSpaceRepr = cubeRepresentativeBG(cSearchMid);
+    cube cSpaceRepr = cSearchMid.representativeBG();
     const CubesReprAtDepth &ccReprCubesC = cubesReprByDepth[cube2Depth];
     int bestMoveCount = -1;
 
