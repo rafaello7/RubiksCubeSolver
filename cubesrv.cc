@@ -309,6 +309,8 @@ public:
 	bool operator==(const cubecorner_perms &ccp) const { return perms == ccp.perms; }
 	bool operator!=(const cubecorner_perms &ccp) const { return perms != ccp.perms; }
 	bool operator<(const cubecorner_perms &ccp) const { return perms < ccp.perms; }
+    unsigned short getPermIdx() const;
+    static cubecorner_perms fromPermIdx(unsigned short);
 };
 
 cubecorner_perms::cubecorner_perms(unsigned corner0perm, unsigned corner1perm,
@@ -488,6 +490,32 @@ cubecorner_perms cubecorner_perms::reverse() const
     }
 #endif  // ASMCHECK
 	return res;
+}
+
+unsigned short cubecorner_perms::getPermIdx() const {
+    unsigned short res = 0;
+    unsigned indexes = 0;
+    for(int i = 7; i >= 0; --i) {
+        unsigned p = getAt(i) * 4;
+        res = (8-i) * res + (indexes >> p & 0xf);
+        indexes += 0x11111111 << p;
+    }
+    return res;
+}
+
+cubecorner_perms cubecorner_perms::fromPermIdx(unsigned short idx)
+{
+    unsigned unused = 0x76543210;
+    cubecorner_perms ccp;
+
+    for(unsigned cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
+        unsigned p = idx % cornerIdx * 4;
+        ccp.setAt(8-cornerIdx, unused >> p & 0xf);
+        unsigned m = -1 << p;
+        unused = unused & ~m | unused >> 4 & m;
+        idx /= cornerIdx;
+    }
+    return ccp;
 }
 
 class cubecorner_orients {
@@ -2225,8 +2253,6 @@ cube cube::transform(unsigned transformDir) const
 	return { .ccp = ccp2, .cco = cco2, .ce = ce2 };
 }
 
-static cubecorner_perms cornersIdxToPerm(unsigned short idx);
-
 struct ReprCandidateTransform {
     bool reversed;
     bool symmetric;
@@ -2244,7 +2270,7 @@ static std::map<cubecorner_perms, CubecornerPermToRepr> gPermToRepr;
 static void permReprInit()
 {
     for(unsigned pidx = 0; pidx < 40320; ++pidx) {
-        cubecorner_perms perm = cornersIdxToPerm(pidx);
+        cubecorner_perms perm = cubecorner_perms::fromPermIdx(pidx);
         cubecorner_perms permRepr;
         std::vector<ReprCandidateTransform> transform;
         for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
@@ -2800,33 +2826,6 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
     if( ! isCubeSolvable(reqFd, c) )
         return false;
     return true;
-}
-
-static cubecorner_perms cornersIdxToPerm(unsigned short idx)
-{
-	unsigned unused = 0x76543210;
-	cubecorner_perms ccp;
-
-	for(unsigned cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
-		unsigned p = idx % cornerIdx * 4;
-		ccp.setAt(8-cornerIdx, unused >> p & 0xf);
-		unsigned m = -1 << p;
-		unused = unused & ~m | unused >> 4 & m;
-		idx /= cornerIdx;
-	}
-	return ccp;
-}
-
-static unsigned short cornersPermToIdx(cubecorner_perms ccp)
-{
-	unsigned short res = 0;
-	unsigned indexes = 0;
-	for(int i = 7; i >= 0; --i) {
-		unsigned p = ccp.getAt(i) * 4;
-		res = (8-i) * res + (indexes >> p & 0xf);
-		indexes += 0x11111111 << p;
-	}
-	return res;
 }
 
 static cubecorner_orients cornersIdxToOrient(unsigned short idx)
