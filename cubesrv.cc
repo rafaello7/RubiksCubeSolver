@@ -4895,18 +4895,23 @@ static void getcube(cube &c)
 }
 
 class TestingResponder : public Responder {
+    const unsigned m_verboseLevel;
     std::string m_solution;
     void handleMessage(MessageType, const char *fmt, va_list);
 public:
+    explicit TestingResponder(unsigned verboseLevel) : m_verboseLevel(verboseLevel) {}
     const char *getSolution() const { return m_solution.c_str(); }
 };
 
 void TestingResponder::handleMessage(MessageType mt, const char *fmt, va_list args) {
     switch(mt) {
     case MT_UNQUALIFIED:
-        vprintf(fmt, args);
+        if( m_verboseLevel )
+            vprintf(fmt, args);
         break;
     case MT_PROGRESS:
+        if( m_verboseLevel > 1 )
+            vprintf(fmt, args);
         break;
     case MT_SOLUTION:
         {
@@ -4919,15 +4924,15 @@ void TestingResponder::handleMessage(MessageType mt, const char *fmt, va_list ar
     }
 }
 
-static void cubeTester()
+static void cubeTester(unsigned count, char mode)
 {
     cube c;
-    for(int i = 0; i < 100; ++i) {
+    for(unsigned i = 0; i < count; ++i) {
         getcube(c);
         std::cout << "--- " << i << " ---" << std::endl;
         cubePrint(c);
-        TestingResponder responder;
-        searchMoves(c, 'm', responder);
+        TestingResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
+        searchMoves(c, mode, responder);
         const char *s = responder.getSolution();
         unsigned moveCount = 0;
         while( s ) {
@@ -4944,8 +4949,8 @@ static void cubeTester()
                 std::cout << "fatal: unrecognized move " << s << std::endl;
                 return;
             }
-            //std::cout << rotateDirName(rd) << std::endl;
             c = cube::compose(c, crotated[rd]);
+            //std::cout << rotateDirName(rd) << std::endl;
             //cubePrint(c);
             s = strchr(s, ' ');
             ++moveCount;
@@ -4956,6 +4961,7 @@ static void cubeTester()
         }
     }
     std::cout << "Passed" << std::endl;
+    exit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -4990,7 +4996,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     permReprInit();
-    //cubeTester();
+    //cubeTester(10, 'q');
     while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
         //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
         std::thread t = std::thread(processConnection, acceptfd);
