@@ -59,16 +59,40 @@ enum {
     TWOPHASE_DEPTH2_MAX = 8u
 };
 
-static void sendRespMessage(int fd, const char *fmt, ...)
-{
-    va_list args;
-    char message[4096], respBuf[5000];
 
+class Responder {
+public:
+    void message(const char *fmt, ...);
+    void progress(const char *fmt, ...);
+    void solution(const char *fmt, ...);
+protected:
+    enum MessageType {
+        MT_UNQUALIFIED,
+        MT_PROGRESS,
+        MT_SOLUTION
+    };
+    virtual void handleMessage(MessageType, const char *fmt, va_list) = 0;
+};
+
+void Responder::message(const char *fmt, ...) {
+    va_list args;
     va_start(args, fmt);
-    vsprintf(message, fmt, args);
+    handleMessage(MT_UNQUALIFIED, fmt, args);
     va_end(args);
-    sprintf(respBuf, "%lx\r\n%s\r\n", strlen(message), message);
-    write(fd, respBuf, strlen(respBuf));
+}
+
+void Responder::progress(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    handleMessage(MT_PROGRESS, fmt, args);
+    va_end(args);
+}
+
+void Responder::solution(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    handleMessage(MT_SOLUTION, fmt, args);
+    va_end(args);
 }
 
 template<typename Fn, typename... Ts>
@@ -2670,7 +2694,7 @@ static void cubePrint(const cube &c)
 	printf("\n");
 }
 
-static bool isCubeSolvable(int reqFd, const cube &c)
+static bool isCubeSolvable(Responder &responder, const cube &c)
 {
     bool isSwapsOdd = false;
     unsigned permsScanned = 0;
@@ -2681,7 +2705,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
         int p = i;
         while( (p = c.ccp.getAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
-                sendRespMessage(reqFd, "corner perm %d is twice\n", p);
+                responder.message("corner perm %d is twice\n", p);
                 return false;
             }
             permsScanned |= 1 << p;
@@ -2696,7 +2720,7 @@ static bool isCubeSolvable(int reqFd, const cube &c)
         int p = i;
         while( (p = c.ce.getPermAt(p)) != i ) {
             if( permsScanned & 1 << p ) {
-                sendRespMessage(reqFd, "edge perm %d is twice\n", p);
+                responder.message("edge perm %d is twice\n", p);
                 return false;
             }
             permsScanned |= 1 << p;
@@ -2704,21 +2728,21 @@ static bool isCubeSolvable(int reqFd, const cube &c)
         }
     }
 	if( isSwapsOdd ) {
-		sendRespMessage(reqFd, "cube unsolvable due to permutation parity\n");
+		responder.message("cube unsolvable due to permutation parity\n");
 		return false;
 	}
 	unsigned sumOrient = 0;
 	for(int i = 0; i < 8; ++i)
 		sumOrient += c.cco.getAt(i);
 	if( sumOrient % 3 ) {
-		sendRespMessage(reqFd, "cube unsolvable due to corner orientations\n");
+		responder.message("cube unsolvable due to corner orientations\n");
 		return false;
 	}
 	sumOrient = 0;
 	for(int i = 0; i < 12; ++i)
 		sumOrient += c.ce.getOrientAt(i);
 	if( sumOrient % 2 ) {
-		sendRespMessage(reqFd, "cube unsolvable due to edge orientations\n");
+		responder.message("cube unsolvable due to edge orientations\n");
 		return false;
 	}
     return true;
@@ -2730,7 +2754,7 @@ struct elemLoc {
 	int col;
 };
 
-static bool cubeRead(int reqFd, const char *squareColors, cube &c)
+static bool cubeRead(Responder &responder, const char *squareColors, cube &c)
 {
 	int walls[6][3][3];
 	const char colorLetters[] = "YOBRGW";
@@ -2766,14 +2790,14 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
     for(int cno = 0; cno < 54; ++cno) {
         const char *lpos = strchr(colorLetters, toupper(squareColors[cno]));
         if(lpos == NULL) {
-            sendRespMessage(reqFd, "bad letter at column %d\n", cno);
+            responder.message("bad letter at column %d\n", cno);
             return false;
         }
         walls[cno / 9][cno % 9 / 3][cno % 3] = lpos - colorLetters;
     }
 	for(int i = 0; i < 6; ++i) {
 		if( walls[i][1][1] != i ) {
-			sendRespMessage(reqFd, "bad orientation: wall=%d exp=%c is=%c\n",
+			responder.message("bad orientation: wall=%d exp=%c is=%c\n",
 					i, colorLetters[i], colorLetters[walls[i][1][1]]);
 			return false;
 		}
@@ -2817,12 +2841,12 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 			}
 		}
 		if( ! match ) {
-			sendRespMessage(reqFd, "corner %d not found\n", i);
+			responder.message("corner %d not found\n", i);
 			return false;
 		}
 		for(int j = 0; j < i; ++j) {
 			if( c.ccp.getAt(i) == c.ccp.getAt(j) ) {
-				sendRespMessage(reqFd, "corner %d is twice: at %d and %d\n",
+				responder.message("corner %d is twice: at %d and %d\n",
 						c.ccp.getAt(i), j, i);
 				return false;
 			}
@@ -2854,18 +2878,18 @@ static bool cubeRead(int reqFd, const char *squareColors, cube &c)
 			}
 		}
 		if( ! match ) {
-			sendRespMessage(reqFd, "edge %d not found\n", i);
+			responder.message("edge %d not found\n", i);
 			return false;
 		}
 		for(int j = 0; j < i; ++j) {
 			if( c.ce.getPermAt(i) == c.ce.getPermAt(j) ) {
-				sendRespMessage(reqFd, "edge %d is twice: at %d and %d\n",
+				responder.message("edge %d is twice: at %d and %d\n",
 						c.ce.getPermAt(i), j, i);
 				return false;
 			}
 		}
 	}
-    if( ! isCubeSolvable(reqFd, c) )
+    if( ! isCubeSolvable(responder, c) )
         return false;
     return true;
 }
@@ -3452,11 +3476,11 @@ public:
     {
     }
 
-    bool inc(int reqFd, unsigned long cubeCount);
-    void threadFinished(int reqFd);
+    bool inc(Responder &responder, unsigned long cubeCount);
+    void threadFinished(Responder &responder);
 };
 
-bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
+bool AddCubesProgress::inc(Responder &responder, unsigned long cubeCount)
 {
     unsigned long cubeCountTot;
     unsigned processedCount;
@@ -3472,13 +3496,13 @@ bool AddCubesProgress::inc(int reqFd, unsigned long cubeCount)
         unsigned procCountNext = 100 * (processedCount+1) / m_processCount;
         unsigned procCountCur = 100 * processedCount / m_processCount;
         if( procCountNext != procCountCur && (m_depth >= 10 || procCountCur % 10 == 0) )
-            sendRespMessage(reqFd, "progress: depth %u cubes %llu, %u%%\n",
+            responder.progress("depth %u cubes %llu, %u%%\n",
                     m_depth, cubeCountTot, 100 * processedCount / m_processCount);
     }
     return isStopRequested;
 }
 
-void AddCubesProgress::threadFinished(int reqFd)
+void AddCubesProgress::threadFinished(Responder &responder)
 {
     unsigned runningThreadCount;
     mutexLock();
@@ -3486,14 +3510,14 @@ void AddCubesProgress::threadFinished(int reqFd)
     m_isFinish = true;
     mutexUnlock();
     if( m_depth >= 9 ) {
-        sendRespMessage(reqFd, "progress: depth %d cubes %d threads still running\n",
+        responder.progress("depth %d cubes %d threads still running\n",
                 m_depth, runningThreadCount);
     }
 }
 
 static void addCubesT(unsigned threadNo,
         CubesReprByDepth *cubesReprByDepth, int depth, bool onlyInSpace, 
-        int reqFd, AddCubesProgress *addCubesProgress)
+        Responder *responder, AddCubesProgress *addCubesProgress)
 {
     std::vector<EdgeReprCandidateTransform> otransformNew;
 
@@ -3579,15 +3603,15 @@ static void addCubesT(unsigned threadNo,
                     }
                 }
             }
-            if( addCubesProgress->inc(reqFd, cubeCount) )
+            if( addCubesProgress->inc(*responder, cubeCount) )
                 break;
         }
     }
-    addCubesProgress->threadFinished(reqFd);
+    addCubesProgress->threadFinished(*responder);
 }
 
 static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth,
-        bool onlyInSpace, int reqFd)
+        bool onlyInSpace, Responder &responder)
 {
     if( requestedDepth >= cubesReprByDepth.availMaxCount() ) {
         std::cout << "fatal: addCubes" << (onlyInSpace?" in-space":"") <<
@@ -3617,12 +3641,12 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
                 std::distance(cubesArr.ccpCubesBegin(), cubesArr.ccpCubesEnd()),
                 depth);
         runInThreadPool(addCubesT, &cubesReprByDepth,
-                    depth, onlyInSpace, reqFd, &addCubesProgress);
+                    depth, onlyInSpace, &responder, &addCubesProgress);
         if( ProgressBase::isStopRequested() ) {
-            sendRespMessage(reqFd, "canceled\n");
+            responder.message("canceled\n");
             return true;
         }
-        sendRespMessage(reqFd, "depth %d %scubes=%lu\n", depth, onlyInSpace? "in-space " : "",
+        responder.message("depth %d %scubes=%lu\n", depth, onlyInSpace? "in-space " : "",
                     cubesReprByDepth[depth].size());
         cubesReprByDepth.incAvailCount();
     }
@@ -3682,14 +3706,14 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
 }
 
 static void addBGSpaceReprCubes(const CubesReprByDepth &cubesReprByDepth,
-        SpaceReprCubes &bgSpaceCubes, unsigned requestedDepth, int fdReq)
+        SpaceReprCubes &bgSpaceCubes, unsigned requestedDepth, Responder &responder)
 {
     while( bgSpaceCubes.availCount() <= requestedDepth ) {
         unsigned depth = bgSpaceCubes.availCount();
         std::atomic_ulong reprCubeCount(0);
         runInThreadPool(addBGSpaceReprCubesT, &cubesReprByDepth, &bgSpaceCubes, depth,
                     &reprCubeCount);
-        sendRespMessage(fdReq, "depth %d space repr cubes=%lu\n", depth, reprCubeCount.load());
+        responder.message("depth %d space repr cubes=%lu\n", depth, reprCubeCount.load());
         bgSpaceCubes.incAvailCount();
     }
 }
@@ -3711,12 +3735,12 @@ public:
     {
     }
 
-    bool inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
+    bool inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
     bool isFinish() const { return m_isFinish; }
     std::string progressStr();
 };
 
-bool SearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf)
+bool SearchProgress::inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf)
 {
     bool res;
     CubesReprAtDepth::ccpcubes_iter cornerPermIt;
@@ -3737,12 +3761,12 @@ bool SearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf)
             unsigned procCountNext = 100 * (itemIdx+1) / itemCount;
             unsigned procCountCur = 100 * itemIdx / itemCount;
             if( procCountNext != procCountCur && (m_depth>=18 || procCountCur % 10 == 0) )
-                sendRespMessage(reqFd, "progress: depth %d search %d of %d, %d%%\n",
+                responder.progress("depth %d search %d of %d, %d%%\n",
                         m_depth, itemIdx, itemCount, 100 * itemIdx / itemCount);
         }
     }else{
         if( m_depth >= 17 ) {
-            sendRespMessage(reqFd, "progress: depth %d search %d threads still running\n",
+            responder.progress("depth %d search %d threads still running\n",
                     m_depth, m_runningThreadCount);
         }
     }
@@ -3855,54 +3879,52 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
 
 static void searchMovesTa(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth,
-        unsigned depth, unsigned depthMax, const cube *csearch, int reqFd,
+        unsigned depth, unsigned depthMax, const cube *csearch, Responder *responder,
         SearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccpIt;
 
-	while( searchProgress->inc(reqFd, &ccpIt) ) {
+	while( searchProgress->inc(*responder, &ccpIt) ) {
         const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
         cubecorner_perms ccp = ccpIt->first;
         std::string moves;
         if( searchMovesForCcp(*cubesReprByDepth, depthMax, *csearch, ccp, ccpReprCubes, moves, 0, 0) ) {
-            moves = "solution:" + moves + "\n";
-            flockfile(stdout);
-            sendRespMessage(reqFd, moves.c_str());
-            funlockfile(stdout);
-            searchProgress->inc(reqFd, NULL);
+            moves += "\n";
+            responder->solution(moves.c_str());
+            searchProgress->inc(*responder, NULL);
             return;
         }
     }
 }
 
 static bool searchMovesOptimalA(const CubesReprByDepth &cubesReprByDepth,
-		const cube &csearch, unsigned depth, unsigned depthMax, int fdReq)
+		const cube &csearch, unsigned depth, unsigned depthMax, Responder &responder)
 {
     SearchProgress searchProgress(cubesReprByDepth[depth].ccpCubesBegin(),
             cubesReprByDepth[depth].ccpCubesEnd(), depth+depthMax);
     runInThreadPool(searchMovesTa, &cubesReprByDepth,
-                depth, depthMax, &csearch, fdReq, &searchProgress);
+                depth, depthMax, &csearch, &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
-        sendRespMessage(fdReq, "finished at %s\n", searchProgress.progressStr().c_str());
-        sendRespMessage(fdReq, "-- %d moves --\n", depth+depthMax);
+        responder.message("finished at %s\n", searchProgress.progressStr().c_str());
+        responder.message("-- %d moves --\n", depth+depthMax);
         return true;
     }
     bool isStopRequested = ProgressBase::isStopRequested();
     if( isStopRequested )
-        sendRespMessage(fdReq, "canceled\n");
+        responder.message("canceled\n");
     else
-        sendRespMessage(fdReq, "depth %d end\n", depth+depthMax);
+        responder.message("depth %d end\n", depth+depthMax);
     return isStopRequested;
 }
 
 static void searchMovesTb(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth,
-		int depth, const cube *csearch, int reqFd, SearchProgress *searchProgress)
+		int depth, const cube *csearch, Responder *responder, SearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter cornerPerm2It;
     std::vector<EdgeReprCandidateTransform> o2transform;
     const CubesReprAtDepth &ccReprCubesC = (*cubesReprByDepth)[depth];
-	while( searchProgress->inc(reqFd, &cornerPerm2It) ) {
+	while( searchProgress->inc(*responder, &cornerPerm2It) ) {
         const CornerPermReprCubes &ccpReprCubes2 = cornerPerm2It->second;
         cubecorner_perms ccp2 = cornerPerm2It->first;
         if( ccpReprCubes2.empty() )
@@ -3940,13 +3962,11 @@ static void searchMovesTb(unsigned threadNo,
                                 if( searchMovesForCcp(*cubesReprByDepth,
                                         DEPTH_MAX, cSearch1, ccp2, ccpReprCubes2, moves2, 0, 0) )
                                 {
-                                    std::string moves = "solution:" + moves2;
+                                    std::string moves = moves2;
                                     moves += printMoves(*cubesReprByDepth, c1T);
                                     moves += "\n";
-                                    flockfile(stdout);
-                                    sendRespMessage(reqFd, moves.c_str());
-                                    funlockfile(stdout);
-                                    searchProgress->inc(reqFd, NULL);
+                                    responder->solution(moves.c_str());
+                                    searchProgress->inc(*responder, NULL);
                                     return;
                                 }
                             }
@@ -3959,34 +3979,34 @@ static void searchMovesTb(unsigned threadNo,
 }
 
 static bool searchMovesOptimalB(const CubesReprByDepth &cubesReprByDepth,
-		const cube &csearch, unsigned depth, int fdReq)
+		const cube &csearch, unsigned depth, Responder &responder)
 {
     SearchProgress searchProgress(
             cubesReprByDepth[DEPTH_MAX].ccpCubesBegin(),
             cubesReprByDepth[DEPTH_MAX].ccpCubesEnd(), 2*DEPTH_MAX+depth);
     runInThreadPool(searchMovesTb, &cubesReprByDepth, depth, &csearch,
-                fdReq, &searchProgress);
+                &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
-        sendRespMessage(fdReq, "finished at %s\n", searchProgress.progressStr().c_str());
-        sendRespMessage(fdReq, "-- %d moves --\n", 2*DEPTH_MAX+depth);
+        responder.message("finished at %s\n", searchProgress.progressStr().c_str());
+        responder.message("-- %d moves --\n", 2*DEPTH_MAX+depth);
         return true;
     }
     bool isStopRequested = ProgressBase::isStopRequested();
     if( isStopRequested )
-        sendRespMessage(fdReq, "canceled\n");
+        responder.message("canceled\n");
     else
-        sendRespMessage(fdReq, "depth %d end\n", 2*DEPTH_MAX+depth);
+        responder.message("depth %d end\n", 2*DEPTH_MAX+depth);
     return isStopRequested;
 }
 
-static const CubesReprByDepth *getCubesInSpace(unsigned depth, int reqFd)
+static const CubesReprByDepth *getCubesInSpace(unsigned depth, Responder &responder)
 {
     static CubesReprByDepth cubesReprByDepthInSpace(TWOPHASE_DEPTH2_MAX+1);
     static std::mutex mtx;
     bool isCanceled;
 
     mtx.lock();
-    isCanceled =  addCubes(cubesReprByDepthInSpace, depth, true, reqFd);
+    isCanceled =  addCubes(cubesReprByDepthInSpace, depth, true, responder);
     mtx.unlock();
     return isCanceled ? NULL : &cubesReprByDepthInSpace;
 }
@@ -4064,9 +4084,9 @@ static bool searchMovesInSpaceB(const CubesReprByDepth &cubesReprByDepthBG,
 }
 
 static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned searchTd,
-        unsigned movesMax, int fdReq, std::string &moves)
+        unsigned movesMax, Responder &responder, std::string &moves)
 {
-    const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(0, fdReq);
+    const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(0, responder);
     if( cubesReprByDepthBG == NULL )
         return -1;
     for(unsigned depthSearch = 0; depthSearch <= movesMax && depthSearch <= 3*TWOPHASE_DEPTH2_MAX;
@@ -4089,14 +4109,14 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
         }else if( depthSearch <= 2*TWOPHASE_DEPTH2_MAX ) {
             unsigned depth = depthSearch / 2;
             unsigned depthMax = depthSearch - depth;
-            cubesReprByDepthBG = getCubesInSpace(depthMax, fdReq);
+            cubesReprByDepthBG = getCubesInSpace(depthMax, responder);
             if( cubesReprByDepthBG == NULL )
                 return -1;
             if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchRev, searchTd, depth, depthMax, moves) )
                 return depthSearch;
             ++depthSearch;
         }else{
-            cubesReprByDepthBG = getCubesInSpace(TWOPHASE_DEPTH2_MAX, fdReq);
+            cubesReprByDepthBG = getCubesInSpace(TWOPHASE_DEPTH2_MAX, responder);
             if( cubesReprByDepthBG == NULL )
                 return -1;
             unsigned depth = depthSearch - 2*TWOPHASE_DEPTH2_MAX;
@@ -4115,7 +4135,7 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
 static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth,
         const cube &cSearchMid, const std::vector<cube> &cubes,
         unsigned searchRev, unsigned searchTd, unsigned cube2Depth, unsigned movesMax,
-        bool catchFirst, int fdReq, std::string &moves)
+        bool catchFirst, Responder &responder, std::string &moves)
 {
     int bestMoveCount = -1;
 
@@ -4130,9 +4150,9 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth,
         cube cSpace = cube::compose(cube2.reverse(), cSearchMid);
         std::string movesInSpace;
         int depthInSpace = searchMovesInSpace(cSpace, searchRev, searchTd,
-                movesMax-cube2Depth, fdReq, movesInSpace);
+                movesMax-cube2Depth, responder, movesInSpace);
         if( depthInSpace >= 0 ) {
-            //sendRespMessage(fdReq, "found in-space cube at depth %d\n", depthInSpace);
+            //responder.message("found in-space cube at depth %d\n", depthInSpace);
             cube cube2T = cube2.transform(transformReverse(searchTd));
             std::string cube2Moves = printMoves(cubesReprByDepth, cube2T, !searchRev);
             if( searchRev )
@@ -4165,12 +4185,12 @@ public:
     {
     }
 
-    int inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
-    int setBestMoves(const std::string &moves, int moveCount, int fdReq);
+    int inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
+    int setBestMoves(const std::string &moves, int moveCount, Responder &responder);
     int getBestMoves(std::string &moves) const;
 };
 
-int QuickSearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBuf) {
+int QuickSearchProgress::inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf) {
     int movesMax;
     CubesReprAtDepth::ccpcubes_iter cornerPermIt;
     mutexLock();
@@ -4188,21 +4208,21 @@ int QuickSearchProgress::inc(int reqFd, CubesReprAtDepth::ccpcubes_iter *ccpItBu
             unsigned procCountNext = 100 * (itemIdx+1) / itemCount;
             unsigned procCountCur = 100 * itemIdx / itemCount;
             if( procCountNext != procCountCur && (m_depth>=10 || procCountCur % 10 == 0) )
-                sendRespMessage(reqFd, "progress: depth %d search %d of %d, %d%%\n",
+                responder.progress("depth %d search %d of %d, %d%%\n",
                         m_depth, itemIdx, itemCount, 100 * itemIdx / itemCount);
         }
     }
     return movesMax;
 }
 
-int QuickSearchProgress::setBestMoves(const std::string &moves, int moveCount, int fdReq) {
+int QuickSearchProgress::setBestMoves(const std::string &moves, int moveCount, Responder &responder) {
     int movesMax;
     mutexLock();
     if( m_bestMoveCount < 0 || moveCount < m_bestMoveCount ) {
         m_bestMoves = moves;
         m_bestMoveCount = moveCount;
         m_movesMax = moveCount-1;
-        sendRespMessage(fdReq, "moves: %d\n", moveCount);
+        responder.message("moves: %d\n", moveCount);
     }
     movesMax = m_movesMax;
     mutexUnlock();
@@ -4218,7 +4238,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
         const CubesReprByDepth &cubesReprByDepth, const SpaceReprCubes *bgSpaceCubes,
         const std::vector<std::pair<cube, std::string>> &csearchWithMovesAppend,
         unsigned depth, unsigned depth1Max, unsigned movesMax,
-        bool catchFirst, int fdReq, QuickSearchProgress *searchProgress)
+        bool catchFirst, Responder &responder, QuickSearchProgress *searchProgress)
 {
     std::vector<cube> csearchTarr[2][3];
 
@@ -4278,7 +4298,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                             std::string inspaceWithCube2Moves;
                                             int moveCount = searchPhase1Cube2(cubesReprByDepth,
                                                     cSearch1, *cubesForCE, searchRev, searchTd,
-                                                    depth1Max, movesMax-depth, catchFirst, fdReq,
+                                                    depth1Max, movesMax-depth, catchFirst, responder,
                                                     inspaceWithCube2Moves);
                                             if( moveCount >= 0 ) {
                                                 cube cube1 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
@@ -4293,7 +4313,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                                     moves = inspaceWithCube2Moves + cube1Moves;
                                                 moves += cubeMovesAppend;
                                                 movesMax = searchProgress->setBestMoves(moves,
-                                                        depth+moveCount, fdReq);
+                                                        depth+moveCount, responder);
                                                 if( catchFirst || movesMax < 0 )
                                                     return true;
                                             }
@@ -4315,20 +4335,20 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
 static void searchMovesQuickTa(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth, const SpaceReprCubes *bgSpaceCubes,
         const cube *csearch, unsigned depth, unsigned depth1Max,
-        bool catchFirst, int fdReq, QuickSearchProgress *searchProgress)
+        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
 {
     //const char transformToSpace[][3] = { "BG", "OR", "YW" };
     CubesReprAtDepth::ccpcubes_iter ccpIt;
     int movesMax;
 
-    while( (movesMax = searchProgress->inc(fdReq, &ccpIt)) >= 0 ) {
+    while( (movesMax = searchProgress->inc(*responder, &ccpIt)) >= 0 ) {
         const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
         cubecorner_perms ccp = ccpIt->first;
         if( !ccpReprCubes.empty() ) {
             std::vector<std::pair<cube, std::string>> cubesWithMoves;
             cubesWithMoves.emplace_back(std::make_pair(*csearch, std::string()));
             if( searchMovesQuickForCcp(ccp, ccpReprCubes, *cubesReprByDepth, bgSpaceCubes,
-                    cubesWithMoves, depth, depth1Max, movesMax, catchFirst, fdReq,
+                    cubesWithMoves, depth, depth1Max, movesMax, catchFirst, *responder,
                     searchProgress) )
                 return;
         }
@@ -4337,11 +4357,11 @@ static void searchMovesQuickTa(unsigned threadNo,
 
 static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubesReprByDepth,
         const SpaceReprCubes *bgSpaceCubes, const cube *csearch, unsigned depth1Max,
-        bool catchFirst, int fdReq, QuickSearchProgress *searchProgress)
+        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccp2It;
     int movesMax;
-    while( (movesMax = searchProgress->inc(fdReq, &ccp2It)) >= 0 ) {
+    while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
         const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
         cubecorner_perms ccp2 = ccp2It->first;
         if( ccp2ReprCubes.empty() )
@@ -4354,20 +4374,20 @@ static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubes
         }
         if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
                     cubesWithMoves, depth1Max+1, depth1Max, movesMax,
-                    catchFirst, fdReq, searchProgress) )
+                    catchFirst, *responder, searchProgress) )
             return;
     }
 }
 
 static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesReprByDepth,
         const SpaceReprCubes *bgSpaceCubes, const cube *csearch, unsigned depth, unsigned depth1Max,
-        bool catchFirst, int fdReq, QuickSearchProgress *searchProgress)
+        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccp2It;
     int movesMax;
     const CubesReprAtDepth &ccReprCubesC = (*cubesReprByDepth)[depth];
 
-    while( (movesMax = searchProgress->inc(fdReq, &ccp2It)) >= 0 ) {
+    while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
         const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
         cubecorner_perms ccp2 = ccp2It->first;
         if( ccp2ReprCubes.empty() )
@@ -4421,7 +4441,7 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
                     }
                     if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
                                 cubesWithMoves, depth+depth1Max, depth1Max, movesMax,
-                                catchFirst, fdReq, searchProgress) )
+                                catchFirst, *responder, searchProgress) )
                         return;
                 }
             }
@@ -4429,33 +4449,33 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
     }
 }
 
-static const CubesReprByDepth *getReprCubes(unsigned depth, int reqFd)
+static const CubesReprByDepth *getReprCubes(unsigned depth, Responder &responder)
 {
     static CubesReprByDepth cubesReprByDepth(DEPTH_MAX);
-    bool isCanceled =  addCubes(cubesReprByDepth, depth, false, reqFd);
+    bool isCanceled =  addCubes(cubesReprByDepth, depth, false, responder);
     return isCanceled ? NULL : &cubesReprByDepth;
 }
 
-static const SpaceReprCubes *getBGSpaceReprCubes(unsigned depth, int reqFd)
+static const SpaceReprCubes *getBGSpaceReprCubes(unsigned depth, Responder &responder)
 {
     static SpaceReprCubes bgSpaceCubes(
             std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1);
 
     if( bgSpaceCubes.availCount() <= depth ) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, reqFd);
+        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return NULL;
-        addBGSpaceReprCubes(*cubesReprByDepth, bgSpaceCubes, depth, reqFd);
+        addBGSpaceReprCubes(*cubesReprByDepth, bgSpaceCubes, depth, responder);
     }
     return &bgSpaceCubes;
 }
 
 static bool searchMovesQuickA(const cube &csearch, unsigned depthSearch, bool catchFirst,
-        int fdReq, unsigned movesMax, int &moveCount, std::string &moves)
+        Responder &responder, unsigned movesMax, int &moveCount, std::string &moves)
 {
     moveCount = -1;
-    const CubesReprByDepth *cubesReprByDepth = getReprCubes(0, fdReq);
-    const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(0, fdReq);
+    const CubesReprByDepth *cubesReprByDepth = getReprCubes(0, responder);
+    const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(0, responder);
     if( cubesReprByDepth == NULL || bgSpaceCubes == NULL )
         return true;
     unsigned depthsAvail = std::min(cubesReprByDepth->availCount(), bgSpaceCubes->availCount()) - 1;
@@ -4469,25 +4489,25 @@ static bool searchMovesQuickA(const cube &csearch, unsigned depthSearch, bool ca
     }else{
         depth = depthSearch / 2;
         depth1Max = depthSearch - depth;
-        cubesReprByDepth = getReprCubes(depth1Max, fdReq);
-        bgSpaceCubes = getBGSpaceReprCubes(depth1Max, fdReq);
+        cubesReprByDepth = getReprCubes(depth1Max, responder);
+        bgSpaceCubes = getBGSpaceReprCubes(depth1Max, responder);
         if( cubesReprByDepth == NULL || bgSpaceCubes == NULL )
             return true;
     }
     QuickSearchProgress searchProgress((*cubesReprByDepth)[depth].ccpCubesBegin(),
             (*cubesReprByDepth)[depth].ccpCubesEnd(), depthSearch, movesMax);
     runInThreadPool(searchMovesQuickTa, cubesReprByDepth, bgSpaceCubes,
-            &csearch, depth, depth1Max, catchFirst, fdReq, &searchProgress);
+            &csearch, depth, depth1Max, catchFirst, &responder, &searchProgress);
     moveCount = searchProgress.getBestMoves(moves);
     return searchProgress.isStopRequested();
 }
 
 static bool searchMovesQuickB(const cube &csearch, unsigned depth1Max, unsigned depthSearch, bool catchFirst,
-        int fdReq, unsigned movesMax, int &moveCount, std::string &moves)
+        Responder &responder, unsigned movesMax, int &moveCount, std::string &moves)
 {
     moveCount = -1;
-    const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth1Max, fdReq);
-    const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(depth1Max, fdReq);
+    const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth1Max, responder);
+    const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(depth1Max, responder);
     if( cubesReprByDepth == NULL || bgSpaceCubes == NULL )
         return true;
     unsigned depth = depthSearch - 2*depth1Max;
@@ -4495,20 +4515,20 @@ static bool searchMovesQuickB(const cube &csearch, unsigned depth1Max, unsigned 
             (*cubesReprByDepth)[depth1Max].ccpCubesEnd(), depthSearch, movesMax);
     if( depth == 1 )
         runInThreadPool(searchMovesQuickTb1, cubesReprByDepth, bgSpaceCubes,
-                    &csearch, depth1Max, catchFirst, fdReq, &searchProgress);
+                    &csearch, depth1Max, catchFirst, &responder, &searchProgress);
     else
         runInThreadPool(searchMovesQuickTb, cubesReprByDepth, bgSpaceCubes,
-                    &csearch, depth, depth1Max, catchFirst, fdReq, &searchProgress);
+                    &csearch, depth, depth1Max, catchFirst, &responder, &searchProgress);
     moveCount = searchProgress.getBestMoves(moves);
     return searchProgress.isStopRequested();
 }
 
-static void searchMovesQuickCatchFirst(const cube &csearch, int fdReq)
+static void searchMovesQuickCatchFirst(const cube &csearch, Responder &responder)
 {
     unsigned depth1Max;
     {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(0, fdReq);
-        const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(0, fdReq);
+        const CubesReprByDepth *cubesReprByDepth = getReprCubes(0, responder);
+        const SpaceReprCubes *bgSpaceCubes = getBGSpaceReprCubes(0, responder);
         if( cubesReprByDepth == NULL || bgSpaceCubes == NULL )
             return;
         depth1Max = std::min(cubesReprByDepth->availCount(), bgSpaceCubes->availCount()) - 1;
@@ -4522,24 +4542,24 @@ static void searchMovesQuickCatchFirst(const cube &csearch, int fdReq)
         std::string bestMoves;
         bool isFinish;
         if( depthSearch <= 2 * depth1Max )
-            isFinish = searchMovesQuickA(csearch, depthSearch, true, fdReq, 999, moveCount, bestMoves);
+            isFinish = searchMovesQuickA(csearch, depthSearch, true, responder, 999, moveCount, bestMoves);
         else
             isFinish = searchMovesQuickB(csearch, TWOPHASE_DEPTH1_CATCHFIRST_MAX, depthSearch,
-                    true, fdReq, 999, moveCount, bestMoves);
+                    true, responder, 999, moveCount, bestMoves);
         if( moveCount >= 0 ) {
-            std::string moves = "solution:" + bestMoves + "\n";
-            sendRespMessage(fdReq, moves.c_str());
-            sendRespMessage(fdReq, "-- %d moves --\n", moveCount);
+            std::string moves = bestMoves + "\n";
+            responder.solution(moves.c_str());
+            responder.message("-- %d moves --\n", moveCount);
             return;
         }
         if( isFinish )
             return;
-        sendRespMessage(fdReq, "depth %u end\n", depthSearch);
+        responder.message("depth %u end\n", depthSearch);
     }
-    sendRespMessage(fdReq, "not found\n");
+    responder.message("not found\n");
 }
 
-static void searchMovesQuickMulti(const cube &csearch, int fdReq)
+static void searchMovesQuickMulti(const cube &csearch, Responder &responder)
 {
     std::string movesBest;
     unsigned bestMoveCount = 999;
@@ -4551,10 +4571,10 @@ static void searchMovesQuickMulti(const cube &csearch, int fdReq)
         std::string moves;
         bool isFinish;
         if( depthSearch <= 2 * TWOPHASE_DEPTH1_MULTI_MAX )
-            isFinish = searchMovesQuickA(csearch, depthSearch, false, fdReq, bestMoveCount-1, moveCount, moves);
+            isFinish = searchMovesQuickA(csearch, depthSearch, false, responder, bestMoveCount-1, moveCount, moves);
         else
             isFinish = searchMovesQuickB(csearch, TWOPHASE_DEPTH1_MULTI_MAX, depthSearch,
-                    false, fdReq, bestMoveCount-1, moveCount, moves);
+                    false, responder, bestMoveCount-1, moveCount, moves);
         if( moveCount >= 0 ) {
             movesBest = moves;
             bestMoveCount = moveCount;
@@ -4563,38 +4583,38 @@ static void searchMovesQuickMulti(const cube &csearch, int fdReq)
         }
         if( isFinish )
             break;
-        sendRespMessage(fdReq, "depth %u end\n", depthSearch);
+        responder.message("depth %u end\n", depthSearch);
     }
     if( !movesBest.empty() ) {
-        std::string moves = "solution:" + movesBest + "\n";
-        sendRespMessage(fdReq, moves.c_str());
-        sendRespMessage(fdReq, "-- %d moves --\n", bestMoveCount);
+        std::string moves = movesBest + "\n";
+        responder.solution(moves.c_str());
+        responder.message("-- %d moves --\n", bestMoveCount);
         return;
     }
-    sendRespMessage(fdReq, "not found\n");
+    responder.message("not found\n");
 }
 
-static void searchMovesOptimal(const cube &csearch, int fdReq)
+static void searchMovesOptimal(const cube &csearch, Responder &responder)
 {
     for(unsigned depth = 0; depth <= DEPTH_MAX; ++depth) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, fdReq);
+        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return;
         if( depth > 0 ) {
-            if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth-1, depth, fdReq) )
+            if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth-1, depth, responder) )
                 return;
         }
-        if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth, depth, fdReq) )
+        if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth, depth, responder) )
             return;
     }
     for(unsigned depth = 1; depth <= DEPTH_MAX; ++depth) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(DEPTH_MAX, fdReq);
+        const CubesReprByDepth *cubesReprByDepth = getReprCubes(DEPTH_MAX, responder);
         if( cubesReprByDepth == NULL )
             return;
-        if( searchMovesOptimalB(*cubesReprByDepth, csearch, depth, fdReq) )
+        if( searchMovesOptimalB(*cubesReprByDepth, csearch, depth, responder) )
             return;
     }
-    sendRespMessage(fdReq, "not found\n");
+    responder.message("not found\n");
 }
 
 static void printStats(const CubesReprByDepth &cubesReprByDepth, int depth)
@@ -4633,20 +4653,50 @@ static void printStats(const CubesReprByDepth &cubesReprByDepth, int depth)
     }
 }
 
-static void searchMoves(const cube &csearch, char mode, int fdReq)
+static void searchMoves(const cube &csearch, char mode, Responder &responder)
 {
-    sendRespMessage(fdReq, "%s\n", getSetup().c_str());
+    responder.message("%s\n", getSetup().c_str());
     switch( mode ) {
     case 'q':
-        searchMovesQuickCatchFirst(csearch, fdReq);
+        searchMovesQuickCatchFirst(csearch, responder);
         break;
     case 'm':
-        searchMovesQuickMulti(csearch, fdReq);
+        searchMovesQuickMulti(csearch, responder);
         break;
     default:
-        searchMovesOptimal(csearch, fdReq);
+        searchMovesOptimal(csearch, responder);
         break;
     }
+}
+
+class SocketChunkedResponder : public Responder {
+    const int m_fdReq;
+
+    void handleMessage(MessageType, const char *fmt, va_list);
+public:
+    explicit SocketChunkedResponder(int fdReq)
+        : m_fdReq(fdReq)
+    {
+    }
+};
+
+void SocketChunkedResponder::handleMessage(MessageType mt, const char *fmt, va_list args) {
+    char message[4096], respBuf[5000];
+
+    switch(mt) {
+    case MT_UNQUALIFIED:
+        message[0] = '\0';
+        break;
+    case MT_PROGRESS:
+        strcpy(message, "progress: ");
+        break;
+    case MT_SOLUTION:
+        strcpy(message, "solution:");
+        break;
+    }
+    vsprintf(message+strlen(message), fmt, args);
+    sprintf(respBuf, "%lx\r\n%s\r\n", strlen(message), message);
+    write(m_fdReq, respBuf, strlen(respBuf));
 }
 
 static void processCubeReq(int fdReq, const char *reqParam)
@@ -4672,18 +4722,19 @@ static void processCubeReq(int fdReq, const char *reqParam)
             "Connection: keep-alive\r\n"
             "\r\n";
         write(fdReq, respHeader, strlen(respHeader));
+        SocketChunkedResponder responder(fdReq);
         char mode = reqParam[0];
         if( reqParam[1] == '=' ) {
             cube c;
-            if( cubeRead(fdReq, reqParam+2, c) ) {
-                sendRespMessage(fdReq, "thread count: %d\n", THREAD_COUNT);
+            if( cubeRead(responder, reqParam+2, c) ) {
+                responder.message("thread count: %d\n", THREAD_COUNT);
                 if( c == csolved )
-                    sendRespMessage(fdReq, "already solved\n");
+                    responder.message("already solved\n");
                 else
-                    searchMoves(c, mode, fdReq);
+                    searchMoves(c, mode, responder);
             }
         }else{
-            sendRespMessage(fdReq, "invalid parameter");
+            responder.message("invalid parameter\n");
         }
         write(fdReq, "0\r\n\r\n", 5);
         solverMutex.unlock();
@@ -4826,6 +4877,87 @@ static void processConnection(int fdConn) {
     close(fdConn);
 }
 
+static void getcube(cube &c)
+{
+    c = csolved;
+    unsigned long ul[3];
+
+    FILE *fp = fopen("/dev/urandom", "r");
+    fread(ul, sizeof(ul), 1, fp);
+    fclose(fp);
+    for(int i = 0; i < 3; ++i) {
+        for(int j = 0; j < 15; ++j) {
+            unsigned rd = ul[i] % RCOUNT;
+            ul[i] /= RCOUNT;
+            c = cube::compose(c, crotated[rd]);
+        }
+    }
+}
+
+class TestingResponder : public Responder {
+    std::string m_solution;
+    void handleMessage(MessageType, const char *fmt, va_list);
+public:
+    const char *getSolution() const { return m_solution.c_str(); }
+};
+
+void TestingResponder::handleMessage(MessageType mt, const char *fmt, va_list args) {
+    switch(mt) {
+    case MT_UNQUALIFIED:
+        vprintf(fmt, args);
+        break;
+    case MT_PROGRESS:
+        break;
+    case MT_SOLUTION:
+        {
+            char buf[4096];
+            vsprintf(buf, fmt, args);
+            fputs(buf, stdout);
+            m_solution = buf;
+        }
+        break;
+    }
+}
+
+static void cubeTester()
+{
+    cube c;
+    for(int i = 0; i < 100; ++i) {
+        getcube(c);
+        std::cout << "--- " << i << " ---" << std::endl;
+        cubePrint(c);
+        TestingResponder responder;
+        searchMoves(c, 'm', responder);
+        const char *s = responder.getSolution();
+        unsigned moveCount = 0;
+        while( s ) {
+            if( *s == ' ' )
+                ++s;
+            int rd = 0;
+            while( rd < RCOUNT ) {
+                const char *dirName = rotateDirName(rd);
+                if( !strncmp(s, dirName, strlen(dirName) ) )
+                    break;
+                ++rd;
+            }
+            if( rd == RCOUNT ) {
+                std::cout << "fatal: unrecognized move " << s << std::endl;
+                return;
+            }
+            //std::cout << rotateDirName(rd) << std::endl;
+            c = cube::compose(c, crotated[rd]);
+            //cubePrint(c);
+            s = strchr(s, ' ');
+            ++moveCount;
+        }
+        if( !(c == csolved) ) {
+            std::cout << "fatal: bad solution!" << std::endl;
+            return;
+        }
+    }
+    std::cout << "Passed" << std::endl;
+}
+
 int main(int argc, char *argv[]) {
     int listenfd, acceptfd, opton = 1;
     struct sockaddr_in addr;
@@ -4858,6 +4990,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     permReprInit();
+    //cubeTester();
     while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
         //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
         std::thread t = std::thread(processConnection, acceptfd);
