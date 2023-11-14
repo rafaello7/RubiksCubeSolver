@@ -54,7 +54,7 @@ static unsigned TWOPHASE_SEARCHREV = 2;
 static const unsigned THREAD_COUNT = std::max(4u, std::thread::hardware_concurrency());
 
 enum {
-    TWOPHASE_DEPTH1_MAX = 5u,
+    TWOPHASE_DEPTH1_MAX = 6u,
     TWOPHASE_DEPTH2_MAX = 8u
 };
 
@@ -81,28 +81,34 @@ static void runInThreadPool(Fn fn, Ts... args)
         threads[t-1].join();
 }
 
-class MeasureTime {
+template<unsigned l>
+class MeasureTimeHelper {
     static std::atomic_uint m_callCnt;
     static std::atomic_ulong m_durTot;
     std::chrono::time_point<std::chrono::system_clock> m_pre;
+    const char *m_fnname;
 public:
-    MeasureTime()
-        : m_pre(std::chrono::system_clock::now())
+    MeasureTimeHelper(const char *fnname)
+        : m_pre(std::chrono::system_clock::now()), m_fnname(fnname)
     {
         ++m_callCnt;
     }
 
-    ~MeasureTime() {
+    ~MeasureTimeHelper() {
         std::chrono::time_point<std::chrono::system_clock> post(std::chrono::system_clock::now());
         auto durns = post - m_pre;
         m_durTot += durns.count();
         std::chrono::milliseconds dur = std::chrono::duration_cast<std::chrono::milliseconds>(durns);
-        std::cout << m_callCnt << " " << dur.count() << " ms, total " << m_durTot/1000000 << " ms" << std::endl;
+        std::cout << m_fnname << " " << m_callCnt << " " << dur.count() << " ms, total " << m_durTot/1000000 << " ms" << std::endl;
     }
 };
 
-std::atomic_uint MeasureTime::m_callCnt;
-std::atomic_ulong MeasureTime::m_durTot;
+template<unsigned l>
+std::atomic_uint MeasureTimeHelper<l>::m_callCnt;
+template<unsigned l>
+std::atomic_ulong MeasureTimeHelper<l>::m_durTot;
+
+#define MeasureTime MeasureTimeHelper<__LINE__> measureTime(__func__)
 
 #ifdef ASMCHECK
 static std::string dumpedges(unsigned long edges) {
@@ -3250,51 +3256,58 @@ public:
 };
 
 class SpaceReprCubesAtDepth {
-    std::vector<cubeedges> m_itemsArr[2187];
+    std::vector<std::pair<cubeedges, unsigned>> m_itemsArr[2187];
+    std::vector<std::vector<cube>> m_cubeArr[2187];
 public:
-    bool addCube(unsigned ccoReprIdx, cubeedges ceRepr);
+    bool addCube(unsigned ccoReprIdx, cubeedges ceRepr, const cube&);
     bool containsCCOrients(unsigned ccoReprIdx) const {
         return !m_itemsArr[ccoReprIdx].empty();
     }
-    bool containsCubeedges(unsigned ccoReprIdx, cubeedges ceRepr) const;
+    const std::vector<cube> *getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const;
 };
 
-bool SpaceReprCubesAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr)
+bool SpaceReprCubesAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const cube &c)
 {
-    std::vector<cubeedges> &items = m_itemsArr[ccoReprIdx];
+    std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
 
     unsigned lo = 0, hi = items.size();
     while( lo < hi ) {
         unsigned mi = (lo+hi) / 2;
-        if( items[mi] < ceRepr )
+        if( items[mi].first < ceRepr )
             lo = mi + 1;
         else
             hi = mi;
     }
-    if( lo == items.size() ) {
-        items.push_back(ceRepr);
-    }else if( items[lo] != ceRepr ) {
-        items.resize(items.size()+1);
-        std::copy_backward(items.begin()+lo, items.end()-1, items.end());
-        items[lo] = ceRepr;
-    }else
-        return false;
-    return true;
+    bool res = lo == items.size() || items[lo].first != ceRepr;
+    if( res ) {
+        unsigned idx = m_cubeArr[ccoReprIdx].size();
+        m_cubeArr[ccoReprIdx].emplace_back();
+        if( lo == items.size() ) {
+            items.emplace_back(std::make_pair(ceRepr, idx));
+        }else{
+            items.resize(items.size()+1);
+            std::copy_backward(items.begin()+lo, items.end()-1, items.end());
+            items[lo] = std::make_pair(ceRepr, idx);
+        }
+    }
+    m_cubeArr[ccoReprIdx][items[lo].second].push_back(c);
+    return res;
 }
 
-bool SpaceReprCubesAtDepth::containsCubeedges(unsigned ccoReprIdx, cubeedges ceRepr) const
+const std::vector<cube> *SpaceReprCubesAtDepth::getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const
 {
-    const std::vector<cubeedges> &items = m_itemsArr[ccoReprIdx];
+    const std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
 
 	unsigned lo = 0, hi = items.size();
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
-		if( items[mi] < ceRepr )
+		if( items[mi].first < ceRepr )
 			lo = mi + 1;
 		else
 			hi = mi;
 	}
-	return lo < items.size() && items[lo] == ceRepr;
+	return lo < items.size() && items[lo].first == ceRepr ?
+        &m_cubeArr[ccoReprIdx][items[lo].second] : NULL;
 }
 
 class SpaceReprCubes {
@@ -3654,12 +3667,8 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
                                 cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
                                 cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = ceT.representativeBG();
-                                bool isAtLowerDepth = false;
-                                for(unsigned d1 = 0; d1 < depth && !isAtLowerDepth; ++d1)
-                                    isAtLowerDepth = (*bgSpaceCubes)[d1].containsCubeedges(
-                                            reprCOrientIdx, ceReprBG);
-                                if( !isAtLowerDepth &&
-                                        (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG) )
+                                cube c = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
+                                if( (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG, c) )
                                     ++reprCubeCountT;
                             }
                         }
@@ -4102,76 +4111,37 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
  * Assumes the cSearchMid was found in SpaceReprCubes at depthMax.
  * Searches for a cube from the same BG space among cubesReprByDepth[depthMax].
  */
-static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth, const cube &cSearchMid,
+static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth,
+        const cube &cSearchMid, const std::vector<cube> &cubes,
         unsigned searchRev, unsigned searchTd, unsigned cube2Depth, unsigned movesMax,
         bool catchFirst, int fdReq, std::string &moves)
 {
-    cube cMidSpaceRepr = cSearchMid.representativeBG();
-    const CubesReprAtDepth &ccReprCubesC = cubesReprByDepth[cube2Depth];
     int bestMoveCount = -1;
 
-    for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccReprCubesC.ccpCubesBegin();
-            ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
-    {
-        const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorner_perms ccp = ccpCubesIt->first;
-        for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
-                ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
-        {
-            const CornerOrientReprCubes &ccoCubes = *ccoCubesIt;
-            cubecorner_orients cco = ccoCubes.getOrients();
-
-            for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-                cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
-                cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
-                for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                    cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
-                    cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
-                    for(unsigned td = 0; td < TCOUNT; ++td) {
-                        cubecorner_perms ccpT = ccprevsymm.transform(td);
-                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
-                        if( cMidSpaceRepr.cco == ccoReprBG ) {
-                            for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
-                                    edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
-                            {
-                                cubeedges ce = *edgeIt;
-                                cubeedges cerev = reversed ? ce.reverse() : ce;
-                                cubeedges cerevsymm = symmetric ? cerev.symmetric() : cerev;
-                                cubeedges ceT = cerevsymm.transform(td);
-                                cubeedges ceTreprBG = ceT.representativeBG();
-                                if( cMidSpaceRepr.ce == ceTreprBG ) {
-                                    cube cube2 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
-                                    // cSearchMid = cube1 ⊙  (csearch rev) = cube2 ⊙  cSpace
-                                    // csearch rev = (cube1 rev) ⊙  cube2 ⊙  cSpace
-                                    //
-                                    // cSearchMid = cube1 ⊙  csearch = cube2 ⊙  cSpace
-                                    // cSpace = (cube2 rev) ⊙  cube1 ⊙  csearch
-                                    // csearch = (cube1 rev) ⊙  cube2 ⊙  cSpace
-                                    // csearch rev = (cSpace rev) ⊙  (cube2 rev) ⊙  cube1
-                                    cube cSpace = cube::compose(cube2.reverse(), cSearchMid);
-                                    std::string movesInSpace;
-                                    int depthInSpace = searchMovesInSpace(cSpace, searchRev, searchTd,
-                                            movesMax-cube2Depth, fdReq, movesInSpace);
-                                    if( depthInSpace >= 0 ) {
-                                        //sendRespMessage(fdReq, "found in-space cube at depth %d\n", depthInSpace);
-                                        cube cube2T = cube2.transform(transformReverse(searchTd));
-                                        std::string cube2Moves = printMoves(cubesReprByDepth, cube2T, !searchRev);
-                                        if( searchRev )
-                                            moves = cube2Moves + movesInSpace;
-                                        else
-                                            moves = movesInSpace + cube2Moves;
-                                        bestMoveCount = cube2Depth + depthInSpace;
-                                        if( catchFirst || depthInSpace == 0 )
-                                            return bestMoveCount;
-                                        movesMax = bestMoveCount-1;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+    for(const cube &cube2 : cubes) {
+        // cSearchMid = cube1 ⊙  (csearch rev) = cube2 ⊙  cSpace
+        // csearch rev = (cube1 rev) ⊙  cube2 ⊙  cSpace
+        //
+        // cSearchMid = cube1 ⊙  csearch = cube2 ⊙  cSpace
+        // cSpace = (cube2 rev) ⊙  cube1 ⊙  csearch
+        // csearch = (cube1 rev) ⊙  cube2 ⊙  cSpace
+        // csearch rev = (cSpace rev) ⊙  (cube2 rev) ⊙  cube1
+        cube cSpace = cube::compose(cube2.reverse(), cSearchMid);
+        std::string movesInSpace;
+        int depthInSpace = searchMovesInSpace(cSpace, searchRev, searchTd,
+                movesMax-cube2Depth, fdReq, movesInSpace);
+        if( depthInSpace >= 0 ) {
+            //sendRespMessage(fdReq, "found in-space cube at depth %d\n", depthInSpace);
+            cube cube2T = cube2.transform(transformReverse(searchTd));
+            std::string cube2Moves = printMoves(cubesReprByDepth, cube2T, !searchRev);
+            if( searchRev )
+                moves = cube2Moves + movesInSpace;
+            else
+                moves = movesInSpace + cube2Moves;
+            bestMoveCount = cube2Depth + depthInSpace;
+            if( catchFirst || depthInSpace == 0 )
+                return bestMoveCount;
+            movesMax = bestMoveCount-1;
         }
     }
     return bestMoveCount;
@@ -4299,13 +4269,14 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                     for(const cubeedges &ceT : ceTarr) {
                                         cubeedges ceSearch = cubeedges::compose(ceT, csearchT.ce);
                                         cubeedges ceSearchSpaceRepr = ceSearch.representativeBG();
-                                        if( (*bgSpaceCubes)[depthMax].containsCubeedges(
-                                                    searchReprCOrientIdx, ceSearchSpaceRepr) )
-                                        {
+                                        const std::vector<cube> *cubesForCE =
+                                            (*bgSpaceCubes)[depthMax].getCubesForCE(
+                                                    searchReprCOrientIdx, ceSearchSpaceRepr);
+                                        if( cubesForCE ) {
                                             cube cSearch1 = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
                                             std::string inspaceWithCube2Moves;
-                                            int moveCount = searchPhase1Cube2(cubesReprByDepth, cSearch1,
-                                                    searchRev, searchTd,
+                                            int moveCount = searchPhase1Cube2(cubesReprByDepth,
+                                                    cSearch1, *cubesForCE, searchRev, searchTd,
                                                     depthMax, movesMax-depth, catchFirst, fdReq,
                                                     inspaceWithCube2Moves);
                                             if( moveCount >= 0 ) {
