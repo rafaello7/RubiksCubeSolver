@@ -81,6 +81,29 @@ static void runInThreadPool(Fn fn, Ts... args)
         threads[t-1].join();
 }
 
+class MeasureTime {
+    static std::atomic_uint m_callCnt;
+    static std::atomic_ulong m_durTot;
+    std::chrono::time_point<std::chrono::system_clock> m_pre;
+public:
+    MeasureTime()
+        : m_pre(std::chrono::system_clock::now())
+    {
+        ++m_callCnt;
+    }
+
+    ~MeasureTime() {
+        std::chrono::time_point<std::chrono::system_clock> post(std::chrono::system_clock::now());
+        auto durns = post - m_pre;
+        m_durTot += durns.count();
+        std::chrono::milliseconds dur = std::chrono::duration_cast<std::chrono::milliseconds>(durns);
+        std::cout << m_callCnt << " " << dur.count() << " ms, total " << m_durTot/1000000 << " ms" << std::endl;
+    }
+};
+
+std::atomic_uint MeasureTime::m_callCnt;
+std::atomic_ulong MeasureTime::m_durTot;
+
 #ifdef ASMCHECK
 static std::string dumpedges(unsigned long edges) {
     std::ostringstream res;
@@ -4281,7 +4304,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                         {
                                             cube cSearch1 = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
                                             std::string inspaceWithCube2Moves;
-                                            int moveCount = searchPhase1Cube2(cubesReprByDepth,cSearch1,
+                                            int moveCount = searchPhase1Cube2(cubesReprByDepth, cSearch1,
                                                     searchRev, searchTd,
                                                     depthMax, movesMax-depth, catchFirst, fdReq,
                                                     inspaceWithCube2Moves);
