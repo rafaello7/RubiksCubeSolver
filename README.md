@@ -20,7 +20,11 @@ With 2GB RAM or less it will perform rather poorly
 Please note that the program performs a lot of computations. The more
 processors, the less time the calculations will take.
 
-In quick mode the program uses only about 16MB RAM.
+In _Quick_ mode the program uses only about 40MB RAM. There is also
+a _Quick Multi_ mode, which uses about 300MB RAM. Both _Quick_ and
+_Quick Multi_ modes use the same algorithm, but for _Quick Multi_ mode
+a bigger search table is initialized to speed up the search.
+
 
 ## Compilation
 
