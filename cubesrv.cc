@@ -5220,13 +5220,19 @@ static void cubeTester(unsigned cubeCount, char mode)
         ++ent.first;
         ent.second += responder.durationTimeMs();
     }
+    unsigned durationTimeTot = 0;
     std::cout << "          moves  cubes  avg time (s)" << std::endl;
     std::cout << "---------------  -----  -------------" << std::endl;
     for(auto [moveCount, stats] : moveCounters) {
         std::cout << std::setw(15) << moveCount << std::setw(7) <<
             stats.first << "  " << std::setprecision(4) <<
             stats.second/1000.0/stats.first << std::endl;
+        durationTimeTot += stats.second;
     }
+    std::cout << "---------------  -----  -------------" << std::endl;
+        std::cout << "total " << std::setw(7) << durationTimeTot/1000.0 << " s" << std::setw(7) <<
+            cubeCount << "  " << std::setprecision(4) <<
+            durationTimeTot/1000.0/cubeCount << std::endl;
     std::cout << std::endl;
 }
 
