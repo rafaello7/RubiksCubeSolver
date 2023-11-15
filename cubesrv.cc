@@ -4019,26 +4019,6 @@ static void searchMovesTa(unsigned threadNo,
     }
 }
 
-static bool searchMovesOptimalA(const CubesReprByDepth &cubesReprByDepth,
-		const cube &csearch, unsigned depth, unsigned depthMax, Responder &responder)
-{
-    SearchProgress searchProgress(cubesReprByDepth[depth].ccpCubesBegin(),
-            cubesReprByDepth[depth].ccpCubesEnd(), depth+depthMax);
-    runInThreadPool(searchMovesTa, &cubesReprByDepth,
-                depth, depthMax, &csearch, &responder, &searchProgress);
-    if( searchProgress.isFinish() ) {
-        responder.message("finished at %s", searchProgress.progressStr().c_str());
-        responder.message("-- %d moves --", depth+depthMax);
-        return true;
-    }
-    bool isStopRequested = ProgressBase::isStopRequested();
-    if( isStopRequested )
-        responder.message("canceled");
-    else
-        responder.message("depth %d end", depth+depthMax);
-    return isStopRequested;
-}
-
 static void searchMovesTb(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth,
 		int depth, const cube *csearch, Responder *responder, SearchProgress *searchProgress)
@@ -4097,27 +4077,6 @@ static void searchMovesTb(unsigned threadNo,
             }
         }
 	}
-}
-
-static bool searchMovesOptimalB(const CubesReprByDepth &cubesReprByDepth,
-		const cube &csearch, unsigned depth, Responder &responder)
-{
-    SearchProgress searchProgress(
-            cubesReprByDepth[DEPTH_MAX].ccpCubesBegin(),
-            cubesReprByDepth[DEPTH_MAX].ccpCubesEnd(), 2*DEPTH_MAX+depth);
-    runInThreadPool(searchMovesTb, &cubesReprByDepth, depth, &csearch,
-                &responder, &searchProgress);
-    if( searchProgress.isFinish() ) {
-        responder.message("finished at %s", searchProgress.progressStr().c_str());
-        responder.message("-- %d moves --", 2*DEPTH_MAX+depth);
-        return true;
-    }
-    bool isStopRequested = ProgressBase::isStopRequested();
-    if( isStopRequested )
-        responder.message("canceled");
-    else
-        responder.message("depth %d end", 2*DEPTH_MAX+depth);
-    return isStopRequested;
 }
 
 static const CubesReprByDepth *getCubesInSpace(unsigned depth, Responder &responder)
@@ -4644,6 +4603,66 @@ static bool searchMovesQuickB(const cube &csearch, unsigned depth1Max, unsigned 
     return searchProgress.isStopRequested();
 }
 
+static bool searchMovesOptimalA(const cube &csearch, unsigned depthSearch, Responder &responder)
+{
+    const CubesReprByDepth *cubesReprByDepth = getReprCubes(0, responder);
+    if( cubesReprByDepth == NULL )
+        return true;
+    unsigned depthsAvail = cubesReprByDepth->availCount() - 1;
+    unsigned depth, depthMax;
+    if( depthSearch <= depthsAvail ) {
+        depth = 0;
+        depthMax = depthSearch;
+    }else if( depthSearch <= 2 * depthsAvail ) {
+        depth = depthSearch - depthsAvail;
+        depthMax = depthsAvail;
+    }else{
+        depth = depthSearch / 2;
+        depthMax = depthSearch - depth;
+        cubesReprByDepth = getReprCubes(depthMax, responder);
+        if( cubesReprByDepth == NULL )
+            return true;
+    }
+    SearchProgress searchProgress((*cubesReprByDepth)[depth].ccpCubesBegin(),
+            (*cubesReprByDepth)[depth].ccpCubesEnd(), depthSearch);
+    runInThreadPool(searchMovesTa, cubesReprByDepth,
+                depth, depthMax, &csearch, &responder, &searchProgress);
+    if( searchProgress.isFinish() ) {
+        responder.message("finished at %s", searchProgress.progressStr().c_str());
+        responder.message("-- %d moves --", depthSearch);
+        return true;
+    }
+    bool isStopRequested = ProgressBase::isStopRequested();
+    if( isStopRequested )
+        responder.message("canceled");
+    else
+        responder.message("depth %d end", depthSearch);
+    return isStopRequested;
+}
+
+static bool searchMovesOptimalB(const cube &csearch, unsigned depth, Responder &responder)
+{
+    const CubesReprByDepth *cubesReprByDepth = getReprCubes(DEPTH_MAX, responder);
+    if( cubesReprByDepth == NULL )
+        return true;
+    SearchProgress searchProgress(
+            (*cubesReprByDepth)[DEPTH_MAX].ccpCubesBegin(),
+            (*cubesReprByDepth)[DEPTH_MAX].ccpCubesEnd(), 2*DEPTH_MAX+depth);
+    runInThreadPool(searchMovesTb, cubesReprByDepth, depth, &csearch,
+                &responder, &searchProgress);
+    if( searchProgress.isFinish() ) {
+        responder.message("finished at %s", searchProgress.progressStr().c_str());
+        responder.message("-- %d moves --", 2*DEPTH_MAX+depth);
+        return true;
+    }
+    bool isStopRequested = ProgressBase::isStopRequested();
+    if( isStopRequested )
+        responder.message("canceled");
+    else
+        responder.message("depth %d end", 2*DEPTH_MAX+depth);
+    return isStopRequested;
+}
+
 static void searchMovesQuickCatchFirst(const cube &csearch, Responder &responder)
 {
     unsigned depth1Max;
@@ -4715,22 +4734,12 @@ static void searchMovesQuickMulti(const cube &csearch, Responder &responder)
 
 static void searchMovesOptimal(const cube &csearch, Responder &responder)
 {
-    for(unsigned depth = 0; depth <= DEPTH_MAX; ++depth) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, responder);
-        if( cubesReprByDepth == NULL )
-            return;
-        if( depth > 0 ) {
-            if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth-1, depth, responder) )
-                return;
-        }
-        if( searchMovesOptimalA(*cubesReprByDepth, csearch, depth, depth, responder) )
+    for(unsigned depthSearch = 0; depthSearch <= 2*DEPTH_MAX; ++depthSearch) {
+        if( searchMovesOptimalA(csearch, depthSearch, responder) )
             return;
     }
     for(unsigned depth = 1; depth <= DEPTH_MAX; ++depth) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(DEPTH_MAX, responder);
-        if( cubesReprByDepth == NULL )
-            return;
-        if( searchMovesOptimalB(*cubesReprByDepth, csearch, depth, responder) )
+        if( searchMovesOptimalB(csearch, depth, responder) )
             return;
     }
     responder.message("not found");
