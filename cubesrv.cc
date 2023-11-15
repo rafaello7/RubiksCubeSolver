@@ -247,6 +247,16 @@ static const char *rotateDirName(int rd) {
 	return buf;
 }
 
+static int rotateNameToDir(const char *rotateName) {
+    int rd;
+    for(rd = 0; rd < RCOUNT; ++rd) {
+        const char *dirName = rotateDirName(rd);
+        if( !strncmp(rotateName, dirName, strlen(dirName) ) )
+            break;
+    }
+    return rd;
+}
+
 static int rotateDirReverse(int rd) {
 	switch( rd ) {
 	case ORANGECW:  return ORANGECCW;
@@ -5065,7 +5075,7 @@ class ConsoleResponder : public Responder {
     void handleMessage(MessageType, const char*);
 public:
     explicit ConsoleResponder(unsigned verboseLevel) : m_verboseLevel(verboseLevel) {}
-    const char *getSolution() const { return m_solution.c_str(); }
+    const char *getSolution() const { return m_solution.empty() ? NULL : m_solution.c_str(); }
 };
 
 void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
@@ -5073,8 +5083,11 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     pad += std::min(strlen(msg), strlen(pad));
     switch(mt) {
     case MT_UNQUALIFIED:
-        if( m_verboseLevel )
+        if( m_verboseLevel ) {
             std::cout << "\r" << msg << pad << std::flush;
+            if( !strncmp(msg, "finished at ", 12) )
+                std::cout << std::endl;
+        }
         break;
     case MT_PROGRESS:
         if( m_verboseLevel > 1 )
@@ -5085,6 +5098,41 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
         m_solution = msg;
         break;
     }
+}
+
+static void solveCube(const char *cubeStr, char mode)
+{
+    ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
+    cube c;
+    if( !cubeRead(responder, cubeStr, c) )
+        return;
+    cubePrint(c);
+    searchMoves(c, mode, responder);
+    if( mode != 'q' )
+        std::cout << std::endl;
+    std::cout << std::endl;
+    const char *s = responder.getSolution();
+    unsigned moveCount = 0;
+    while( s ) {
+        if( *s == ' ' )
+            ++s;
+        int rd = rotateNameToDir(s);
+        if( rd == RCOUNT ) {
+            std::cout << "fatal: unrecognized move " << s << std::endl;
+            return;
+        }
+        c = cube::compose(c, crotated[rd]);
+        std::cout << rotateDirName(rd) << " " << c.toParamText() << std::endl;
+        cubePrint(c);
+        s = strchr(s, ' ');
+        ++moveCount;
+    }
+    if( c != csolved ) {
+        std::cout << "fatal: bad solution!" << std::endl;
+        return;
+    }
+    if( mode == 'q' )
+        std::cout << "moves: " << moveCount << std::endl;
 }
 
 static void cubeTester(unsigned count, char mode)
@@ -5107,20 +5155,12 @@ static void cubeTester(unsigned count, char mode)
         while( s ) {
             if( *s == ' ' )
                 ++s;
-            int rd = 0;
-            while( rd < RCOUNT ) {
-                const char *dirName = rotateDirName(rd);
-                if( !strncmp(s, dirName, strlen(dirName) ) )
-                    break;
-                ++rd;
-            }
+            int rd = rotateNameToDir(s);
             if( rd == RCOUNT ) {
                 std::cout << "fatal: unrecognized move " << s << std::endl;
                 return;
             }
             c = cube::compose(c, crotated[rd]);
-            //std::cout << rotateDirName(rd) << std::endl;
-            //cubePrint(c);
             s = strchr(s, ' ');
             ++moveCount;
         }
@@ -5147,9 +5187,12 @@ int main(int argc, char *argv[]) {
     }
     std::cout << getSetup() << std::endl;
     permReprInit();
-    if( argc >= 4 )
-        cubeTester(atoi(argv[2]), argv[3][0]);
-    else
+    if( argc >= 4 ) {
+        if(isdigit(argv[2][0]))
+            cubeTester(atoi(argv[2]), argv[3][0]);
+        else
+            solveCube(argv[2], argv[3][0]);
+    }else
         runServer();
     return 0;
 }
