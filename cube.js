@@ -2473,6 +2473,16 @@ function cubelistChange() {
     localStorage.setItem('cubelistitemno', cubelistitemno.value);
 }
 
+function cubeLoadFromInput(ev) {
+    if( ev.type == 'keydown' && ev.key != 'Enter' )
+        return;
+    if( cubeinput.value ) {
+        let c = cubeFromString(cubeinput.value);
+        if( c )
+            displayCube(c);
+    }
+}
+
 onload = () => {
     if( window['showOpenFilePicker'] == undefined ) {
         cubelistloadfromfile.style.display = 'none';
@@ -2558,6 +2568,8 @@ onload = () => {
     cubelistloadfromfile.addEventListener('click', cubelistLoadFromFile);
     cubelistsavetofile.addEventListener('click', cubelistSaveToFile);
     cubelistselect.addEventListener('change', cubelistChange);
+    cubeloadbtn.addEventListener('click', cubeLoadFromInput);
+    cubeinput.addEventListener('keydown', cubeLoadFromInput);
     let crestore = localStorage.getItem('cube');
     if( crestore ) {
         let cr = crestore.split(' ');

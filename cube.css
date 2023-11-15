@@ -458,6 +458,14 @@ h3 {
     width: 100%;
 }
 
+#cubeload {
+    display: flex;
+}
+
+#cubeinput {
+    flex-grow: 1;
+}
+
 #cubelistloaddialogtext {
     width: 40em;
     height: 30em;
@@ -510,7 +518,7 @@ h3 {
     .cwhite {
         background-color: #ccc;
     }
-    #rotatewalls,#rotatecube {
+    .controlsarea {
         background-color: cornflowerblue;
     }
     .currentmv {
