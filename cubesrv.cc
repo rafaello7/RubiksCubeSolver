@@ -4274,18 +4274,22 @@ class QuickSearchProgress : public ProgressBase {
     const CubesReprAtDepth::ccpcubes_iter m_ccpItEnd;
     CubesReprAtDepth::ccpcubes_iter m_ccpItNext;
     const unsigned m_depthSearch;
+    const bool m_catchFirst;
     int m_movesMax;
     int m_bestMoveCount;
     std::string m_bestMoves;
 
 public:
     QuickSearchProgress(CubesReprAtDepth::ccpcubes_iter ccpItBeg,
-            CubesReprAtDepth::ccpcubes_iter ccpItEnd, unsigned depthSearch, int movesMax)
+            CubesReprAtDepth::ccpcubes_iter ccpItEnd, unsigned depthSearch,
+            bool catchFirst, int movesMax)
         : m_ccpItBeg(ccpItBeg), m_ccpItEnd(ccpItEnd), m_ccpItNext(ccpItBeg),
-          m_depthSearch(depthSearch), m_movesMax(movesMax), m_bestMoveCount(-1)
+          m_depthSearch(depthSearch), m_catchFirst(catchFirst),
+          m_movesMax(movesMax), m_bestMoveCount(-1)
     {
     }
 
+    bool isCatchFirst() const { return m_catchFirst; }
     int inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
     int setBestMoves(const std::string &moves, int moveCount, Responder &responder);
     int getBestMoves(std::string &moves) const;
@@ -4322,7 +4326,7 @@ int QuickSearchProgress::setBestMoves(const std::string &moves, int moveCount, R
     if( m_bestMoveCount < 0 || moveCount < m_bestMoveCount ) {
         m_bestMoves = moves;
         m_bestMoveCount = moveCount;
-        m_movesMax = moveCount-1;
+        m_movesMax = m_catchFirst ? -1 : moveCount-1;
         responder.movecount("%u at depth: %u", moveCount, m_depthSearch);
     }
     movesMax = m_movesMax;
@@ -4339,7 +4343,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
         const CubesReprByDepth &cubesReprByDepth, const SpaceReprCubes *bgSpaceCubes,
         const std::vector<std::pair<cube, std::string>> &csearchWithMovesAppend,
         unsigned depth, unsigned depth1Max, unsigned movesMax,
-        bool catchFirst, Responder &responder, QuickSearchProgress *searchProgress)
+        Responder &responder, QuickSearchProgress *searchProgress)
 {
     std::vector<cube> csearchTarr[2][3];
 
@@ -4399,8 +4403,8 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                             std::string inspaceWithCube2Moves;
                                             int moveCount = searchPhase1Cube2(cubesReprByDepth,
                                                     cSearch1, *cubesForCE, searchRev, searchTd,
-                                                    depth1Max, movesMax-depth, catchFirst, responder,
-                                                    inspaceWithCube2Moves);
+                                                    depth1Max, movesMax-depth, searchProgress->isCatchFirst(),
+                                                    responder, inspaceWithCube2Moves);
                                             if( moveCount >= 0 ) {
                                                 cube cube1 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
                                                 cube cube1T = cube1.transform(transformReverse(searchTd));
@@ -4415,7 +4419,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                                                 moves += cubeMovesAppend;
                                                 movesMax = searchProgress->setBestMoves(moves,
                                                         depth+moveCount, responder);
-                                                if( catchFirst || movesMax < 0 )
+                                                if( movesMax < 0 )
                                                     return true;
                                             }
                                         }
@@ -4436,7 +4440,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
 static void searchMovesQuickTa(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth, const SpaceReprCubes *bgSpaceCubes,
         const cube *csearch, unsigned depth, unsigned depth1Max,
-        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
+        Responder *responder, QuickSearchProgress *searchProgress)
 {
     //const char transformToSpace[][3] = { "BG", "OR", "YW" };
     CubesReprAtDepth::ccpcubes_iter ccpIt;
@@ -4449,7 +4453,7 @@ static void searchMovesQuickTa(unsigned threadNo,
             std::vector<std::pair<cube, std::string>> cubesWithMoves;
             cubesWithMoves.emplace_back(std::make_pair(*csearch, std::string()));
             if( searchMovesQuickForCcp(ccp, ccpReprCubes, *cubesReprByDepth, bgSpaceCubes,
-                    cubesWithMoves, depth, depth1Max, movesMax, catchFirst, *responder,
+                    cubesWithMoves, depth, depth1Max, movesMax, *responder,
                     searchProgress) )
                 return;
         }
@@ -4458,7 +4462,7 @@ static void searchMovesQuickTa(unsigned threadNo,
 
 static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubesReprByDepth,
         const SpaceReprCubes *bgSpaceCubes, const cube *csearch, unsigned depth1Max,
-        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
+        Responder *responder, QuickSearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccp2It;
     int movesMax;
@@ -4475,14 +4479,14 @@ static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubes
         }
         if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
                     cubesWithMoves, depth1Max+1, depth1Max, movesMax,
-                    catchFirst, *responder, searchProgress) )
+                    *responder, searchProgress) )
             return;
     }
 }
 
 static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesReprByDepth,
         const SpaceReprCubes *bgSpaceCubes, const cube *csearch, unsigned depth, unsigned depth1Max,
-        bool catchFirst, Responder *responder, QuickSearchProgress *searchProgress)
+        Responder *responder, QuickSearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccp2It;
     int movesMax;
@@ -4542,7 +4546,7 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
                     }
                     if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
                                 cubesWithMoves, depth+depth1Max, depth1Max, movesMax,
-                                catchFirst, *responder, searchProgress) )
+                                *responder, searchProgress) )
                         return;
                 }
             }
@@ -4596,9 +4600,9 @@ static bool searchMovesQuickA(const cube &csearch, unsigned depthSearch, bool ca
             return true;
     }
     QuickSearchProgress searchProgress((*cubesReprByDepth)[depth].ccpCubesBegin(),
-            (*cubesReprByDepth)[depth].ccpCubesEnd(), depthSearch, movesMax);
+            (*cubesReprByDepth)[depth].ccpCubesEnd(), depthSearch, catchFirst, movesMax);
     runInThreadPool(searchMovesQuickTa, cubesReprByDepth, bgSpaceCubes,
-            &csearch, depth, depth1Max, catchFirst, &responder, &searchProgress);
+            &csearch, depth, depth1Max, &responder, &searchProgress);
     moveCount = searchProgress.getBestMoves(moves);
     return searchProgress.isStopRequested();
 }
@@ -4613,13 +4617,13 @@ static bool searchMovesQuickB(const cube &csearch, unsigned depth1Max, unsigned 
         return true;
     unsigned depth = depthSearch - 2*depth1Max;
     QuickSearchProgress searchProgress((*cubesReprByDepth)[depth1Max].ccpCubesBegin(),
-            (*cubesReprByDepth)[depth1Max].ccpCubesEnd(), depthSearch, movesMax);
+            (*cubesReprByDepth)[depth1Max].ccpCubesEnd(), depthSearch, catchFirst, movesMax);
     if( depth == 1 )
         runInThreadPool(searchMovesQuickTb1, cubesReprByDepth, bgSpaceCubes,
-                    &csearch, depth1Max, catchFirst, &responder, &searchProgress);
+                    &csearch, depth1Max, &responder, &searchProgress);
     else
         runInThreadPool(searchMovesQuickTb, cubesReprByDepth, bgSpaceCubes,
-                    &csearch, depth, depth1Max, catchFirst, &responder, &searchProgress);
+                    &csearch, depth, depth1Max, &responder, &searchProgress);
     moveCount = searchProgress.getBestMoves(moves);
     return searchProgress.isStopRequested();
 }
