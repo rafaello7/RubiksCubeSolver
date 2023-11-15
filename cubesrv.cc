@@ -377,6 +377,7 @@ public:
 	bool operator<(const cubecorner_perms &ccp) const { return perms < ccp.perms; }
     unsigned short getPermIdx() const;
     static cubecorner_perms fromPermIdx(unsigned short);
+    bool isPermParityOdd() const;
 };
 
 cubecorner_perms::cubecorner_perms(unsigned corner0perm, unsigned corner1perm,
@@ -584,6 +585,23 @@ cubecorner_perms cubecorner_perms::fromPermIdx(unsigned short idx)
     return ccp;
 }
 
+bool cubecorner_perms::isPermParityOdd() const
+{
+    bool isSwapsOdd = false;
+    unsigned permsScanned = 0;
+    for(unsigned i = 0; i < 8; ++i) {
+        if( permsScanned & 1 << i )
+            continue;
+        permsScanned |= 1 << i;
+        unsigned p = i;
+        while( (p = getAt(p)) != i ) {
+            permsScanned |= 1 << p;
+            isSwapsOdd = !isSwapsOdd;
+        }
+    }
+    return isSwapsOdd;
+}
+
 class cubecorner_orients {
 	unsigned short orients;
 public:
@@ -614,10 +632,11 @@ public:
     }
     cubecorner_orients reverse(cubecorner_perms) const;
     cubecorner_orients transform(cubecorner_perms, unsigned transformDir) const;
-    unsigned short getOrientIdx() const;
 	bool operator==(const cubecorner_orients &cco) const { return orients == cco.orients; }
 	bool operator!=(const cubecorner_orients &cco) const { return orients != cco.orients; }
 	bool operator<(const cubecorner_orients &cco) const { return orients < cco.orients; }
+    unsigned short getOrientIdx() const;
+    static cubecorner_orients fromOrientIdx(unsigned short);
     bool isBGspace() const;
     bool isYWspace(cubecorner_perms) const;
     bool isORspace(cubecorner_perms) const;
@@ -856,6 +875,20 @@ unsigned short cubecorner_orients::getOrientIdx() const
 	return res;
 }
 
+cubecorner_orients cubecorner_orients::fromOrientIdx(unsigned short idx)
+{
+    cubecorner_orients res;
+    int sum = 0;
+    for(unsigned i = 0; i < 7; ++i) {
+        unsigned short val = idx % 3;
+        idx /= 3;
+        res.setAt(6-i, val);
+        sum += val;
+    }
+    res.setAt(7, (15-sum) % 3);
+    return res;
+}
+
 bool cubecorner_orients::isBGspace() const {
     return orients == 0;
 }
@@ -1053,6 +1086,8 @@ public:
 	bool operator<(const cubeedges &ce) const { return edges < ce.edges; }
     unsigned getPermIdx() const;
     unsigned short getOrientIdx() const;
+    static cubeedges fromPermAndOrientIdx(unsigned permIdx, unsigned short orientIdx);
+    bool isPermParityOdd() const;
     unsigned long get() const { return edges; }
     void set(unsigned long e) { edges = e; }
     bool isNil() const { return edges == 0; }
@@ -1600,6 +1635,43 @@ unsigned short cubeedges::getOrientIdx() const {
 	return res;
 }
 
+cubeedges cubeedges::fromPermAndOrientIdx(unsigned permIdx, unsigned short orientIdx)
+{
+    unsigned long unused = 0xba9876543210ul;
+    cubeedges ce;
+    unsigned orient11 = 0;
+
+    for(unsigned edgeIdx = 12; edgeIdx > 0; --edgeIdx) {
+        unsigned p = permIdx % edgeIdx * 4;
+        ce.setPermAt(12-edgeIdx, unused >> p & 0xf);
+        ce.setOrientAt(12-edgeIdx, orientIdx & 1);
+        unsigned long m = -1ul << p;
+        unused = unused & ~m | unused >> 4 & m;
+        permIdx /= edgeIdx;
+        orient11 ^= orientIdx;
+        orientIdx /= 2;
+    }
+    ce.setOrientAt(11, orient11 & 1);
+    return ce;
+}
+
+bool cubeedges::isPermParityOdd() const
+{
+    bool isSwapsOdd = false;
+    unsigned permsScanned = 0;
+    for(unsigned i = 0; i < 12; ++i) {
+        if( permsScanned & 1 << i )
+            continue;
+        permsScanned |= 1 << i;
+        unsigned p = i;
+        while( (p = getPermAt(p)) != i ) {
+            permsScanned |= 1 << p;
+            isSwapsOdd = !isSwapsOdd;
+        }
+    }
+    return isSwapsOdd;
+}
+
 bool cubeedges::isBGspace() const {
     const unsigned orients03811[12] = { 0, 1, 1, 0, 2, 2, 2, 2, 0, 1, 1, 0 };
     const unsigned orients12910[12] = { 1, 0, 0, 1, 2, 2, 2, 2, 1, 0, 0, 1 };
@@ -1901,6 +1973,7 @@ struct cube {
     }
     cube transform(unsigned transformDir) const;
 	bool operator==(const cube &c) const;
+	bool operator!=(const cube &c) const;
 	bool operator<(const cube &c) const;
     bool isBGspace() const { return cco.isBGspace() && ce.isBGspace(); }
     bool isYWspace() const { return cco.isYWspace(ccp) && ce.isYWspace(); }
@@ -1913,6 +1986,11 @@ struct cube {
 bool cube::operator==(const cube &c) const
 {
 	return ccp == c.ccp && cco == c.cco && ce == c.ce;
+}
+
+bool cube::operator!=(const cube &c) const
+{
+	return ccp != c.ccp || cco != c.cco || ce != c.ce;
 }
 
 bool cube::operator<(const cube &c) const
@@ -2894,35 +2972,6 @@ static bool cubeRead(Responder &responder, const char *squareColors, cube &c)
     return true;
 }
 
-static cubecorner_orients cornersIdxToOrient(unsigned short idx)
-{
-    cubecorner_orients res;
-    int sum = 0;
-    for(unsigned i = 0; i < 7; ++i) {
-        unsigned short val = idx % 3;
-        idx /= 3;
-        res.setAt(6-i, val);
-        sum += val;
-    }
-    res.setAt(7, (15-sum) % 3);
-    return res;
-}
-
-static cubeedges edgesIdxToPerm(unsigned idx)
-{
-    unsigned long unused = 0xba9876543210ul;
-    cubeedges ce;
-
-    for(unsigned edgeIdx = 12; edgeIdx > 0; --edgeIdx) {
-        unsigned p = idx % edgeIdx * 4;
-        ce.setPermAt(12-edgeIdx, unused >> p & 0xf);
-        unsigned long m = -1ul << p;
-        unused = unused & ~m | unused >> 4 & m;
-        idx /= edgeIdx;
-    }
-    return ce;
-}
-
 enum SpaceKind {
     SPACEBG, SPACEYW, SPACEOR, SPACECOUNT
 };
@@ -3194,7 +3243,7 @@ CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(unsigned corien
             hi = mi;
     }
     if( lo == m_idxmap.size() || m_idxmap[lo] > corientIdx ) {
-        cubecorner_orients cco = cornersIdxToOrient(corientIdx);
+        cubecorner_orients cco = cubecorner_orients::fromOrientIdx(corientIdx);
         m_coreprCubes.emplace_back(cco);
         if( m_initOccur )
             m_coreprCubes.back().initOccur();
@@ -4877,21 +4926,58 @@ static void processConnection(int fdConn) {
     close(fdConn);
 }
 
-static void getcube(cube &c)
+static void runServer()
 {
-    c = csolved;
-    unsigned long ul[3];
+    int listenfd, acceptfd, opton = 1;
+    struct sockaddr_in addr;
+
+    if( (listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
+        perror("socket");
+        return;
+    }
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opton, sizeof(opton));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons(8080);
+    if( bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) < 0 ) {
+        perror("bind");
+        return;
+    }
+    if( listen(listenfd, 1) < 0 ) {
+        perror("listen");
+        return;
+    }
+    while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
+        //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
+        std::thread t = std::thread(processConnection, acceptfd);
+        t.detach();
+    }
+    perror("accept");
+}
+
+static cube generateCube()
+{
+    unsigned rndarr[3];
 
     FILE *fp = fopen("/dev/urandom", "r");
-    fread(ul, sizeof(ul), 1, fp);
+    fread(rndarr, sizeof(rndarr), 1, fp);
     fclose(fp);
-    for(int i = 0; i < 3; ++i) {
-        for(int j = 0; j < 15; ++j) {
-            unsigned rd = ul[i] % RCOUNT;
-            ul[i] /= RCOUNT;
-            c = cube::compose(c, crotated[rd]);
-        }
+    unsigned long rnd = (unsigned long)rndarr[1] << 32 | rndarr[0];
+    cube c;
+    c.ccp = cubecorner_perms::fromPermIdx(rnd % 40320);
+    rnd /= 40320;
+    c.cco = cubecorner_orients::fromOrientIdx(rnd % 2187);
+    rnd /= 2187;
+    unsigned ceOrient = rnd % 2048;
+    rnd /= 2048;
+    rnd = rnd << 32 | rndarr[2];
+    c.ce = cubeedges::fromPermAndOrientIdx(rnd % 479001600, ceOrient);
+    if( c.ccp.isPermParityOdd() != c.ce.isPermParityOdd() ) {
+        unsigned p = c.ce.getPermAt(10);
+        c.ce.setPermAt(10, c.ce.getPermAt(11));
+        c.ce.setPermAt(11, p);
     }
+    return c;
 }
 
 class TestingResponder : public Responder {
@@ -4926,9 +5012,8 @@ void TestingResponder::handleMessage(MessageType mt, const char *fmt, va_list ar
 
 static void cubeTester(unsigned count, char mode)
 {
-    cube c;
     for(unsigned i = 0; i < count; ++i) {
-        getcube(c);
+        cube c = generateCube();
         std::cout << "--- " << i << " ---" << std::endl;
         cubePrint(c);
         TestingResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
@@ -4965,9 +5050,6 @@ static void cubeTester(unsigned count, char mode)
 }
 
 int main(int argc, char *argv[]) {
-    int listenfd, acceptfd, opton = 1;
-    struct sockaddr_in addr;
-
     if( argc >= 2 ) {
         const char *s = argv[1];
         USEREVERSE = strchr(s, 'r') != NULL;
@@ -4979,30 +5061,9 @@ int main(int argc, char *argv[]) {
         }
     }
     std::cout << getSetup() << std::endl;
-    if( (listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0 ) {
-        perror("socket");
-        return 1;
-    }
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opton, sizeof(opton));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    addr.sin_port = htons(8080);
-    if( bind(listenfd, (struct sockaddr*)&addr, sizeof(addr)) < 0 ) {
-        perror("bind");
-        return 1;
-    }
-    if( listen(listenfd, 1) < 0 ) {
-        perror("listen");
-        return 1;
-    }
     permReprInit();
-    //cubeTester(10, 'q');
-    while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
-        //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
-        std::thread t = std::thread(processConnection, acceptfd);
-        t.detach();
-    }
-    perror("accept");
+    //cubeTester(10, 'm');
+    runServer();
 	return 1;
 }
 
