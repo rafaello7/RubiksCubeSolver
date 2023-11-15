@@ -64,11 +64,13 @@ class Responder {
 public:
     void message(const char *fmt, ...);
     void progress(const char *fmt, ...);
+    void movecount(unsigned);
     void solution(const char *fmt, ...);
 protected:
     enum MessageType {
         MT_UNQUALIFIED,
         MT_PROGRESS,
+        MT_MOVECOUNT,
         MT_SOLUTION
     };
     virtual void handleMessage(MessageType, const char*) = 0;
@@ -90,6 +92,12 @@ void Responder::progress(const char *fmt, ...) {
     vsprintf(msg, fmt, args);
     va_end(args);
     handleMessage(MT_PROGRESS, msg);
+}
+
+void Responder::movecount(unsigned moveCount) {
+    char msg[40];
+    sprintf(msg, "%u", moveCount);
+    handleMessage(MT_MOVECOUNT, msg);
 }
 
 void Responder::solution(const char *fmt, ...) {
@@ -4312,7 +4320,7 @@ int QuickSearchProgress::setBestMoves(const std::string &moves, int moveCount, R
         m_bestMoves = moves;
         m_bestMoveCount = moveCount;
         m_movesMax = moveCount-1;
-        responder.message("moves: %d", moveCount);
+        responder.movecount(moveCount);
     }
     movesMax = m_movesMax;
     mutexUnlock();
@@ -4638,8 +4646,8 @@ static bool searchMovesOptimalA(const cube &csearch, unsigned depthSearch, Respo
     runInThreadPool(searchMovesTa, cubesReprByDepth,
                 depth, depthMax, &csearch, &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
+        responder.movecount(depthSearch);
         responder.message("finished at %s", searchProgress.progressStr().c_str());
-        responder.message("-- %d moves --", depthSearch);
         return true;
     }
     bool isStopRequested = ProgressBase::isStopRequested();
@@ -4661,8 +4669,8 @@ static bool searchMovesOptimalB(const cube &csearch, unsigned depth, Responder &
     runInThreadPool(searchMovesTb, cubesReprByDepth, depth, &csearch,
                 &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
+        responder.movecount(2*DEPTH_MAX+depth);
         responder.message("finished at %s", searchProgress.progressStr().c_str());
-        responder.message("-- %d moves --", 2*DEPTH_MAX+depth);
         return true;
     }
     bool isStopRequested = ProgressBase::isStopRequested();
@@ -4698,7 +4706,6 @@ static void searchMovesQuickCatchFirst(const cube &csearch, Responder &responder
                     true, responder, 999, moveCount, bestMoves);
         if( moveCount >= 0 ) {
             responder.solution(bestMoves.c_str());
-            responder.message("-- %d moves --", moveCount);
             return;
         }
         if( isFinish )
@@ -4736,7 +4743,6 @@ static void searchMovesQuickMulti(const cube &csearch, Responder &responder)
     }
     if( !movesBest.empty() ) {
         responder.solution(movesBest.c_str());
-        responder.message("-- %d moves --", bestMoveCount);
         return;
     }
     responder.message("not found");
@@ -4825,6 +4831,9 @@ void SocketChunkedResponder::handleMessage(MessageType mt, const char *msg) {
         break;
     case MT_PROGRESS:
         prefix = "progress: ";
+        break;
+    case MT_MOVECOUNT:
+        prefix = "moves: ";
         break;
     case MT_SOLUTION:
         prefix = "solution:";
@@ -5071,13 +5080,15 @@ static cube generateCube()
 
 class ConsoleResponder : public Responder {
     const unsigned m_verboseLevel;
-    std::string m_solution;
+    std::string m_solution, m_movecount;
     std::chrono::time_point<std::chrono::system_clock> m_startTime;
-    std::string durationTime() const;
     void handleMessage(MessageType, const char*);
 public:
     explicit ConsoleResponder(unsigned verboseLevel);
+    unsigned durationTimeMs() const;
+    std::string durationTime() const;
     const char *getSolution() const { return m_solution.empty() ? NULL : m_solution.c_str(); }
+    const char *getMoveCount() const { return m_movecount.c_str(); }
 };
 
 ConsoleResponder::ConsoleResponder(unsigned verboseLevel)
@@ -5085,20 +5096,25 @@ ConsoleResponder::ConsoleResponder(unsigned verboseLevel)
 {
 }
 
-std::string ConsoleResponder::durationTime() const
+unsigned ConsoleResponder::durationTimeMs() const
 {
     std::chrono::time_point<std::chrono::system_clock> curTime(std::chrono::system_clock::now());
     auto durns = curTime - m_startTime;
     std::chrono::milliseconds dur = std::chrono::duration_cast<std::chrono::milliseconds>(durns);
+    return dur.count();
+}
+
+std::string ConsoleResponder::durationTime() const
+{
     std::ostringstream os;
-    unsigned ms = dur.count();
+    unsigned ms = durationTimeMs();
     unsigned minutes = ms / 60000;
     ms %= 60000;
     unsigned seconds = ms / 1000;
     ms %= 1000;
     if( minutes )
         os << minutes << ":" << std::setw(2) << std::setfill('0');
-    os << seconds << "." << std::setw(3) << std::setfill('0') << ms << " ";
+    os << seconds << "." << std::setw(3) << std::setfill('0') << ms;
     return os.str();
 }
 
@@ -5108,14 +5124,18 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     switch(mt) {
     case MT_UNQUALIFIED:
         if( m_verboseLevel ) {
-            std::cout << "\r" << durationTime() << msg << pad << std::flush;
+            std::cout << "\r" << durationTime() << " " << msg << pad << std::flush;
             if( !strncmp(msg, "finished at ", 12) )
                 std::cout << std::endl;
         }
         break;
     case MT_PROGRESS:
         if( m_verboseLevel > 1 )
-            std::cout << "\r" << durationTime() << msg << pad << std::flush;
+            std::cout << "\r" << durationTime() << " " << msg << pad << std::flush;
+        break;
+    case MT_MOVECOUNT:
+        std::cout << "\r" << durationTime() << " moves: " << msg << pad << std::endl;
+        m_movecount = msg;
         break;
     case MT_SOLUTION:
         std::cout << "\r" << durationTime() << msg << pad << std::endl;
@@ -5155,27 +5175,24 @@ static void solveCube(const char *cubeStr, char mode)
         std::cout << "fatal: bad solution!" << std::endl;
         return;
     }
-    if( mode == 'q' )
-        std::cout << "moves: " << moveCount << std::endl;
 }
 
-static void cubeTester(unsigned count, char mode)
+static void cubeTester(unsigned cubeCount, char mode)
 {
     if( mode == 'O' ) {
         ConsoleResponder responder(2);
         getReprCubes(DEPTH_MAX, responder);
         std::cout << std::endl;
     }
-    ConsoleResponder totalResp(1);
-    for(unsigned i = 0; i < count; ++i) {
+    std::map<unsigned, std::pair<unsigned, unsigned>> moveCounters;
+    for(unsigned i = 0; i < cubeCount; ++i) {
         cube c = generateCube();
-        totalResp.message("%d %s", i, c.toParamText().c_str());
+        std::cout << i << "  " << c.toParamText() << std::endl;
         std::cout << std::endl;
         cubePrint(c);
         ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
         searchMoves(c, mode, responder);
-        if( mode != 'q' )
-            std::cout << std::endl;
+        std::cout << std::endl;
         const char *s = responder.getSolution();
         unsigned moveCount = 0;
         while( s ) {
@@ -5194,10 +5211,17 @@ static void cubeTester(unsigned count, char mode)
             std::cout << "fatal: bad solution!" << std::endl;
             return;
         }
-        if( mode == 'q' )
-            std::cout << "moves: " << moveCount << std::endl;
+        std::pair<unsigned, unsigned> &ent = moveCounters[moveCount];
+        ++ent.first;
+        ent.second += responder.durationTimeMs();
     }
-    totalResp.message("Passed");
+    std::cout << "moves  cubes  avg time (s)" << std::endl;
+    std::cout << "-----  -----  -------------" << std::endl;
+    for(auto [moveCount, stats] : moveCounters) {
+        std::cout << std::setw(5) << moveCount << std::setw(7) <<
+            stats.first << "  " << std::setprecision(4) <<
+            stats.second/1000.0/stats.first << std::endl;
+    }
     std::cout << std::endl;
 }
 
