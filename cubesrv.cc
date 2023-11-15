@@ -5031,6 +5031,7 @@ static void runServer()
         t.detach();
     }
     perror("accept");
+    exit(1);
 }
 
 static cube generateCube()
@@ -5068,18 +5069,19 @@ public:
 };
 
 void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
-    const char *clr = "\r                                                  \r";
+    const char *pad = "                                                 ";
+    pad += std::min(strlen(msg), strlen(pad));
     switch(mt) {
     case MT_UNQUALIFIED:
         if( m_verboseLevel )
-            std::cout << clr << msg << std::flush;
+            std::cout << "\r" << msg << pad << std::flush;
         break;
     case MT_PROGRESS:
         if( m_verboseLevel > 1 )
-            std::cout << clr << msg << std::flush;
+            std::cout << "\r" << msg << pad << std::flush;
         break;
     case MT_SOLUTION:
-        std::cout << clr << msg << std::endl;
+        std::cout << "\r" << msg << pad << std::endl;
         m_solution = msg;
         break;
     }
@@ -5087,13 +5089,19 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
 
 static void cubeTester(unsigned count, char mode)
 {
+    if( mode == 'O' ) {
+        ConsoleResponder responder(2);
+        getReprCubes(DEPTH_MAX, responder);
+        std::cout << std::endl;
+    }
     for(unsigned i = 0; i < count; ++i) {
         cube c = generateCube();
         std::cout << i << " " << c.toParamText() << std::endl;
         cubePrint(c);
         ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
         searchMoves(c, mode, responder);
-        std::cout << std::endl;
+        if( mode != 'q' )
+            std::cout << std::endl;
         const char *s = responder.getSolution();
         unsigned moveCount = 0;
         while( s ) {
@@ -5116,13 +5124,14 @@ static void cubeTester(unsigned count, char mode)
             s = strchr(s, ' ');
             ++moveCount;
         }
-        if( !(c == csolved) ) {
+        if( c != csolved ) {
             std::cout << "fatal: bad solution!" << std::endl;
             return;
         }
+        if( mode == 'q' )
+            std::cout << "moves: " << moveCount << std::endl;
     }
     std::cout << "Passed" << std::endl;
-    exit(0);
 }
 
 int main(int argc, char *argv[]) {
@@ -5138,8 +5147,10 @@ int main(int argc, char *argv[]) {
     }
     std::cout << getSetup() << std::endl;
     permReprInit();
-    //cubeTester(10, 'm');
-    runServer();
-	return 1;
+    if( argc >= 4 )
+        cubeTester(atoi(argv[2]), argv[3][0]);
+    else
+        runServer();
+    return 0;
 }
 
