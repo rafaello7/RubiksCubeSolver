@@ -14,7 +14,7 @@ function dolog(section, text) {
         if( section == 'depth' )
             lastTime = curTime;
     }
-    if( ['progress', 'movecount'].includes(section) ) {
+    if( ['progress'].includes(section) ) {
         el.textContent = text;
     }else{
         let d = document.createElement('div');

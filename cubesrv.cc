@@ -64,7 +64,7 @@ class Responder {
 public:
     void message(const char *fmt, ...);
     void progress(const char *fmt, ...);
-    void movecount(unsigned);
+    void movecount(const char *fmt, ...);
     void solution(const char *fmt, ...);
 protected:
     enum MessageType {
@@ -94,9 +94,12 @@ void Responder::progress(const char *fmt, ...) {
     handleMessage(MT_PROGRESS, msg);
 }
 
-void Responder::movecount(unsigned moveCount) {
-    char msg[40];
-    sprintf(msg, "%u", moveCount);
+void Responder::movecount(const char *fmt, ...) {
+    char msg[2000];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf(msg, fmt, args);
+    va_end(args);
     handleMessage(MT_MOVECOUNT, msg);
 }
 
@@ -4270,16 +4273,16 @@ class QuickSearchProgress : public ProgressBase {
     const CubesReprAtDepth::ccpcubes_iter m_ccpItBeg;
     const CubesReprAtDepth::ccpcubes_iter m_ccpItEnd;
     CubesReprAtDepth::ccpcubes_iter m_ccpItNext;
-    const unsigned m_depth;
+    const unsigned m_depthSearch;
     int m_movesMax;
     int m_bestMoveCount;
     std::string m_bestMoves;
 
 public:
     QuickSearchProgress(CubesReprAtDepth::ccpcubes_iter ccpItBeg,
-            CubesReprAtDepth::ccpcubes_iter ccpItEnd, unsigned depth, int movesMax)
+            CubesReprAtDepth::ccpcubes_iter ccpItEnd, unsigned depthSearch, int movesMax)
         : m_ccpItBeg(ccpItBeg), m_ccpItEnd(ccpItEnd), m_ccpItNext(ccpItBeg),
-          m_depth(depth), m_movesMax(movesMax), m_bestMoveCount(-1)
+          m_depthSearch(depthSearch), m_movesMax(movesMax), m_bestMoveCount(-1)
     {
     }
 
@@ -4300,14 +4303,14 @@ int QuickSearchProgress::inc(Responder &responder, CubesReprAtDepth::ccpcubes_it
     mutexUnlock();
     if( movesMax >= 0 ) {
         *ccpItBuf = cornerPermIt;
-        if( m_depth >= 9 ) {
+        if( m_depthSearch >= 9 ) {
             unsigned itemCount = std::distance(m_ccpItBeg, m_ccpItEnd);
             unsigned itemIdx = std::distance(m_ccpItBeg, cornerPermIt);
             unsigned procCountNext = 100 * (itemIdx+1) / itemCount;
             unsigned procCountCur = 100 * itemIdx / itemCount;
-            if( procCountNext != procCountCur && (m_depth>=10 || procCountCur % 10 == 0) )
+            if( procCountNext != procCountCur && (m_depthSearch>=10 || procCountCur % 10 == 0) )
                 responder.progress("depth %d search %d of %d, %d%%",
-                        m_depth, itemIdx, itemCount, 100 * itemIdx / itemCount);
+                        m_depthSearch, itemIdx, itemCount, 100 * itemIdx / itemCount);
         }
     }
     return movesMax;
@@ -4320,7 +4323,7 @@ int QuickSearchProgress::setBestMoves(const std::string &moves, int moveCount, R
         m_bestMoves = moves;
         m_bestMoveCount = moveCount;
         m_movesMax = moveCount-1;
-        responder.movecount(moveCount);
+        responder.movecount("%u at depth: %u", moveCount, m_depthSearch);
     }
     movesMax = m_movesMax;
     mutexUnlock();
@@ -4646,7 +4649,7 @@ static bool searchMovesOptimalA(const cube &csearch, unsigned depthSearch, Respo
     runInThreadPool(searchMovesTa, cubesReprByDepth,
                 depth, depthMax, &csearch, &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
-        responder.movecount(depthSearch);
+        responder.movecount("%u", depthSearch);
         responder.message("finished at %s", searchProgress.progressStr().c_str());
         return true;
     }
@@ -4669,7 +4672,7 @@ static bool searchMovesOptimalB(const cube &csearch, unsigned depth, Responder &
     runInThreadPool(searchMovesTb, cubesReprByDepth, depth, &csearch,
                 &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
-        responder.movecount(2*DEPTH_MAX+depth);
+        responder.movecount("%u", 2*DEPTH_MAX+depth);
         responder.message("finished at %s", searchProgress.progressStr().c_str());
         return true;
     }
@@ -5184,7 +5187,7 @@ static void cubeTester(unsigned cubeCount, char mode)
         getReprCubes(DEPTH_MAX, responder);
         std::cout << std::endl;
     }
-    std::map<unsigned, std::pair<unsigned, unsigned>> moveCounters;
+    std::map<std::string, std::pair<unsigned, unsigned>> moveCounters;
     for(unsigned i = 0; i < cubeCount; ++i) {
         cube c = generateCube();
         std::cout << i << "  " << c.toParamText() << std::endl;
@@ -5194,7 +5197,6 @@ static void cubeTester(unsigned cubeCount, char mode)
         searchMoves(c, mode, responder);
         std::cout << std::endl;
         const char *s = responder.getSolution();
-        unsigned moveCount = 0;
         while( s ) {
             if( *s == ' ' )
                 ++s;
@@ -5205,20 +5207,19 @@ static void cubeTester(unsigned cubeCount, char mode)
             }
             c = cube::compose(c, crotated[rd]);
             s = strchr(s, ' ');
-            ++moveCount;
         }
         if( c != csolved ) {
             std::cout << "fatal: bad solution!" << std::endl;
             return;
         }
-        std::pair<unsigned, unsigned> &ent = moveCounters[moveCount];
+        std::pair<unsigned, unsigned> &ent = moveCounters[responder.getMoveCount()];
         ++ent.first;
         ent.second += responder.durationTimeMs();
     }
-    std::cout << "moves  cubes  avg time (s)" << std::endl;
-    std::cout << "-----  -----  -------------" << std::endl;
+    std::cout << "          moves  cubes  avg time (s)" << std::endl;
+    std::cout << "---------------  -----  -------------" << std::endl;
     for(auto [moveCount, stats] : moveCounters) {
-        std::cout << std::setw(5) << moveCount << std::setw(7) <<
+        std::cout << std::setw(15) << moveCount << std::setw(7) <<
             stats.first << "  " << std::setprecision(4) <<
             stats.second/1000.0/stats.first << std::endl;
     }
@@ -5239,10 +5240,10 @@ int main(int argc, char *argv[]) {
     std::cout << getSetup() << std::endl;
     permReprInit();
     if( argc >= 4 ) {
-        if(isdigit(argv[2][0]))
-            cubeTester(atoi(argv[2]), argv[3][0]);
+        if(isdigit(argv[3][0]))
+            cubeTester(atoi(argv[3]), argv[2][0]);
         else
-            solveCube(argv[2], argv[3][0]);
+            solveCube(argv[3], argv[2][0]);
     }else
         runServer();
     return 0;
