@@ -5072,11 +5072,35 @@ static cube generateCube()
 class ConsoleResponder : public Responder {
     const unsigned m_verboseLevel;
     std::string m_solution;
+    std::chrono::time_point<std::chrono::system_clock> m_startTime;
+    std::string durationTime() const;
     void handleMessage(MessageType, const char*);
 public:
-    explicit ConsoleResponder(unsigned verboseLevel) : m_verboseLevel(verboseLevel) {}
+    explicit ConsoleResponder(unsigned verboseLevel);
     const char *getSolution() const { return m_solution.empty() ? NULL : m_solution.c_str(); }
 };
+
+ConsoleResponder::ConsoleResponder(unsigned verboseLevel)
+    : m_verboseLevel(verboseLevel), m_startTime(std::chrono::system_clock::now())
+{
+}
+
+std::string ConsoleResponder::durationTime() const
+{
+    std::chrono::time_point<std::chrono::system_clock> curTime(std::chrono::system_clock::now());
+    auto durns = curTime - m_startTime;
+    std::chrono::milliseconds dur = std::chrono::duration_cast<std::chrono::milliseconds>(durns);
+    std::ostringstream os;
+    unsigned ms = dur.count();
+    unsigned minutes = ms / 60000;
+    ms %= 60000;
+    unsigned seconds = ms / 1000;
+    ms %= 1000;
+    if( minutes )
+        os << minutes << ":" << std::setw(2) << std::setfill('0');
+    os << seconds << "." << std::setw(3) << std::setfill('0') << ms << " ";
+    return os.str();
+}
 
 void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     const char *pad = "                                                 ";
@@ -5084,17 +5108,17 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     switch(mt) {
     case MT_UNQUALIFIED:
         if( m_verboseLevel ) {
-            std::cout << "\r" << msg << pad << std::flush;
+            std::cout << "\r" << durationTime() << msg << pad << std::flush;
             if( !strncmp(msg, "finished at ", 12) )
                 std::cout << std::endl;
         }
         break;
     case MT_PROGRESS:
         if( m_verboseLevel > 1 )
-            std::cout << "\r" << msg << pad << std::flush;
+            std::cout << "\r" << durationTime() << msg << pad << std::flush;
         break;
     case MT_SOLUTION:
-        std::cout << "\r" << msg << pad << std::endl;
+        std::cout << "\r" << durationTime() << msg << pad << std::endl;
         m_solution = msg;
         break;
     }
@@ -5142,9 +5166,11 @@ static void cubeTester(unsigned count, char mode)
         getReprCubes(DEPTH_MAX, responder);
         std::cout << std::endl;
     }
+    ConsoleResponder totalResp(1);
     for(unsigned i = 0; i < count; ++i) {
         cube c = generateCube();
-        std::cout << i << " " << c.toParamText() << std::endl;
+        totalResp.message("%d %s", i, c.toParamText().c_str());
+        std::cout << std::endl;
         cubePrint(c);
         ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
         searchMoves(c, mode, responder);
@@ -5171,7 +5197,8 @@ static void cubeTester(unsigned count, char mode)
         if( mode == 'q' )
             std::cout << "moves: " << moveCount << std::endl;
     }
-    std::cout << "Passed" << std::endl;
+    totalResp.message("Passed");
+    std::cout << std::endl;
 }
 
 int main(int argc, char *argv[]) {
