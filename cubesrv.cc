@@ -374,52 +374,52 @@ static const char *transformName(unsigned td) {
 static const unsigned char R120[3] = { 1, 2, 0 };
 static const unsigned char R240[3] = { 2, 0, 1 };
 
-class cubecorner_perms {
-	unsigned perms;
+class cubecorners_perm {
+	unsigned perm;
 public:
-	cubecorner_perms() : perms(0) {}
-	cubecorner_perms(unsigned corner0perm, unsigned corner1perm, unsigned corner2perm,
+	cubecorners_perm() : perm(0) {}
+	cubecorners_perm(unsigned corner0perm, unsigned corner1perm, unsigned corner2perm,
 			unsigned corner3perm, unsigned corner4perm, unsigned corner5perm,
 			unsigned corner6perm, unsigned corner7perm);
 
-	void setAt(unsigned idx, unsigned char perm) {
-		perms &= ~(7 << 3*idx);
-		perms |= perm << 3*idx;
+	void setAt(unsigned idx, unsigned char p) {
+		perm &= ~(7 << 3*idx);
+		perm |= p << 3*idx;
 	}
-	unsigned getAt(unsigned idx) const { return perms >> 3*idx & 7; }
-	unsigned get() const { return perms; }
-	void set(unsigned pms) { perms = pms; }
-    static cubecorner_perms compose(cubecorner_perms, cubecorner_perms);
-    static cubecorner_perms compose3(cubecorner_perms, cubecorner_perms, cubecorner_perms);
-    cubecorner_perms symmetric() const {
-        unsigned permsRes = perms ^ 0x924924;
-        cubecorner_perms ccpres;
-        ccpres.perms = (permsRes >> 12 | permsRes << 12) & 0xffffff;
+	unsigned getAt(unsigned idx) const { return perm >> 3*idx & 7; }
+	unsigned get() const { return perm; }
+	void set(unsigned p) { perm = p; }
+    static cubecorners_perm compose(cubecorners_perm, cubecorners_perm);
+    static cubecorners_perm compose3(cubecorners_perm, cubecorners_perm, cubecorners_perm);
+    cubecorners_perm symmetric() const {
+        unsigned permRes = perm ^ 0x924924;
+        cubecorners_perm ccpres;
+        ccpres.perm = (permRes >> 12 | permRes << 12) & 0xffffff;
         return ccpres;
     }
-    cubecorner_perms reverse() const;
-    cubecorner_perms transform(unsigned transformDir) const;
-	bool operator==(const cubecorner_perms &ccp) const { return perms == ccp.perms; }
-	bool operator!=(const cubecorner_perms &ccp) const { return perms != ccp.perms; }
-	bool operator<(const cubecorner_perms &ccp) const { return perms < ccp.perms; }
+    cubecorners_perm reverse() const;
+    cubecorners_perm transform(unsigned transformDir) const;
+	bool operator==(const cubecorners_perm &ccp) const { return perm == ccp.perm; }
+	bool operator!=(const cubecorners_perm &ccp) const { return perm != ccp.perm; }
+	bool operator<(const cubecorners_perm &ccp) const { return perm < ccp.perm; }
     unsigned short getPermIdx() const;
-    static cubecorner_perms fromPermIdx(unsigned short);
+    static cubecorners_perm fromPermIdx(unsigned short);
     bool isPermParityOdd() const;
 };
 
-cubecorner_perms::cubecorner_perms(unsigned corner0perm, unsigned corner1perm,
+cubecorners_perm::cubecorners_perm(unsigned corner0perm, unsigned corner1perm,
 			unsigned corner2perm, unsigned corner3perm,
 			unsigned corner4perm, unsigned corner5perm,
 			unsigned corner6perm, unsigned corner7perm)
-	: perms(corner0perm | corner1perm << 3 | corner2perm << 6 |
+	: perm(corner0perm | corner1perm << 3 | corner2perm << 6 |
 			corner3perm << 9 | corner4perm << 12 | corner5perm << 15 |
 			corner6perm << 18 | corner7perm << 21)
 {
 }
 
-cubecorner_perms cubecorner_perms::compose(cubecorner_perms ccp1, cubecorner_perms ccp2)
+cubecorners_perm cubecorners_perm::compose(cubecorners_perm ccp1, cubecorners_perm ccp2)
 {
-    cubecorner_perms res;
+    cubecorners_perm res;
 #ifdef USE_ASM
     unsigned long tmp1;
 
@@ -434,30 +434,30 @@ cubecorner_perms cubecorner_perms::compose(cubecorner_perms ccp1, cubecorner_per
         // store xmm1 in res
         "vpextrq $0, %%xmm1, %[tmp1]\n"
         "pext %[depPerm], %[tmp1], %q[res]\n"
-            : [res]      "=r"  (res.perms),
+            : [res]      "=r"  (res.perm),
               [tmp1]     "=&r" (tmp1)
-            : [ccp1]     "r"   (ccp1.perms),
-              [ccp2]     "r"   (ccp2.perms),
+            : [ccp1]     "r"   (ccp1.perm),
+              [ccp2]     "r"   (ccp2.perm),
               [depPerm]  "r"   (0x0707070707070707ul)
             : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorner_perms chk = res;
-    res.perms = 0;
+    cubecorners_perm chk = res;
+    res.perm = 0;
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
     for(unsigned i = 0; i < 8; ++i)
-        res.perms |= ccp1.getAt(ccp2.getAt(i)) << 3*i;
+        res.perm |= ccp1.getAt(ccp2.getAt(i)) << 3*i;
 #endif
 #ifdef ASMCHECK
-    if( res.perms != chk.perms ) {
+    if( res.perm != chk.perm ) {
         flockfile(stdout);
-        printf("corner perms compose mismatch!\n");
-        printf("ccp1 = 0x%x;\n", ccp1.perms);
-        printf("ccp2 = 0x%x;\n", ccp2.perms);
-        printf("exp  = 0x%x;\n", res.perms);
-        printf("got  = 0x%x;\n", chk.perms);
+        printf("corner perm compose mismatch!\n");
+        printf("ccp1 = 0x%x;\n", ccp1.perm);
+        printf("ccp2 = 0x%x;\n", ccp2.perm);
+        printf("exp  = 0x%x;\n", res.perm);
+        printf("got  = 0x%x;\n", chk.perm);
         funlockfile(stdout);
         exit(1);
     }
@@ -465,10 +465,10 @@ cubecorner_perms cubecorner_perms::compose(cubecorner_perms ccp1, cubecorner_per
     return res;
 }
 
-cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_perms ccp2,
-        cubecorner_perms ccp3)
+cubecorners_perm cubecorners_perm::compose3(cubecorners_perm ccp1, cubecorners_perm ccp2,
+        cubecorners_perm ccp3)
 {
-    cubecorner_perms res;
+    cubecorners_perm res;
 #ifdef USE_ASM
     unsigned long tmp1;
 
@@ -488,17 +488,17 @@ cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_pe
         // store xmm1 in res
         "vpextrq $0, %%xmm1, %[tmp1]\n"
         "pext %[depPerm], %[tmp1], %q[res]\n"
-            : [res]      "=r"  (res.perms),
+            : [res]      "=r"  (res.perm),
               [tmp1]     "=&r" (tmp1)
-            : [ccp1]     "r"   (ccp1.perms),
-              [ccp2]     "r"   (ccp2.perms),
-              [ccp3]     "r"   (ccp3.perms),
+            : [ccp1]     "r"   (ccp1.perm),
+              [ccp2]     "r"   (ccp2.perm),
+              [ccp3]     "r"   (ccp3.perm),
               [depPerm]  "r"   (0x707070707070707ul)
             : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorner_perms chk = res;
-    res.perms = 0;
+    cubecorners_perm chk = res;
+    res.perm = 0;
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
@@ -506,22 +506,22 @@ cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_pe
     res = compose(compose(ccp1, ccp2), ccp3);
 #else
     for(int i = 0; i < 8; ++i) {
-        unsigned corner3perm = ccp3.perms >> 3 * i & 0x7;
-        unsigned long corner2perm = ccp2.perms >> 3 * corner3perm & 0x7;
-        unsigned long corner1perm = ccp1.perms >> 3 * corner2perm & 0x7;
-        res.perms |= corner1perm << 3*i;
+        unsigned corner3perm = ccp3.perm >> 3 * i & 0x7;
+        unsigned long corner2perm = ccp2.perm >> 3 * corner3perm & 0x7;
+        unsigned long corner1perm = ccp1.perm >> 3 * corner2perm & 0x7;
+        res.perm |= corner1perm << 3*i;
     }
 #endif
 #endif
 #ifdef ASMCHECK
-    if( res.perms != chk.perms ) {
+    if( res.perm != chk.perm ) {
         flockfile(stdout);
-        printf("corner perms compose3 mismatch!\n");
-        printf("ccp1 = 0x%x;\n", ccp1.perms);
-        printf("ccp2 = 0x%x;\n", ccp2.perms);
-        printf("ccp3 = 0x%x;\n", ccp3.perms);
-        printf("exp  = 0x%x;\n", res.perms);
-        printf("got  = 0x%x;\n", chk.perms);
+        printf("corner perm compose3 mismatch!\n");
+        printf("ccp1 = 0x%x;\n", ccp1.perm);
+        printf("ccp2 = 0x%x;\n", ccp2.perm);
+        printf("ccp3 = 0x%x;\n", ccp3.perm);
+        printf("exp  = 0x%x;\n", res.perm);
+        printf("got  = 0x%x;\n", chk.perm);
         funlockfile(stdout);
         exit(1);
     }
@@ -529,14 +529,14 @@ cubecorner_perms cubecorner_perms::compose3(cubecorner_perms ccp1, cubecorner_pe
     return res;
 }
 
-cubecorner_perms cubecorner_perms::reverse() const
+cubecorners_perm cubecorners_perm::reverse() const
 {
-    cubecorner_perms res;
+    cubecorners_perm res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
         // xmm1 := perm
-        "pdep %[depPerm], %q[perms], %[tmp1]\n"
+        "pdep %[depPerm], %q[perm], %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
         // xmm2 := 3 * perm
         "vpaddb %%xmm1, %%xmm1, %%xmm2\n"
@@ -559,26 +559,26 @@ cubecorner_perms cubecorner_perms::reverse() const
         "vzeroupper\n"
         : [res]         "=r"    (res),
           [tmp1]        "=&r"   (tmp1)
-        : [perms]       "r"     (perms),
+        : [perm]       "r"      (perm),
           [depPerm]     "rm"    (0x707070707070707ul)
         : "ymm1", "ymm2"
         );
 #ifdef ASMCHECK
-    cubecorner_perms chk = res;
-    res.perms = 0;
+    cubecorners_perm chk = res;
+    res.perm = 0;
 #endif
 #endif // USE_ASM
 #if defined(ASMCHECK) || !defined(USE_ASM)
     for(int i = 0; i < 8; ++i)
-        res.perms |= i << 3*getAt(i);
+        res.perm |= i << 3*getAt(i);
 #endif
 #ifdef ASMCHECK
-    if( res.perms != chk.perms ) {
+    if( res.perm != chk.perm ) {
         flockfile(stdout);
-        printf("corner perms reverse mismatch!\n");
-        printf("this.perms = 0x%o;\n", perms);
-        printf("exp.perms  = 0x%o;\n", res.perms);
-        printf("got.perms  = 0x%o;\n", chk.perms);
+        printf("corner perm reverse mismatch!\n");
+        printf("this.perm = 0x%o;\n", perm);
+        printf("exp.perm  = 0x%o;\n", res.perm);
+        printf("got.perm  = 0x%o;\n", chk.perm);
         funlockfile(stdout);
         exit(1);
     }
@@ -586,7 +586,7 @@ cubecorner_perms cubecorner_perms::reverse() const
 	return res;
 }
 
-unsigned short cubecorner_perms::getPermIdx() const {
+unsigned short cubecorners_perm::getPermIdx() const {
     unsigned short res = 0;
     unsigned indexes = 0;
     for(int i = 7; i >= 0; --i) {
@@ -597,10 +597,10 @@ unsigned short cubecorner_perms::getPermIdx() const {
     return res;
 }
 
-cubecorner_perms cubecorner_perms::fromPermIdx(unsigned short idx)
+cubecorners_perm cubecorners_perm::fromPermIdx(unsigned short idx)
 {
     unsigned unused = 0x76543210;
-    cubecorner_perms ccp;
+    cubecorners_perm ccp;
 
     for(unsigned cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
         unsigned p = idx % cornerIdx * 4;
@@ -612,17 +612,17 @@ cubecorner_perms cubecorner_perms::fromPermIdx(unsigned short idx)
     return ccp;
 }
 
-bool cubecorner_perms::isPermParityOdd() const
+bool cubecorners_perm::isPermParityOdd() const
 {
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(unsigned i = 0; i < 8; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         unsigned p = i;
         while( (p = getAt(p)) != i ) {
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -646,10 +646,10 @@ public:
 	unsigned get() const { return orients; }
 	void set(unsigned orts) { orients = orts; }
     static cubecorner_orients compose(cubecorner_orients cco1,
-            cubecorner_perms ccp2, cubecorner_orients cco2);
+            cubecorners_perm ccp2, cubecorner_orients cco2);
     static cubecorner_orients compose3(cubecorner_orients cco1,
-            cubecorner_perms ccp2, cubecorner_orients cco2,
-            cubecorner_perms ccp3, cubecorner_orients cco3);
+            cubecorners_perm ccp2, cubecorner_orients cco2,
+            cubecorners_perm ccp3, cubecorner_orients cco3);
     cubecorner_orients symmetric() const {
         cubecorner_orients ccores;
         // set orient 2 -> 1, 1 -> 2, 0 unchanged
@@ -657,19 +657,19 @@ public:
         ccores.orients = (orie >> 8 | orie << 8) & 0xffff;
         return ccores;
     }
-    cubecorner_orients reverse(cubecorner_perms) const;
-    cubecorner_orients transform(cubecorner_perms, unsigned transformDir) const;
+    cubecorner_orients reverse(cubecorners_perm) const;
+    cubecorner_orients transform(cubecorners_perm, unsigned transformDir) const;
 	bool operator==(const cubecorner_orients &cco) const { return orients == cco.orients; }
 	bool operator!=(const cubecorner_orients &cco) const { return orients != cco.orients; }
 	bool operator<(const cubecorner_orients &cco) const { return orients < cco.orients; }
     unsigned short getOrientIdx() const;
     static cubecorner_orients fromOrientIdx(unsigned short);
     bool isBGspace() const;
-    bool isYWspace(cubecorner_perms) const;
-    bool isORspace(cubecorner_perms) const;
-    cubecorner_orients representativeBG(cubecorner_perms) const;
-    cubecorner_orients representativeYW(cubecorner_perms) const;
-    cubecorner_orients representativeOR(cubecorner_perms) const;
+    bool isYWspace(cubecorners_perm) const;
+    bool isORspace(cubecorners_perm) const;
+    cubecorner_orients representativeBG(cubecorners_perm) const;
+    cubecorner_orients representativeYW(cubecorners_perm) const;
+    cubecorner_orients representativeOR(cubecorners_perm) const;
 };
 
 cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1orient,
@@ -683,7 +683,7 @@ cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1o
 }
 
 cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
-            cubecorner_perms ccp2, cubecorner_orients cco2)
+            cubecorners_perm ccp2, cubecorner_orients cco2)
 {
     cubecorner_orients res;
 #ifdef USE_ASM
@@ -752,8 +752,8 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
 }
 
 cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
-            cubecorner_perms ccp2, cubecorner_orients cco2,
-            cubecorner_perms ccp3, cubecorner_orients cco3)
+            cubecorners_perm ccp2, cubecorner_orients cco2,
+            cubecorners_perm ccp3, cubecorner_orients cco3)
 {
     cubecorner_orients res;
 #ifdef USE_ASM
@@ -839,14 +839,14 @@ cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
 	return res;
 }
 
-cubecorner_orients cubecorner_orients::reverse(cubecorner_perms ccp) const {
+cubecorner_orients cubecorner_orients::reverse(cubecorners_perm ccp) const {
     unsigned short revOrients = (orients & 0xaaaa) >> 1 | (orients & 0x5555) << 1;
     cubecorner_orients res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
         // xmm2[63:0] := 2*perm
-        "pdep %[depPermx2], %q[perms], %[tmp1]\n"
+        "pdep %[depPermx2], %q[perm], %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
         // xmm1[63:0] := revOrients
         "pdep %[depOrient], %q[revOrients], %[tmp1]\n"
@@ -865,7 +865,7 @@ cubecorner_orients cubecorner_orients::reverse(cubecorner_perms ccp) const {
         "vpextrw $0, %%xmm1, %q[res]\n"
         : [res]         "=r"    (res),
           [tmp1]        "=&r"   (tmp1)
-        : [perms]       "r"     (ccp.get()),
+        : [perm]        "r"     (ccp.get()),
           [revOrients]  "r"     (revOrients),
           [depPermx2]   "rm"    (0xe0e0e0e0e0e0e0eul),
           [depOrient]   "rm"    (0x303030303030303ul)
@@ -920,7 +920,7 @@ bool cubecorner_orients::isBGspace() const {
     return orients == 0;
 }
 
-bool cubecorner_orients::isYWspace(cubecorner_perms ccp) const {
+bool cubecorner_orients::isYWspace(cubecorners_perm ccp) const {
     const unsigned orients0356[8] = { 0, 1, 1, 0, 1, 0, 0, 1 };
     const unsigned orients1247[8] = { 2, 0, 0, 2, 0, 2, 2, 0 };
     for(unsigned i = 0; i < 8; ++i) {
@@ -944,7 +944,7 @@ bool cubecorner_orients::isYWspace(cubecorner_perms ccp) const {
     return true;
 }
 
-bool cubecorner_orients::isORspace(cubecorner_perms ccp) const {
+bool cubecorner_orients::isORspace(cubecorners_perm ccp) const {
     const unsigned orients0356[8] = { 0, 2, 2, 0, 2, 0, 0, 2 };
     const unsigned orients1247[8] = { 1, 0, 0, 1, 0, 1, 1, 0 };
     for(unsigned i = 0; i < 8; ++i) {
@@ -968,14 +968,14 @@ bool cubecorner_orients::isORspace(cubecorner_perms ccp) const {
     return true;
 }
 
-cubecorner_orients cubecorner_orients::representativeBG(cubecorner_perms ccp) const
+cubecorner_orients cubecorner_orients::representativeBG(cubecorners_perm ccp) const
 {
     cubecorner_orients orepr;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
         // xmm2[63:0] := 2*perm
-        "pdep %[depPermx2], %q[perms], %[tmp1]\n"
+        "pdep %[depPermx2], %q[perm], %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
         // xmm1[63:0] := cco
         "pdep %[depOrient], %q[cco], %[tmp1]\n"
@@ -994,7 +994,7 @@ cubecorner_orients cubecorner_orients::representativeBG(cubecorner_perms ccp) co
         "vpextrw $0, %%xmm1, %q[orepr]\n"
         : [orepr]       "=r"    (orepr.orients),
           [tmp1]        "=&r"   (tmp1)
-        : [perms]       "r"     (ccp.get()),
+        : [perm]        "r"     (ccp.get()),
           [cco]         "r"     (this->orients),
           [depPermx2]   "rm"    (0xe0e0e0e0e0e0e0eul),
           [depOrient]   "rm"    (0x303030303030303ul)
@@ -1023,11 +1023,11 @@ cubecorner_orients cubecorner_orients::representativeBG(cubecorner_perms ccp) co
     return orepr;
 }
 
-cubecorner_orients cubecorner_orients::representativeYW(cubecorner_perms ccp) const
+cubecorner_orients cubecorner_orients::representativeYW(cubecorners_perm ccp) const
 {
     unsigned oadd[8] = { 2, 1, 1, 2, 1, 2, 2, 1 };
     cubecorner_orients orepr;
-    cubecorner_perms ccpRev = ccp.reverse();
+    cubecorners_perm ccpRev = ccp.reverse();
     for(unsigned i = 0; i < 8; ++i) {
         unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
         orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
@@ -1035,11 +1035,11 @@ cubecorner_orients cubecorner_orients::representativeYW(cubecorner_perms ccp) co
     return orepr;
 }
 
-cubecorner_orients cubecorner_orients::representativeOR(cubecorner_perms ccp) const
+cubecorner_orients cubecorner_orients::representativeOR(cubecorners_perm ccp) const
 {
     unsigned oadd[8] = { 1, 2, 2, 1, 2, 1, 1, 2 };
     cubecorner_orients orepr;
-    cubecorner_perms ccpRev = ccp.reverse();
+    cubecorners_perm ccpRev = ccp.reverse();
     for(unsigned i = 0; i < 8; ++i) {
         unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
         orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
@@ -1048,7 +1048,7 @@ cubecorner_orients cubecorner_orients::representativeOR(cubecorner_perms ccp) co
 }
 
 struct cubecorners {
-	cubecorner_perms perms;
+	cubecorners_perm perm;
 	cubecorner_orients orients;
 
     cubecorners(unsigned corner0perm, unsigned corner0orient,
@@ -1059,7 +1059,7 @@ struct cubecorners {
             unsigned corner5perm, unsigned corner5orient,
             unsigned corner6perm, unsigned corner6orient,
             unsigned corner7perm, unsigned corner7orient)
-        : perms(corner0perm, corner1perm, corner2perm, corner3perm, corner4perm, corner5perm,
+        : perm(corner0perm, corner1perm, corner2perm, corner3perm, corner4perm, corner5perm,
                 corner6perm, corner7perm),
         orients(corner0orient, corner1orient, corner2orient,
                 corner3orient, corner4orient, corner5orient, corner6orient, corner7orient)
@@ -1685,14 +1685,14 @@ cubeedges cubeedges::fromPermAndOrientIdx(unsigned permIdx, unsigned short orien
 bool cubeedges::isPermParityOdd() const
 {
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(unsigned i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         unsigned p = i;
         while( (p = getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -1795,18 +1795,18 @@ bool cubeedges::isORspace() const {
 static bool isCeReprSolvable(const cubeedges &ce)
 {
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         int p = i;
         while( (p = ce.getPermAt(p)) != i ) {
-            if( permsScanned & 1 << p ) {
+            if( permScanned & 1 << p ) {
                 printf("edge perm %d is twice\n", p);
                 return false;
             }
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -1894,14 +1894,14 @@ cubeedges cubeedges::representativeYW() const
     }
     // make the cube solvable
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         int p = i;
         while( (p = cerepr.getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -1946,14 +1946,14 @@ cubeedges cubeedges::representativeOR() const
     }
     // make the cube solvable
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         int p = i;
         while( (p = cerepr.getPermAt(p)) != i ) {
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -1973,13 +1973,13 @@ cubeedges cubeedges::representativeOR() const
 }
 
 struct cube {
-	cubecorner_perms ccp;
+	cubecorners_perm ccp;
     cubecorner_orients cco;
 	cubeedges ce;
 
     static cube compose(const cube &c1, const cube &c2) {
         return {
-            .ccp = cubecorner_perms::compose(c1.ccp, c2.ccp),
+            .ccp = cubecorners_perm::compose(c1.ccp, c2.ccp),
             .cco = cubecorner_orients::compose(c1.cco, c2.ccp, c2.cco),
             .ce = cubeedges::compose(c1.ce, c2.ce)
         };
@@ -2028,7 +2028,7 @@ bool cube::operator<(const cube &c) const
 }
 
 const struct cube csolved = {
-    .ccp =   cubecorner_perms(0, 1, 2, 3, 4, 5, 6, 7),
+    .ccp =   cubecorners_perm(0, 1, 2, 3, 4, 5, 6, 7),
     .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
     .ce  = cubeedges(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
                      0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0)
@@ -2121,92 +2121,92 @@ std::string cube::toParamText() const
 
 const struct cube crotated[RCOUNT] = {
     {   // ORANGECW
-        .ccp =   cubecorner_perms(4, 1, 0, 3, 6, 5, 2, 7),
+        .ccp =   cubecorners_perm(4, 1, 0, 3, 6, 5, 2, 7),
         .cco = cubecorner_orients(1, 0, 2, 0, 2, 0, 1, 0),
 		.ce  = cubeedges(0, 4, 2, 3, 9, 5, 1, 7, 8, 6, 10, 11,
                          0, 1, 0, 0, 1, 0, 1, 0, 0, 1,  0,  0)
     },{ // ORANGE180
-		.ccp =   cubecorner_perms(6, 1, 4, 3, 2, 5, 0, 7),
+		.ccp =   cubecorners_perm(6, 1, 4, 3, 2, 5, 0, 7),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 9, 2, 3, 6, 5, 4, 7, 8, 1, 10, 11,
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0)
     },{ // ORANGECCW
-		.ccp =   cubecorner_perms(2, 1, 6, 3, 0, 5, 4, 7),
+		.ccp =   cubecorners_perm(2, 1, 6, 3, 0, 5, 4, 7),
         .cco = cubecorner_orients(1, 0, 2, 0, 2, 0, 1, 0),
 		.ce  = cubeedges(0, 6, 2, 3, 1, 5, 9, 7, 8, 4, 10, 11,
                          0, 1, 0, 0, 1, 0, 1, 0, 0, 1,  0,  0)
     },{ // REDCW
-		.ccp =   cubecorner_perms(0, 3, 2, 7, 4, 1, 6, 5),
+		.ccp =   cubecorners_perm(0, 3, 2, 7, 4, 1, 6, 5),
         .cco = cubecorner_orients(0, 2, 0, 1, 0, 1, 0, 2),
 		.ce  = cubeedges(0, 1, 7, 3, 4, 2, 6, 10, 8, 9, 5, 11,
                          0, 0, 1, 0, 0, 1, 0,  1, 0, 0, 1,  0)
     },{ // RED180
-		.ccp =   cubecorner_perms(0, 7, 2, 5, 4, 3, 6, 1),
+		.ccp =   cubecorners_perm(0, 7, 2, 5, 4, 3, 6, 1),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 1, 10, 3, 4, 7, 6, 5, 8, 9, 2, 11,
                          0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0,  0)
     },{ // REDCCW
-		.ccp =   cubecorner_perms(0, 5, 2, 1, 4, 7, 6, 3),
+		.ccp =   cubecorners_perm(0, 5, 2, 1, 4, 7, 6, 3),
         .cco = cubecorner_orients(0, 2, 0, 1, 0, 1, 0, 2),
 		.ce  = cubeedges(0, 1, 5, 3, 4, 10, 6, 2, 8, 9, 7, 11,
                          0, 0, 1, 0, 0,  1, 0, 1, 0, 0, 1,  0)
     },{ // YELLOWCW
-		.ccp =   cubecorner_perms(1, 5, 2, 3, 0, 4, 6, 7),
+		.ccp =   cubecorners_perm(1, 5, 2, 3, 0, 4, 6, 7),
         .cco = cubecorner_orients(2, 1, 0, 0, 1, 2, 0, 0),
 		.ce  = cubeedges(5, 1, 2, 3, 0, 8, 6, 7, 4, 9, 10, 11,
                          1, 0, 0, 0, 1, 1, 0, 0, 1, 0,  0,  0)
     },{ // YELLOW180
-		.ccp =   cubecorner_perms(5, 4, 2, 3, 1, 0, 6, 7),
+		.ccp =   cubecorners_perm(5, 4, 2, 3, 1, 0, 6, 7),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(8, 1, 2, 3, 5, 4, 6, 7, 0, 9, 10, 11,
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0)
     },{ // YELLOWCCW
-		.ccp =   cubecorner_perms(4, 0, 2, 3, 5, 1, 6, 7),
+		.ccp =   cubecorners_perm(4, 0, 2, 3, 5, 1, 6, 7),
         .cco = cubecorner_orients(2, 1, 0, 0, 1, 2, 0, 0),
 		.ce  = cubeedges(4, 1, 2, 3, 8, 0, 6, 7, 5, 9, 10, 11,
                          1, 0, 0, 0, 1, 1, 0, 0, 1, 0,  0,  0)
     },{ // WHITECW
-		.ccp =   cubecorner_perms(0, 1, 6, 2, 4, 5, 7, 3),
+		.ccp =   cubecorners_perm(0, 1, 6, 2, 4, 5, 7, 3),
         .cco = cubecorner_orients(0, 0, 1, 2, 0, 0, 2, 1),
 		.ce  = cubeedges(0, 1, 2, 6, 4, 5, 11, 3, 8, 9, 10, 7,
                          0, 0, 0, 1, 0, 0,  1, 1, 0, 0,  0, 1)
     },{ // WHITE180
-		.ccp =   cubecorner_perms(0, 1, 7, 6, 4, 5, 3, 2),
+		.ccp =   cubecorners_perm(0, 1, 7, 6, 4, 5, 3, 2),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 1, 2, 11, 4, 5, 7, 6, 8, 9, 10, 3,
                          0, 0, 0,  0, 0, 0, 0, 0, 0, 0,  0, 0)
     },{ // WHITECCW
-		.ccp =   cubecorner_perms(0, 1, 3, 7, 4, 5, 2, 6),
+		.ccp =   cubecorners_perm(0, 1, 3, 7, 4, 5, 2, 6),
         .cco = cubecorner_orients(0, 0, 1, 2, 0, 0, 2, 1),
 		.ce  = cubeedges(0, 1, 2, 7, 4, 5, 3, 11, 8, 9, 10, 6,
                          0, 0, 0, 1, 0, 0, 1,  1, 0, 0,  0, 1)
     },{ // GREENCW
-		.ccp =   cubecorner_perms(0, 1, 2, 3, 5, 7, 4, 6),
+		.ccp =   cubecorners_perm(0, 1, 2, 3, 5, 7, 4, 6),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 1, 2, 3, 4, 5, 6, 7, 10, 8, 11, 9,
                          0, 0, 0, 0, 0, 0, 0, 0,  1, 1,  1, 1)
     },{ // GREEN180
-		.ccp =   cubecorner_perms(0, 1, 2, 3, 7, 6, 5, 4),
+		.ccp =   cubecorners_perm(0, 1, 2, 3, 7, 6, 5, 4),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 1, 2, 3, 4, 5, 6, 7, 11, 10, 9, 8,
                          0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0)
     },{ // GREENCCW
-		.ccp =   cubecorner_perms(0, 1, 2, 3, 6, 4, 7, 5),
+		.ccp =   cubecorners_perm(0, 1, 2, 3, 6, 4, 7, 5),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(0, 1, 2, 3, 4, 5, 6, 7, 9, 11, 8, 10,
                          0, 0, 0, 0, 0, 0, 0, 0, 1,  1, 1,  1)
     },{ // BLUECW
-		.ccp =   cubecorner_perms(2, 0, 3, 1, 4, 5, 6, 7),
+		.ccp =   cubecorners_perm(2, 0, 3, 1, 4, 5, 6, 7),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(1, 3, 0, 2, 4, 5, 6, 7, 8, 9, 10, 11,
                          1, 1, 1, 1, 0, 0, 0, 0, 0, 0,  0, 0)
     },{ // BLUE180
-		.ccp =   cubecorner_perms(3, 2, 1, 0, 4, 5, 6, 7),
+		.ccp =   cubecorners_perm(3, 2, 1, 0, 4, 5, 6, 7),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(3, 2, 1, 0, 4, 5, 6, 7, 8, 9, 10, 11,
                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  0,  0)
     },{ // BLUECCW
-		.ccp =   cubecorner_perms(1, 3, 0, 2, 4, 5, 6, 7),
+		.ccp =   cubecorners_perm(1, 3, 0, 2, 4, 5, 6, 7),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(2, 0, 3, 1, 4, 5, 6, 7, 8, 9, 10, 11,
                          1, 1, 1, 1, 0, 0, 0, 0, 0, 0,  0,  0)
@@ -2219,138 +2219,138 @@ const struct cube crotated[RCOUNT] = {
 const struct cube ctransformed[TCOUNT] = {
     csolved,
     {    // O B Y G W R, TD_C0_7_CW
-		.ccp =   cubecorner_perms(0, 4, 1, 5, 2, 6, 3, 7),
+		.ccp =   cubecorners_perm(0, 4, 1, 5, 2, 6, 3, 7),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(4, 0, 8, 5, 1, 9, 2, 10, 6, 3, 11, 7,
                          0, 0, 0, 0, 0, 0, 0,  0, 0, 0,  0, 0)
     },{     // B Y O W R G, TD_C0_7_CCW
-		.ccp =   cubecorner_perms(0, 2, 4, 6, 1, 3, 5, 7),
+		.ccp =   cubecorners_perm(0, 2, 4, 6, 1, 3, 5, 7),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(1, 4, 6, 9, 0, 3, 8, 11, 2, 5, 7, 10,
                          0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0,  0)
     },{     // B W R Y O G, TD_C1_6_CW
-		.ccp =   cubecorner_perms(3, 1, 7, 5, 2, 0, 6, 4),
+		.ccp =   cubecorners_perm(3, 1, 7, 5, 2, 0, 6, 4),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(2, 7, 5, 10, 3, 0, 11, 8, 1, 6, 4, 9,
                          0, 0, 0,  0, 0, 0,  0, 0, 0, 0, 0, 0)
     },{     // R G Y B W O, TD_C1_6_CCW
-        .ccp =   cubecorner_perms(5, 1, 4, 0, 7, 3, 6, 2),
+        .ccp =   cubecorners_perm(5, 1, 4, 0, 7, 3, 6, 2),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
         .ce  = cubeedges(5, 8, 0, 4, 10, 2, 9, 1, 7, 11, 3, 6,
                          0, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0)
     },{     // G W O Y R B, TD_C2_5_CW
-		.ccp =   cubecorner_perms(6, 4, 2, 0, 7, 5, 3, 1),
+		.ccp =   cubecorners_perm(6, 4, 2, 0, 7, 5, 3, 1),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(9, 6, 4, 1, 11, 8, 3, 0, 10, 7, 5, 2,
                          0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0)
     },{     // R B W G Y O, TD_C2_5_CCW
-		.ccp =   cubecorner_perms(3, 7, 2, 6, 1, 5, 0, 4),
+		.ccp =   cubecorners_perm(3, 7, 2, 6, 1, 5, 0, 4),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(7, 3, 11, 6, 2, 10, 1, 9, 5, 0, 8, 4,
                          0, 0,  0, 0, 0,  0, 0, 0, 0, 0, 0, 0)
     },{     // O G W B Y R, TD_C3_4_CW
-		.ccp =   cubecorner_perms(6, 2, 7, 3, 4, 0, 5, 1),
+		.ccp =   cubecorners_perm(6, 2, 7, 3, 4, 0, 5, 1),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(6, 11, 3, 7, 9, 1, 10, 2, 4, 8, 0, 5,
                          0,  0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0)
     },{     // G Y R W O B, TD_C3_4_CCW
-		.ccp =   cubecorner_perms(5, 7, 1, 3, 4, 6, 0, 2),
+		.ccp =   cubecorners_perm(5, 7, 1, 3, 4, 6, 0, 2),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(10, 5, 7, 2, 8, 11, 0, 3, 9, 4, 6, 1,
                           0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0)
     },{     // O W B Y G R, TD_BG_CW
-		.ccp =   cubecorner_perms(2, 0, 3, 1, 6, 4, 7, 5),
+		.ccp =   cubecorners_perm(2, 0, 3, 1, 6, 4, 7, 5),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(1, 3, 0, 2, 6, 4, 7, 5, 9, 11, 8, 10,
                          1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1,  1)
     },{     // W R B O G Y, TD_BG_180
-		.ccp =   cubecorner_perms(3, 2, 1, 0, 7, 6, 5, 4),
+		.ccp =   cubecorners_perm(3, 2, 1, 0, 7, 6, 5, 4),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8,
                          0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0)
     },{     // R Y B W G O, TD_BG_CCW
-		.ccp =   cubecorner_perms(1, 3, 0, 2, 5, 7, 4, 6),
+		.ccp =   cubecorners_perm(1, 3, 0, 2, 5, 7, 4, 6),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(2, 0, 3, 1, 5, 7, 4, 6, 10, 8, 11, 9,
                          1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1)
     },{     // Y B R G O W, TD_YW_CW
-		.ccp =   cubecorner_perms(1, 5, 3, 7, 0, 4, 2, 6),
+		.ccp =   cubecorners_perm(1, 5, 3, 7, 0, 4, 2, 6),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(5, 2, 10, 7, 0, 8, 3, 11, 4, 1, 9, 6,
                          1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1, 1)
     },{     // Y R G O B W, TD_YW_180
-		.ccp =   cubecorner_perms(5, 4, 7, 6, 1, 0, 3, 2),
+		.ccp =   cubecorners_perm(5, 4, 7, 6, 1, 0, 3, 2),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(8, 10, 9, 11, 5, 4, 7, 6, 0, 2, 1, 3,
                          0,  0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0)
     },{     // Y G O B R W, TD_YW_CCW
-		.ccp =   cubecorner_perms(4, 0, 6, 2, 5, 1, 7, 3),
+		.ccp =   cubecorners_perm(4, 0, 6, 2, 5, 1, 7, 3),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(4, 9, 1, 6, 8, 0, 11, 3, 5, 10, 2, 7,
                          1, 1, 1, 1, 1, 1,  1, 1, 1,  1, 1, 1)
     },{     // B O W R Y G, TD_OR_CW
-		.ccp =   cubecorner_perms(2, 3, 6, 7, 0, 1, 4, 5),
+		.ccp =   cubecorners_perm(2, 3, 6, 7, 0, 1, 4, 5),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(3, 6, 7, 11, 1, 2, 9, 10, 0, 4, 5, 8,
                          1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1)
     },{     // W O G R B Y, TD_OR_180
-		.ccp =   cubecorner_perms(6, 7, 4, 5, 2, 3, 0, 1),
+		.ccp =   cubecorners_perm(6, 7, 4, 5, 2, 3, 0, 1),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(11, 9, 10, 8, 6, 7, 4, 5, 3, 1, 2, 0,
                           0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     },{     // G O Y R W B, TD_OR_CCW
-		.ccp =   cubecorner_perms(4, 5, 0, 1, 6, 7, 2, 3),
+		.ccp =   cubecorners_perm(4, 5, 0, 1, 6, 7, 2, 3),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(8, 4, 5, 0, 9, 10, 1, 2, 11, 6, 7, 3,
                          1, 1, 1, 1, 1,  1, 1, 1,  1, 1, 1, 1)
     },{     // B R Y O W G, TD_E0_11
-		.ccp =   cubecorner_perms(1, 0, 5, 4, 3, 2, 7, 6),
+		.ccp =   cubecorners_perm(1, 0, 5, 4, 3, 2, 7, 6),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(0, 5, 4, 8, 2, 1, 10, 9, 3, 7, 6, 11,
                          1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1)
     },{     // W B O G R Y, TD_E1_10
-		.ccp =   cubecorner_perms(2, 6, 0, 4, 3, 7, 1, 5),
+		.ccp =   cubecorners_perm(2, 6, 0, 4, 3, 7, 1, 5),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(6, 1, 9, 4, 3, 11, 0, 8, 7, 2, 10, 5,
                          1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1)
     },{     // W G R B O Y, TD_E2_9
-		.ccp =   cubecorner_perms(7, 3, 5, 1, 6, 2, 4, 0),
+		.ccp =   cubecorners_perm(7, 3, 5, 1, 6, 2, 4, 0),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(7, 10, 2, 5, 11, 3, 8, 0, 6, 9, 1, 4,
                          1,  1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1)
     },{     // G R W O Y B, TD_E3_8
-		.ccp =   cubecorner_perms(7, 6, 3, 2, 5, 4, 1, 0),
+		.ccp =   cubecorners_perm(7, 6, 3, 2, 5, 4, 1, 0),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(11, 7, 6, 3, 10, 9, 2, 1, 8, 5, 4, 0,
                           1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1)
     },{     // O Y G W B R, TD_E4_7
-		.ccp =   cubecorner_perms(4, 6, 5, 7, 0, 2, 1, 3),
+		.ccp =   cubecorners_perm(4, 6, 5, 7, 0, 2, 1, 3),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(9, 8, 11, 10, 4, 6, 5, 7, 1, 0, 3, 2,
                          1, 1,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
     },{     // R W G Y B O, TD_E5_6
-		.ccp =   cubecorner_perms(7, 5, 6, 4, 3, 1, 2, 0),
+		.ccp =   cubecorners_perm(7, 5, 6, 4, 3, 1, 2, 0),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(10, 11, 8, 9, 7, 5, 6, 4, 2, 3, 0, 1,
                           1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
 	}
 };
 
-static cubecorner_perms cubecornerPermsTransform1(cubecorner_perms ccp, int idx)
+static cubecorners_perm cubecornerPermsTransform1(cubecorners_perm ccp, int idx)
 {
-    cubecorner_perms ccp1 = cubecorner_perms::compose(ctransformed[idx].ccp, ccp);
-	return cubecorner_perms::compose(ccp1,
+    cubecorners_perm ccp1 = cubecorners_perm::compose(ctransformed[idx].ccp, ccp);
+	return cubecorners_perm::compose(ccp1,
             ctransformed[transformReverse(idx)].ccp);
 }
 
-cubecorner_perms cubecorner_perms::transform(unsigned transformDir) const
+cubecorners_perm cubecorners_perm::transform(unsigned transformDir) const
 {
-    cubecorner_perms cctr = ctransformed[transformDir].ccp;
-    cubecorner_perms ccrtr = ctransformed[transformReverse(transformDir)].ccp;
-    return cubecorner_perms::compose3(cctr, *this, ccrtr);
+    cubecorners_perm cctr = ctransformed[transformDir].ccp;
+    cubecorners_perm ccrtr = ctransformed[transformReverse(transformDir)].ccp;
+    return cubecorners_perm::compose3(cctr, *this, ccrtr);
 }
 
-cubecorner_orients cubecorner_orients::transform(cubecorner_perms ccp, unsigned transformDir) const
+cubecorner_orients cubecorner_orients::transform(cubecorners_perm ccp, unsigned transformDir) const
 {
     const cube &ctrans = ctransformed[transformDir];
     const cube &ctransRev = ctransformed[transformReverse(transformDir)];
@@ -2378,7 +2378,7 @@ cubeedges cubeedges::transform(int idx) const
         "pdep %[depItem], %[tmp1], %[tmp1]\n"
         "vpinsrq $1, %[tmp1], %%xmm0, %%xmm0\n"
 
-        // store cetrans perms in xmm1
+        // store cetrans perm in xmm1
         "pdep %[depItem], %[cetrans], %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
         "mov %[cetrans], %[tmp1]\n"
@@ -2399,7 +2399,7 @@ cubeedges cubeedges::transform(int idx) const
         // or xmm1 with ce orients
         "vpor %%xmm2, %%xmm1, %%xmm1\n"
 
-        // store cetransRev perms in xmm2
+        // store cetransRev perm in xmm2
         "pdep %[depItem], %[cetransRev], %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
         "mov %[cetransRev], %[tmp1]\n"
@@ -2481,12 +2481,12 @@ cubeedges cubeedges::transform(int idx) const
 cube cube::transform(unsigned transformDir) const
 {
     const cube &ctrans = ctransformed[transformDir];
-    cubecorner_perms ccp1 = cubecorner_perms::compose(ctrans.ccp, this->ccp);
+    cubecorners_perm ccp1 = cubecorners_perm::compose(ctrans.ccp, this->ccp);
     cubecorner_orients cco1 = cubecorner_orients::compose(ctrans.cco, this->ccp, this->cco);
     cubeedges ce1 = cubeedges::compose(ctrans.ce, this->ce);
 
     const cube &ctransRev = ctransformed[transformReverse(transformDir)];
-    cubecorner_perms ccp2 = cubecorner_perms::compose(ccp1, ctransRev.ccp);
+    cubecorners_perm ccp2 = cubecorners_perm::compose(ccp1, ctransRev.ccp);
     cubecorner_orients cco2 = cubecorner_orients::compose(cco1, ctransRev.ccp, ctransRev.cco);
     cubeedges ce2 = cubeedges::compose(ce1, ctransRev.ce);
 	return { .ccp = ccp2, .cco = cco2, .ce = ce2 };
@@ -2503,21 +2503,21 @@ struct CubecornerPermToRepr {
     std::vector<ReprCandidateTransform> transform;
 };
 
-static std::vector<cubecorner_perms> gReprPerms;
-static std::map<cubecorner_perms, CubecornerPermToRepr> gPermToRepr;
+static std::vector<cubecorners_perm> gReprPerms;
+static std::map<cubecorners_perm, CubecornerPermToRepr> gPermToRepr;
 
 static void permReprInit()
 {
     for(unsigned pidx = 0; pidx < 40320; ++pidx) {
-        cubecorner_perms perm = cubecorner_perms::fromPermIdx(pidx);
-        cubecorner_perms permRepr;
+        cubecorners_perm perm = cubecorners_perm::fromPermIdx(pidx);
+        cubecorners_perm permRepr;
         std::vector<ReprCandidateTransform> transform;
         for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-            cubecorner_perms permr = reversed ? perm.reverse() : perm;
+            cubecorners_perm permr = reversed ? perm.reverse() : perm;
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                cubecorner_perms permchk = symmetric ? permr.symmetric() : permr;
+                cubecorners_perm permchk = symmetric ? permr.symmetric() : permr;
                 for(unsigned short td = 0; td < TCOUNT; ++td) {
-                    cubecorner_perms cand = permchk.transform(td);
+                    cubecorners_perm cand = permchk.transform(td);
                     if( td+reversed+symmetric == 0 || cand < permRepr ) {
                         permRepr = cand;
                         transform.clear();
@@ -2530,7 +2530,7 @@ static void permReprInit()
                 }
             }
         }
-        std::map<cubecorner_perms, CubecornerPermToRepr>::const_iterator it = gPermToRepr.find(permRepr);
+        std::map<cubecorners_perm, CubecornerPermToRepr>::const_iterator it = gPermToRepr.find(permRepr);
         unsigned permReprIdx;
         if( it == gPermToRepr.end() ) {
             permReprIdx = gReprPerms.size();
@@ -2545,12 +2545,12 @@ static void permReprInit()
     std::cout << "repr size=" << gReprPerms.size() << std::endl;
 }
 
-static unsigned cubecornerPermRepresentativeIdx(cubecorner_perms ccp)
+static unsigned cubecornerPermRepresentativeIdx(cubecorners_perm ccp)
 {
     return gPermToRepr.at(ccp).reprIdx;
 }
 
-static cubecorner_perms cubecornerPermsRepresentative(cubecorner_perms ccp)
+static cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
 {
     unsigned permReprIdx = gPermToRepr.at(ccp).reprIdx;
     return gReprPerms[permReprIdx];
@@ -2563,11 +2563,11 @@ struct EdgeReprCandidateTransform {
     cubeedges ceTrans;
 };
 
-static cubecorner_orients cubecornerOrientsRepresentative(cubecorner_perms ccp, cubecorner_orients cco,
+static cubecorner_orients cubecornerOrientsRepresentative(cubecorners_perm ccp, cubecorner_orients cco,
          std::vector<EdgeReprCandidateTransform> &transform)
 {
     CubecornerPermToRepr permToRepr = gPermToRepr.at(ccp);
-    cubecorner_perms ccpsymm, ccprev, ccprevsymm;
+    cubecorners_perm ccpsymm, ccprev, ccprevsymm;
     cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
     bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
 	transform.clear();
@@ -2670,11 +2670,11 @@ static cubeedges cubeedgesRepresentative(cubeedges ce, const std::vector<EdgeRep
  *    transform                - output list to pass later to cubeedgesComposedRepresentative()
  */
 static cubecorner_orients cubecornerOrientsComposedRepresentative(
-        cubecorner_perms ccpComposed, cubecorner_orients ccoComposed,
+        cubecorners_perm ccpComposed, cubecorner_orients ccoComposed,
         cubeedges ce2, std::vector<EdgeReprCandidateTransform> &transform)
 {
     CubecornerPermToRepr permToRepr = gPermToRepr.at(ccpComposed);
-    cubecorner_perms ccpsymm, ccprev, ccprevsymm;
+    cubecorners_perm ccpsymm, ccprev, ccprevsymm;
     cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
     bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
 	transform.clear();
@@ -2780,7 +2780,7 @@ static cubeedges cubeedgesComposedRepresentative(cubeedges ce, const std::vector
 static cube cubeRepresentative(const cube &c) {
     std::vector<EdgeReprCandidateTransform> transform;
 
-    cubecorner_perms ccpRepr = cubecornerPermsRepresentative(c.ccp);
+    cubecorners_perm ccpRepr = cubecornerPermsRepresentative(c.ccp);
     cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(c.ccp,
             c.cco, transform);
     cubeedges ceRepr = cubeedgesRepresentative(c.ce, transform);
@@ -2870,33 +2870,33 @@ static void cubePrint(const cube &c)
 static bool isCubeSolvable(Responder &responder, const cube &c)
 {
     bool isSwapsOdd = false;
-    unsigned permsScanned = 0;
+    unsigned permScanned = 0;
     for(int i = 0; i < 8; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         int p = i;
         while( (p = c.ccp.getAt(p)) != i ) {
-            if( permsScanned & 1 << p ) {
+            if( permScanned & 1 << p ) {
                 responder.message("corner perm %d is twice", p);
                 return false;
             }
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
-    permsScanned = 0;
+    permScanned = 0;
     for(int i = 0; i < 12; ++i) {
-        if( permsScanned & 1 << i )
+        if( permScanned & 1 << i )
             continue;
-        permsScanned |= 1 << i;
+        permScanned |= 1 << i;
         int p = i;
         while( (p = c.ce.getPermAt(p)) != i ) {
-            if( permsScanned & 1 << p ) {
+            if( permScanned & 1 << p ) {
                 responder.message("edge perm %d is twice", p);
                 return false;
             }
-            permsScanned |= 1 << p;
+            permScanned |= 1 << p;
             isSwapsOdd = !isSwapsOdd;
         }
     }
@@ -3355,9 +3355,9 @@ CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(unsigned corien
 }
 
 class CubesReprAtDepth {
-    std::vector<std::pair<cubecorner_perms, CornerPermReprCubes>> m_cornerPermReprCubes;
+    std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>> m_cornerPermReprCubes;
 public:
-    typedef std::vector<std::pair<cubecorner_perms, CornerPermReprCubes>>::const_iterator ccpcubes_iter;
+    typedef std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>>::const_iterator ccpcubes_iter;
     CubesReprAtDepth();
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
     ~CubesReprAtDepth();
@@ -3383,7 +3383,7 @@ CubesReprAtDepth::~CubesReprAtDepth() {
 }
 
 bool CubesReprAtDepth::empty() const {
-    for(const std::pair<cubecorner_perms, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
+    for(const std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
         if( !reprCube.second.empty() )
             return false;
     return true;
@@ -3391,14 +3391,14 @@ bool CubesReprAtDepth::empty() const {
 
 size_t CubesReprAtDepth::size() const {
     size_t res = 0;
-    for(const std::pair<cubecorner_perms, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
+    for(const std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
         res += reprCube.second.size();
     return res;
 }
 
 void CubesReprAtDepth::initOccur()
 {
-    for(std::pair<cubecorner_perms, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
+    for(std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
         reprCube.second.initOccur();
 }
 
@@ -3670,14 +3670,14 @@ static void addCubesT(unsigned threadNo,
             ccpCubesIt != ccpReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
         const CornerPermReprCubes &cpermReprCubesC = ccpCubesIt->second;
-        cubecorner_perms ccp = ccpCubesIt->first;
+        cubecorners_perm ccp = ccpCubesIt->first;
         if( !cpermReprCubesC.empty() ) {
             unsigned long cubeCount = 0;
             for(int rd = 0; rd < RCOUNT; ++rd) {
                 for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-                    cubecorner_perms ccpNew = reversed ?
-                        cubecorner_perms::compose(crotated[rd].ccp, ccp) :
-                        cubecorner_perms::compose(ccp, crotated[rd].ccp);
+                    cubecorners_perm ccpNew = reversed ?
+                        cubecorners_perm::compose(crotated[rd].ccp, ccp) :
+                        cubecorners_perm::compose(ccp, crotated[rd].ccp);
                     unsigned cornerPermReprIdxNew = cubecornerPermRepresentativeIdx(ccpNew);
                     if( cornerPermReprIdxNew % THREAD_COUNT == threadNo ) {
                         const CornerPermReprCubes *ccpReprCubesNewP = depth == 1 ? NULL : &(*cubesReprByDepth)[depth-2].getAt(cornerPermReprIdxNew);
@@ -3808,7 +3808,7 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
             ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
         const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorner_perms ccp = ccpCubesIt->first;
+        cubecorners_perm ccp = ccpCubesIt->first;
         for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
                 ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
         {
@@ -3816,13 +3816,13 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
             cubecorner_orients cco = ccoCubes.getOrients();
 
             for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-                cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
+                cubecorners_perm ccprev = reversed ? ccp.reverse() : ccp;
                 cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
                 for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                    cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
+                    cubecorners_perm ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
                     cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                     for(unsigned td = 0; td < TCOUNT; ++td) {
-                        cubecorner_perms ccpT = ccprevsymm.transform(td);
+                        cubecorners_perm ccpT = ccprevsymm.transform(td);
                         cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
                         cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
                         unsigned reprCOrientIdx = ccoReprBG.getOrientIdx();
@@ -3942,7 +3942,7 @@ static bool containsCube(const CubesReprAtDepth &cubesRepr, const cube &c)
 }
 
 static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
-        unsigned depthMax, const cube &csearch, cubecorner_perms ccp,
+        unsigned depthMax, const cube &csearch, cubecorners_perm ccp,
         const CornerPermReprCubes &ccpReprCubes, std::string &moves,
         unsigned searchRev, unsigned searchTd)
 {
@@ -3952,11 +3952,11 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
     if( ccpReprCubes.empty() )
         return false;
     for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-        cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
+        cubecorners_perm ccprev = reversed ? ccp.reverse() : ccp;
         for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
             for(unsigned td = 0; td < TCOUNT; ++td) {
                 const cube cSearchT = (symmetric ? csearchSymm : csearch).transform(td);
-                cubecorner_perms ccpSearch = cubecorner_perms::compose(ccprev, cSearchT.ccp);
+                cubecorners_perm ccpSearch = cubecorners_perm::compose(ccprev, cSearchT.ccp);
                 unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(ccpSearch);
                 const CornerPermReprCubes &ccpReprSearchCubes =
                     cubesReprByDepth[depthMax].getAt(ccpReprSearchIdx);
@@ -4030,7 +4030,7 @@ static void searchMovesTa(unsigned threadNo,
 
 	while( searchProgress->inc(*responder, &ccpIt) ) {
         const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
-        cubecorner_perms ccp = ccpIt->first;
+        cubecorners_perm ccp = ccpIt->first;
         std::string moves;
         if( searchMovesForCcp(*cubesReprByDepth, depthMax, *csearch, ccp, ccpReprCubes, moves, 0, 0) ) {
             responder->solution(moves.c_str());
@@ -4049,14 +4049,14 @@ static void searchMovesTb(unsigned threadNo,
     const CubesReprAtDepth &ccReprCubesC = (*cubesReprByDepth)[depth];
 	while( searchProgress->inc(*responder, &cornerPerm2It) ) {
         const CornerPermReprCubes &ccpReprCubes2 = cornerPerm2It->second;
-        cubecorner_perms ccp2 = cornerPerm2It->first;
+        cubecorners_perm ccp2 = cornerPerm2It->first;
         if( ccpReprCubes2.empty() )
             continue;
         for(CubesReprAtDepth::ccpcubes_iter ccpCubes1It = ccReprCubesC.ccpCubesBegin();
                 ccpCubes1It != ccReprCubesC.ccpCubesEnd(); ++ccpCubes1It)
         {
             const CornerPermReprCubes &ccpCubes1 = ccpCubes1It->second;
-            cubecorner_perms ccp1 = ccpCubes1It->first;
+            cubecorners_perm ccp1 = ccpCubes1It->first;
             if( ccpCubes1.empty() )
                 continue;
             for(CornerPermReprCubes::ccocubes_iter ccoCubes1It = ccpCubes1.ccoCubesBegin();
@@ -4121,7 +4121,7 @@ static bool searchMovesInSpaceA(const CubesReprByDepth &cubesReprByDepthBG,
             ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
         const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorner_perms ccp = ccpCubesIt->first;
+        cubecorners_perm ccp = ccpCubesIt->first;
         if( searchMovesForCcp(cubesReprByDepthBG, depthMax, cSpace, ccp, ccpCubes, moves, searchRev, searchTd) )
             return true;
     }
@@ -4138,7 +4138,7 @@ static bool searchMovesInSpaceB(const CubesReprByDepth &cubesReprByDepthBG,
             ccpCubes1It != ccReprCubesC.ccpCubesEnd(); ++ccpCubes1It)
     {
         const CornerPermReprCubes &ccpCubes1 = ccpCubes1It->second;
-        cubecorner_perms ccp1 = ccpCubes1It->first;
+        cubecorners_perm ccp1 = ccpCubes1It->first;
         if( ccpCubes1.empty() )
             continue;
         for(CornerPermReprCubes::ccocubes_iter ccoCubes1It = ccpCubes1.ccoCubesBegin();
@@ -4339,7 +4339,7 @@ int QuickSearchProgress::getBestMoves(std::string &moves) const {
     return m_bestMoveCount;
 }
 
-static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCubes &ccpReprCubes,
+static bool searchMovesQuickForCcp(cubecorners_perm ccp, const CornerPermReprCubes &ccpReprCubes,
         const CubesReprByDepth &cubesReprByDepth, const SpaceReprCubes *bgSpaceCubes,
         const std::vector<std::pair<cube, std::string>> &csearchWithMovesAppend,
         unsigned depth, unsigned depth1Max, unsigned movesMax,
@@ -4357,11 +4357,11 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
         csearchTarr[1][2].emplace_back(crev.transform(2));
     }
     for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-        cubecorner_perms ccprev = reversed ? ccp.reverse() : ccp;
+        cubecorners_perm ccprev = reversed ? ccp.reverse() : ccp;
         for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-            cubecorner_perms ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
+            cubecorners_perm ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
             for(unsigned td = 0; td < TCOUNT; ++td) {
-                cubecorner_perms ccpT = ccprevsymm.transform(td);
+                cubecorners_perm ccpT = ccprevsymm.transform(td);
                 for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprCubes.ccoCubesBegin();
                         ccoCubesIt != ccpReprCubes.ccoCubesEnd(); ++ccoCubesIt)
                 {
@@ -4375,7 +4375,7 @@ static bool searchMovesQuickForCcp(cubecorner_perms ccp, const CornerPermReprCub
                         for(unsigned searchRev = 0; searchRev < TWOPHASE_SEARCHREV; ++searchRev) {
                             for(unsigned searchTd = 0; searchTd < 3; ++searchTd) {
                                 const cube &csearchT = csearchTarr[searchRev][searchTd][srchItem];
-                                cubecorner_perms ccpSearch = cubecorner_perms::compose(ccpT, csearchT.ccp);
+                                cubecorners_perm ccpSearch = cubecorners_perm::compose(ccpT, csearchT.ccp);
                                 cubecorner_orients ccoSearch = cubecorner_orients::compose(ccoT,
                                         csearchT.ccp, csearchT.cco);
                                 cubecorner_orients ccoSearchReprBG = ccoSearch.representativeBG(ccpSearch);
@@ -4448,7 +4448,7 @@ static void searchMovesQuickTa(unsigned threadNo,
 
     while( (movesMax = searchProgress->inc(*responder, &ccpIt)) >= 0 ) {
         const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
-        cubecorner_perms ccp = ccpIt->first;
+        cubecorners_perm ccp = ccpIt->first;
         if( !ccpReprCubes.empty() ) {
             std::vector<std::pair<cube, std::string>> cubesWithMoves;
             cubesWithMoves.emplace_back(std::make_pair(*csearch, std::string()));
@@ -4468,7 +4468,7 @@ static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubes
     int movesMax;
     while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
         const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
-        cubecorner_perms ccp2 = ccp2It->first;
+        cubecorners_perm ccp2 = ccp2It->first;
         if( ccp2ReprCubes.empty() )
             continue;
         std::vector<std::pair<cube, std::string>> cubesWithMoves;
@@ -4494,14 +4494,14 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
 
     while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
         const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
-        cubecorner_perms ccp2 = ccp2It->first;
+        cubecorners_perm ccp2 = ccp2It->first;
         if( ccp2ReprCubes.empty() )
             continue;
         for(CubesReprAtDepth::ccpcubes_iter ccp1It = ccReprCubesC.ccpCubesBegin();
                 ccp1It != ccReprCubesC.ccpCubesEnd(); ++ccp1It)
         {
             const CornerPermReprCubes &ccp1ReprCubes = ccp1It->second;
-            cubecorner_perms ccp1 = ccp1It->first;
+            cubecorners_perm ccp1 = ccp1It->first;
             if( ccp1ReprCubes.empty() )
                 continue;
             for(CornerPermReprCubes::ccocubes_iter cco1CubesIt = ccp1ReprCubes.ccoCubesBegin();
@@ -4516,15 +4516,15 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
                     std::vector<cube> cubesChecked;
                     std::vector<std::pair<cube, std::string>> cubesWithMoves;
                     for(unsigned reversed1 = 0; reversed1 < (USEREVERSE ? 2 : 1); ++reversed1) {
-                        cubecorner_perms ccp1rev = reversed1 ? ccp1.reverse() : ccp1;
+                        cubecorners_perm ccp1rev = reversed1 ? ccp1.reverse() : ccp1;
                         cubecorner_orients cco1rev = reversed1 ? cco1.reverse(ccp1) : cco1;
                         cubeedges ce1rev = reversed1 ? ce1.reverse() : ce1;
                         for(unsigned symmetric1 = 0; symmetric1 < 2; ++symmetric1) {
-                            cubecorner_perms ccp1revsymm = symmetric1 ? ccp1rev.symmetric() : ccp1rev;
+                            cubecorners_perm ccp1revsymm = symmetric1 ? ccp1rev.symmetric() : ccp1rev;
                             cubecorner_orients cco1revsymm = symmetric1 ? cco1rev.symmetric() : cco1rev;
                             cubeedges ce1revsymm = symmetric1 ? ce1rev.symmetric() : ce1rev;
                             for(unsigned td1 = 0; td1 < TCOUNT; ++td1) {
-                                cubecorner_perms ccp1T = ccp1revsymm.transform(td1);
+                                cubecorners_perm ccp1T = ccp1revsymm.transform(td1);
                                 cubecorner_orients cco1T = cco1revsymm.transform(ccp1revsymm, td1);
                                 cubeedges ce1T = ce1revsymm.transform(td1);
 
@@ -4534,7 +4534,7 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
                                     continue;
                                 cubesChecked.push_back(c1T);
 
-                                cubecorner_perms ccp1Search = cubecorner_perms::compose(ccp1T, csearch->ccp);
+                                cubecorners_perm ccp1Search = cubecorners_perm::compose(ccp1T, csearch->ccp);
                                 cubecorner_orients cco1Search = cubecorner_orients::compose(cco1T,
                                         csearch->ccp, csearch->cco);
                                 cubeedges ce1Search = cubeedges::compose(ce1T, csearch->ce);
@@ -4778,8 +4778,8 @@ static void printStats(const CubesReprByDepth &cubesReprByDepth, int depth)
             ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
         const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorner_perms ccp = ccpCubesIt->first;
-        cubecorner_perms ccpRepr = cubecornerPermsRepresentative(ccp);
+        cubecorners_perm ccp = ccpCubesIt->first;
+        cubecorners_perm ccpRepr = cubecornerPermsRepresentative(ccp);
         if( !(ccp == ccpRepr) ) {
             std::cout << "fatal: perm is not representative!" << std::endl;
         }
@@ -5069,7 +5069,7 @@ static cube generateCube()
     fclose(fp);
     unsigned long rnd = (unsigned long)rndarr[1] << 32 | rndarr[0];
     cube c;
-    c.ccp = cubecorner_perms::fromPermIdx(rnd % 40320);
+    c.ccp = cubecorners_perm::fromPermIdx(rnd % 40320);
     rnd /= 40320;
     c.cco = cubecorner_orients::fromOrientIdx(rnd % 2187);
     rnd /= 2187;
