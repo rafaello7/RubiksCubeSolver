@@ -4768,42 +4768,6 @@ static void searchMovesOptimal(const cube &csearch, Responder &responder)
     responder.message("not found");
 }
 
-static void printStats(const CubesReprByDepth &cubesReprByDepth, int depth)
-{
-    std::vector<EdgeReprCandidateTransform> otransform;
-
-    std::cout << "depth " << depth << std::endl;
-    const CubesReprAtDepth &ccReprCubesC = cubesReprByDepth[depth];
-    for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccReprCubesC.ccpCubesBegin();
-            ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
-    {
-        const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorners_perm ccp = ccpCubesIt->first;
-        cubecorners_perm ccpRepr = cubecornerPermsRepresentative(ccp);
-        if( !(ccp == ccpRepr) ) {
-            std::cout << "fatal: perm is not representative!" << std::endl;
-        }
-        for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
-                ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
-        {
-            const CornerOrientReprCubes &ccoCubes = *ccoCubesIt;
-            cubecorner_orients cco = ccoCubes.getOrients();
-            cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(ccp, cco, otransform);
-            if( !(cco == ccoRepr) ) {
-                std::cout << "fatal: orient is not representative!" << std::endl;
-            }
-            for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
-                    edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
-            {
-                const cubeedges ce = *edgeIt;
-                if( ce != cubeedgesRepresentative(ce, otransform) ) {
-                    std::cout << "fatal: edge is not representative!" << std::endl;
-                }
-            }
-        }
-    }
-}
-
 static void searchMoves(const cube &csearch, char mode, Responder &responder)
 {
     responder.message("%s", getSetup().c_str());
@@ -5151,6 +5115,47 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     }
 }
 
+static void printStats()
+{
+    std::vector<EdgeReprCandidateTransform> otransform;
+
+    for(unsigned depth = 0; depth <= DEPTH_MAX; ++depth) {
+        ConsoleResponder responder(2);
+        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, responder);
+        std::cout << "depth " << depth << std::endl;
+        const CubesReprAtDepth &ccReprCubesC = (*cubesReprByDepth)[depth];
+        for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccReprCubesC.ccpCubesBegin();
+                ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
+        {
+            const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
+            cubecorners_perm ccp = ccpCubesIt->first;
+            cubecorners_perm ccpRepr = cubecornerPermsRepresentative(ccp);
+            if( !(ccp == ccpRepr) ) {
+                std::cout << "fatal: perm is not representative!" << std::endl;
+            }
+            for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
+                    ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
+            {
+                const CornerOrientReprCubes &ccoCubes = *ccoCubesIt;
+                cubecorner_orients cco = ccoCubes.getOrients();
+                cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(ccp, cco, otransform);
+                if( !(cco == ccoRepr) ) {
+                    std::cout << "fatal: orient is not representative!" << std::endl;
+                }
+                for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
+                        edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
+                {
+                    const cubeedges ce = *edgeIt;
+                    if( ce != cubeedgesRepresentative(ce, otransform) ) {
+                        std::cout << "fatal: edge is not representative!" << std::endl;
+                    }
+                }
+            }
+        }
+    }
+    exit(0);
+}
+
 static void solveCube(const char *cubeStr, char mode)
 {
     ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
@@ -5249,6 +5254,7 @@ int main(int argc, char *argv[]) {
     }
     std::cout << getSetup() << std::endl;
     permReprInit();
+    //printStats();
     if( argc >= 4 ) {
         if(isdigit(argv[3][0]))
             cubeTester(atoi(argv[3]), argv[2][0]);
