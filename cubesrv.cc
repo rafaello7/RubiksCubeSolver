@@ -5118,6 +5118,7 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
 static void printStats()
 {
     std::vector<EdgeReprCandidateTransform> otransform;
+    unsigned maxSize = 0;
 
     for(unsigned depth = 0; depth <= DEPTH_MAX; ++depth) {
         ConsoleResponder responder(2);
@@ -5128,28 +5129,23 @@ static void printStats()
                 ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
         {
             const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-            cubecorners_perm ccp = ccpCubesIt->first;
-            cubecorners_perm ccpRepr = cubecornerPermsRepresentative(ccp);
-            if( !(ccp == ccpRepr) ) {
-                std::cout << "fatal: perm is not representative!" << std::endl;
-            }
+            //cubecorners_perm ccp = ccpCubesIt->first;
             for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
                     ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
             {
                 const CornerOrientReprCubes &ccoCubes = *ccoCubesIt;
-                cubecorner_orients cco = ccoCubes.getOrients();
-                cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(ccp, cco, otransform);
-                if( !(cco == ccoRepr) ) {
-                    std::cout << "fatal: orient is not representative!" << std::endl;
+                if( ccoCubes.size() > maxSize ) {
+                    maxSize = ccoCubes.size();
+                    std::cout << "max size: " << maxSize << std::endl;
                 }
+                /*
+                cubecorner_orients cco = ccoCubes.getOrients();
                 for(CornerOrientReprCubes::edges_iter edgeIt = ccoCubes.edgeBegin();
                         edgeIt != ccoCubes.edgeEnd(); ++edgeIt)
                 {
                     const cubeedges ce = *edgeIt;
-                    if( ce != cubeedgesRepresentative(ce, otransform) ) {
-                        std::cout << "fatal: edge is not representative!" << std::endl;
-                    }
                 }
+                */
             }
         }
     }
