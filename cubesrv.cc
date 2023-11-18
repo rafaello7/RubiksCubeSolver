@@ -3250,25 +3250,44 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
 {
     cubeedges cetrans = ctransformed[erct.transformedIdx].ce;
     cubeedges cetransRev = ctransformed[transformReverse(erct.transformedIdx)].ce;
-    for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
-            edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
-    {
-        cubeedges ce = *edgeIt;
-        cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
-        cubeedges ceSearchRepr;
-        if( erct.reversed ) {
-            if( edgeReverse )
-                ceSearchRepr = cubeedges::compose3(erct.ceTrans, ces, cetransRev);
-            else
-                ceSearchRepr = cubeedges::compose3revmid(erct.ceTrans, ces, cetransRev);
-        }else{
-            if( edgeReverse )
-                ceSearchRepr = cubeedges::compose3revmid(cetrans, ces, erct.ceTrans);
-            else
-                ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
+    if( ccoReprCubes.size() <= ccoReprSearchCubes.size() ) {
+        for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
+                edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
+        {
+            cubeedges ce = *edgeIt;
+            cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
+            cubeedges ceSearchRepr;
+            if( erct.reversed ) {
+                if( edgeReverse )
+                    ceSearchRepr = cubeedges::compose3(erct.ceTrans, ces, cetransRev);
+                else
+                    ceSearchRepr = cubeedges::compose3revmid(erct.ceTrans, ces, cetransRev);
+            }else{
+                if( edgeReverse )
+                    ceSearchRepr = cubeedges::compose3revmid(cetrans, ces, erct.ceTrans);
+                else
+                    ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
+            }
+            if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
+                return edgeReverse ? ce.reverse() : ce;
         }
-        if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
-            return edgeReverse ? ce.reverse() : ce;
+    }else{
+        cubeedges erctCeTransRev = erct.ceTrans.reverse();
+        for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprSearchCubes.edgeBegin();
+                edgeIt != ccoReprSearchCubes.edgeEnd(); ++edgeIt)
+        {
+            cubeedges ce = *edgeIt;
+            cubeedges ceSearch;
+            if( erct.reversed ) {
+                ceSearch = cubeedges::compose3(erctCeTransRev, ce, cetrans);
+            }else{
+                ceSearch = cubeedges::compose3(cetransRev, ce, erctCeTransRev);
+            }
+            cubeedges cesymmSearch = erct.symmetric ? ceSearch.symmetric() : ceSearch;
+            cubeedges cesymmrevSearch = edgeReverse == erct.reversed ? cesymmSearch : cesymmSearch.reverse();
+            if( ccoReprCubes.containsCubeEdges(cesymmrevSearch) )
+                return edgeReverse ? cesymmrevSearch.reverse() : cesymmrevSearch;
+        }
     }
     return cubeedges();
 }
