@@ -3260,12 +3260,13 @@ public:
 bool CornerOrientReprCubes::addCube(cubeedges ce)
 {
     unsigned item11val = ce.getItem11val();
-    unsigned lo = 0, hi = m_items.size();
+    unsigned lo = 0, itemsEnd = m_items.size();
     if( !m_item11idxs.empty() ) {
         lo = m_item11idxs[item11val];
         if( item11val+1 < m_item11idxs.size() )
-            hi = m_item11idxs[item11val+1];
+            itemsEnd = m_item11idxs[item11val+1];
     }
+    unsigned hi = itemsEnd;
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
 		if( m_items[mi] < ce )
@@ -3273,7 +3274,7 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
 		else
 			hi = mi;
 	}
-	if( lo < m_items.size() && m_items[lo] == ce )
+	if( lo < itemsEnd && m_items[lo] == ce )
 		return false;
 	if( lo == m_items.size() ) {
 		m_items.push_back(ce);
@@ -3298,13 +3299,14 @@ bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
         if( (m_orientOccur[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )
             return false;
     }
-	unsigned lo = 0, hi = m_items.size();
+	unsigned lo = 0, itemsEnd = m_items.size();
     if( !m_item11idxs.empty() ) {
         unsigned item11val = ce.getItem11val();
         lo = m_item11idxs[item11val];
         if( item11val+1 < m_item11idxs.size() )
-            hi = m_item11idxs[item11val+1];
+            itemsEnd = m_item11idxs[item11val+1];
     }
+    unsigned hi = itemsEnd;
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
 		if( m_items[mi] < ce )
@@ -3312,7 +3314,7 @@ bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
 		else
 			hi = mi;
 	}
-	return lo < m_items.size() && m_items[lo] == ce;
+	return lo < itemsEnd && m_items[lo] == ce;
 }
 
 cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
