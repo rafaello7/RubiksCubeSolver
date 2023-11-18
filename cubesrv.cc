@@ -1110,7 +1110,7 @@ public:
 	unsigned getOrientAt(unsigned idx) const { return edges >> (5*idx+4) & 1; }
     unsigned getItem11val() const {
         unsigned item11 = edges >> 55;
-        item11 -= item11 >> 2;
+        item11 -= item11 >> 2 & 4;
         return item11;
     }
 	bool operator==(const cubeedges &ce) const { return edges == ce.edges; }
