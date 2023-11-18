@@ -1108,6 +1108,11 @@ public:
     cubeedges transform(int idx) const;
 	unsigned getPermAt(unsigned idx) const { return edges >> 5 * idx & 0xf; }
 	unsigned getOrientAt(unsigned idx) const { return edges >> (5*idx+4) & 1; }
+    unsigned getItem11val() const {
+        unsigned item11 = edges >> 55;
+        item11 -= item11 >> 2;
+        return item11;
+    }
 	bool operator==(const cubeedges &ce) const { return edges == ce.edges; }
 	bool operator!=(const cubeedges &ce) const { return edges != ce.edges; }
 	bool operator<(const cubeedges &ce) const { return edges < ce.edges; }
@@ -3205,6 +3210,7 @@ static std::string getSetup() {
 class CornerOrientReprCubes {
 	std::vector<cubeedges> m_items;
     std::vector<unsigned> m_orientOccur;
+    std::vector<unsigned> m_item11idxs;
     cubecorner_orients m_orients;
     CornerOrientReprCubes(const CornerOrientReprCubes&) = delete;
     static cubeedges findSolutionEdgeMulti(
@@ -3227,7 +3233,10 @@ public:
     }
 
     typedef std::vector<cubeedges>::const_iterator edges_iter;
-    void initOccur() { m_orientOccur.resize(64); }
+    void initOccur() {
+        m_item11idxs.resize(24);
+        m_orientOccur.resize(64);
+    }
     cubecorner_orients getOrients() const { return m_orients; }
 	bool addCube(cubeedges);
 	bool containsCubeEdges(cubeedges) const;
@@ -3243,13 +3252,20 @@ public:
     void swap(CornerOrientReprCubes &other) {
         m_items.swap(other.m_items);
         m_orientOccur.swap(other.m_orientOccur);
+        std::swap(m_item11idxs, other.m_item11idxs);
         std::swap(m_orients, other.m_orients);
     }
 };
 
 bool CornerOrientReprCubes::addCube(cubeedges ce)
 {
-	unsigned lo = 0, hi = m_items.size();
+    unsigned item11val = ce.getItem11val();
+    unsigned lo = 0, hi = m_items.size();
+    if( !m_item11idxs.empty() ) {
+        lo = m_item11idxs[item11val];
+        if( item11val+1 < m_item11idxs.size() )
+            hi = m_item11idxs[item11val+1];
+    }
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
 		if( m_items[mi] < ce )
@@ -3270,7 +3286,9 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
         unsigned short orientIdx = ce.getOrientIdx();
         m_orientOccur[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
     }
-	return true;
+    for(unsigned i = item11val + 1; i < m_item11idxs.size(); ++i)
+        ++m_item11idxs[i];
+    return true;
 }
 
 bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
@@ -3281,6 +3299,12 @@ bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
             return false;
     }
 	unsigned lo = 0, hi = m_items.size();
+    if( !m_item11idxs.empty() ) {
+        unsigned item11val = ce.getItem11val();
+        lo = m_item11idxs[item11val];
+        if( item11val+1 < m_item11idxs.size() )
+            hi = m_item11idxs[item11val+1];
+    }
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
 		if( m_items[mi] < ce )
