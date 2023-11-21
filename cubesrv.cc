@@ -3404,7 +3404,6 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
 class CornerPermReprCubes {
     static const CornerOrientReprCubes m_coreprCubesEmpty;
     std::vector<CornerOrientReprCubes> m_coreprCubes;
-    std::vector<unsigned short> m_idxmap;
     bool m_initOccur;
 
 public:
@@ -3415,20 +3414,20 @@ public:
     unsigned size() const { return m_coreprCubes.size(); }
     size_t cubeCount() const;
     void initOccur();
-    const CornerOrientReprCubes &cornerOrientCubesAt(unsigned corientIdx) const {
-        unsigned lo = 0, hi = m_idxmap.size();
+    const CornerOrientReprCubes &cornerOrientCubesAt(cubecorner_orients cco) const {
+        unsigned lo = 0, hi = m_coreprCubes.size();
         while( lo < hi ) {
             unsigned mi = (lo+hi) / 2;
-            if( m_idxmap[mi] < corientIdx )
+            if( m_coreprCubes[mi].getOrients() < cco )
                 lo = mi + 1;
             else
                 hi = mi;
         }
-        if( lo < m_idxmap.size() && m_idxmap[lo] == corientIdx )
+        if( lo < m_coreprCubes.size() && m_coreprCubes[lo].getOrients() == cco )
             return m_coreprCubes[lo];
         return m_coreprCubesEmpty;
     }
-	CornerOrientReprCubes &cornerOrientCubesAdd(unsigned corientIdx);
+	CornerOrientReprCubes &cornerOrientCubesAdd(cubecorner_orients);
     ccocubes_iter ccoCubesBegin() const { return m_coreprCubes.begin(); }
     ccocubes_iter ccoCubesEnd() const { return m_coreprCubes.end(); }
 };
@@ -3457,28 +3456,24 @@ void CornerPermReprCubes::initOccur() {
     m_initOccur = true;
 }
 
-CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(unsigned corientIdx) {
-    unsigned lo = 0, hi = m_idxmap.size();
+CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orients cco) {
+    unsigned lo = 0, hi = m_coreprCubes.size();
     while( lo < hi ) {
         unsigned mi = (lo+hi) / 2;
-        if( m_idxmap[mi] < corientIdx )
+        if( m_coreprCubes[mi].getOrients() < cco )
             lo = mi + 1;
         else
             hi = mi;
     }
-    if( lo == m_idxmap.size() || m_idxmap[lo] > corientIdx ) {
-        cubecorner_orients cco = cubecorner_orients::fromOrientIdx(corientIdx);
+    if( lo == m_coreprCubes.size() || cco < m_coreprCubes[lo].getOrients() ) {
+        hi = m_coreprCubes.size();
         m_coreprCubes.emplace_back(cco);
         if( m_initOccur )
             m_coreprCubes.back().initOccur();
-        hi = m_idxmap.size();
         while( hi > lo ) {
             m_coreprCubes[hi].swap(m_coreprCubes[hi-1]);
             --hi;
         }
-        m_idxmap.resize(m_idxmap.size()+1);
-        std::copy_backward(m_idxmap.begin()+lo, m_idxmap.end()-1, m_idxmap.end());
-        m_idxmap[lo] = corientIdx;
     }
     return m_coreprCubes[lo];
 }
@@ -3632,11 +3627,10 @@ static std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &
     std::vector<int>::iterator insertPos = rotateDirs.end();
     cube crepr = cubeRepresentative(c);
     unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.ccp);
-    unsigned corientIdx = crepr.cco.getOrientIdx();
 	unsigned depth = 0;
 	while( true ) {
         const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
-        const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(corientIdx);
+        const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(crepr.cco);
 		if( ccoReprCubes.containsCubeEdges(crepr.ce) )
 			break;
 		++depth;
@@ -3654,17 +3648,15 @@ static std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &
 			cc1 = cube::compose(cc, crotated[cm]);
             cube cc1repr = cubeRepresentative(cc1);
             ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            corientIdx = cc1repr.cco.getOrientIdx();
             const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
-            const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(corientIdx);
+            const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubes.containsCubeEdges(cc1repr.ce) )
                 break;
 			cc1 = cube::compose(ccRev, crotated[cm]);
             cc1repr = cubeRepresentative(cc1);
             ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            corientIdx = cc1repr.cco.getOrientIdx();
             const CornerPermReprCubes &ccpReprCubesRev = cubesByDepth[depth].getAt(ccpReprIdx);
-            const CornerOrientReprCubes &ccoReprCubesRev = ccpReprCubesRev.cornerOrientCubesAt(corientIdx);
+            const CornerOrientReprCubes &ccoReprCubesRev = ccpReprCubesRev.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubesRev.containsCubeEdges(cc1repr.ce) ) {
                 movesRev = !movesRev;
                 break;
@@ -3833,10 +3825,9 @@ static void addCubesT(unsigned threadNo,
                                 cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
                                 cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
                             cubecorner_orients ccoReprNew = cubecornerOrientsRepresentative(ccpNew, ccoNew, otransformNew);
-                            unsigned corientIdxNew = ccoReprNew.getOrientIdx();
                             const CornerOrientReprCubes *corientReprCubesNewP = ccpReprCubesNewP == NULL ? NULL :
-                                &ccpReprCubesNewP->cornerOrientCubesAt(corientIdxNew);
-                            const CornerOrientReprCubes &corientReprCubesNewC = ccpReprCubesNewC.cornerOrientCubesAt(corientIdxNew);
+                                &ccpReprCubesNewP->cornerOrientCubesAt(ccoReprNew);
+                            const CornerOrientReprCubes &corientReprCubesNewC = ccpReprCubesNewC.cornerOrientCubesAt(ccoReprNew);
                             std::vector<cubeedges> ceNewArr;
                             for(CornerOrientReprCubes::edges_iter edgeIt = corientReprCubesC.edgeBegin();
                                     edgeIt != corientReprCubesC.edgeEnd(); ++edgeIt)
@@ -3866,7 +3857,7 @@ static void addCubesT(unsigned threadNo,
                             }
                             if( !ceNewArr.empty() ) {
                                 CornerPermReprCubes &ccpReprCubesNewN = (*cubesReprByDepth)[depth].add(cornerPermReprIdxNew);
-                                CornerOrientReprCubes &corientReprCubesNewN = ccpReprCubesNewN.cornerOrientCubesAdd(corientIdxNew);
+                                CornerOrientReprCubes &corientReprCubesNewN = ccpReprCubesNewN.cornerOrientCubesAdd(ccoReprNew);
                                 for(cubeedges cenewRepr : ceNewArr) {
                                     if( corientReprCubesNewN.addCube(cenewRepr) )
                                         ++cubeCount;
@@ -3899,8 +3890,7 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
         std::vector<EdgeReprCandidateTransform> otransform;
         cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(csolved.ccp,
                 csolved.cco, otransform);
-        unsigned ccoIdx = ccoRepr.getOrientIdx();
-        CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoIdx);
+        CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoRepr);
         cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
         ccoCubes.addCube(ceRepr);
         cubesReprByDepth.incAvailCount();
@@ -4063,9 +4053,8 @@ static bool containsCube(const CubesReprAtDepth &cubesRepr, const cube &c)
     const CornerPermReprCubes &ccpReprSearchCubes = cubesRepr.getAt(ccpReprSearchIdx);
     cubecorner_orients ccoSearchRepr = cubecornerOrientsRepresentative(c.ccp,
             c.cco, otransform);
-    unsigned corientIdxSearch = ccoSearchRepr.getOrientIdx();
     const CornerOrientReprCubes &ccoReprSearchCubes =
-        ccpReprSearchCubes.cornerOrientCubesAt(corientIdxSearch);
+        ccpReprSearchCubes.cornerOrientCubesAt(ccoSearchRepr);
     cubeedges ceSearchRepr = cubeedgesRepresentative(c.ce, otransform);
     return ccoReprSearchCubes.containsCubeEdges(ceSearchRepr);
 }
@@ -4132,9 +4121,8 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
                         cubecorner_orients ccoSearch = cubecorner_orients::compose(ccorev, cSearchT.ccp, cSearchT.cco);
                         cubecorner_orients ccoSearchRepr = cubecornerOrientsComposedRepresentative(
                                 ccpSearch, ccoSearch, cSearchT.ce, otransform);
-                        unsigned corientIdxSearch = ccoSearchRepr.getOrientIdx();
                         const CornerOrientReprCubes &ccoReprSearchCubes =
-                            ccpReprSearchCubes.cornerOrientCubesAt(corientIdxSearch);
+                            ccpReprSearchCubes.cornerOrientCubesAt(ccoSearchRepr);
                         if( ccoReprSearchCubes.empty() )
                             continue;
                         cubeedges cerev = CornerOrientReprCubes::findSolutionEdge(
@@ -4157,9 +4145,8 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
                         cubecorner_orients ccorev = cubecornerOrientsForComposedRepresentative(
                                 ccpSearch, ccoSearchRepr, cSearchT, ccprev, otransform);
                         cubecorner_orients cco = reversed ? ccorev.reverse(ccprev) : ccorev;
-                        unsigned corientIdx = cco.getOrientIdx();
                         const CornerOrientReprCubes &ccoReprCubes =
-                            ccpReprCubes.cornerOrientCubesAt(corientIdx);
+                            ccpReprCubes.cornerOrientCubesAt(cco);
                         if( ccoReprCubes.empty() )
                             continue;
                         cubeedges cerev = CornerOrientReprCubes::findSolutionEdge(
