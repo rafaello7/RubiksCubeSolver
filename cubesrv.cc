@@ -2504,15 +2504,16 @@ struct ReprCandidateTransform {
 };
 
 struct CubecornerPermToRepr {
-    unsigned reprIdx;       // index in gReprPerms
+    int reprIdx = -1;       // index in gReprPerms
     std::vector<ReprCandidateTransform> transform;
 };
 
 static std::vector<cubecorners_perm> gReprPerms;
-static std::map<cubecorners_perm, CubecornerPermToRepr> gPermToRepr;
+static std::vector<CubecornerPermToRepr> gPermToRepr(40320);
 
 static void permReprInit()
 {
+    gReprPerms.reserve(USEREVERSE ? 654 : 984);
     for(unsigned pidx = 0; pidx < 40320; ++pidx) {
         cubecorners_perm perm = cubecorners_perm::fromPermIdx(pidx);
         cubecorners_perm permRepr;
@@ -2535,29 +2536,26 @@ static void permReprInit()
                 }
             }
         }
-        std::map<cubecorners_perm, CubecornerPermToRepr>::const_iterator it = gPermToRepr.find(permRepr);
-        unsigned permReprIdx;
-        if( it == gPermToRepr.end() ) {
-            permReprIdx = gReprPerms.size();
+        CubecornerPermToRepr &permToReprRepr = gPermToRepr[permRepr.getPermIdx()];
+        if( permToReprRepr.reprIdx < 0 ) {
+            permToReprRepr.reprIdx = gReprPerms.size();
             gReprPerms.push_back(permRepr);
-            CubecornerPermToRepr permToRepr = { .reprIdx = permReprIdx };
-            gPermToRepr[permRepr] = permToRepr;
-        }else
-            permReprIdx = it->second.reprIdx;
-        CubecornerPermToRepr permToRepr = { .reprIdx = permReprIdx, .transform = transform };
-        gPermToRepr[perm] = permToRepr;
+        }
+        CubecornerPermToRepr &permToRepr = gPermToRepr[perm.getPermIdx()];
+        permToRepr.reprIdx = permToReprRepr.reprIdx;
+        permToRepr.transform.swap(transform);
     }
     std::cout << "repr size=" << gReprPerms.size() << std::endl;
 }
 
 static unsigned cubecornerPermRepresentativeIdx(cubecorners_perm ccp)
 {
-    return gPermToRepr.at(ccp).reprIdx;
+    return gPermToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
 static cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
 {
-    unsigned permReprIdx = gPermToRepr.at(ccp).reprIdx;
+    unsigned permReprIdx = gPermToRepr.at(ccp.getPermIdx()).reprIdx;
     return gReprPerms[permReprIdx];
 }
 
@@ -2571,7 +2569,7 @@ struct EdgeReprCandidateTransform {
 static cubecorner_orients cubecornerOrientsRepresentative(cubecorners_perm ccp, cubecorner_orients cco,
          std::vector<EdgeReprCandidateTransform> &transform)
 {
-    CubecornerPermToRepr permToRepr = gPermToRepr.at(ccp);
+    CubecornerPermToRepr permToRepr = gPermToRepr.at(ccp.getPermIdx());
     cubecorners_perm ccpsymm, ccprev, ccprevsymm;
     cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
     bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
@@ -2678,7 +2676,7 @@ static cubecorner_orients cubecornerOrientsComposedRepresentative(
         cubecorners_perm ccpComposed, cubecorner_orients ccoComposed,
         cubeedges ce2, std::vector<EdgeReprCandidateTransform> &transform)
 {
-    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccpComposed);
+    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccpComposed.getPermIdx());
     cubecorners_perm ccpsymm, ccprev, ccprevsymm;
     cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
     bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
@@ -2741,14 +2739,14 @@ static cubecorner_orients cubecornerOrientsComposedRepresentative(
 }
 
 static bool isSingleTransform(cubecorners_perm ccp) {
-    return gPermToRepr[ccp].transform.size() == 1;
+    return gPermToRepr[ccp.getPermIdx()].transform.size() == 1;
 }
 
 static cubecorner_orients cubecornerOrientsForComposedRepresentative(cubecorners_perm ccpSearch,
         cubecorner_orients ccoSearchRepr, const cube &cSearchT,
         cubecorners_perm ccprev, std::vector<EdgeReprCandidateTransform> &transform)
 {
-    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccpSearch);
+    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccpSearch.getPermIdx());
     cubecorners_perm ccpSearchRepr = gReprPerms[permToRepr.reprIdx];
     cube cSearchTrev = cSearchT.reverse();
     cubecorner_orients ccorev;
