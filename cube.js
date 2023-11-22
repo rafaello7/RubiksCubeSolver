@@ -1646,7 +1646,7 @@ async function searchMoves(c, qparammode) {
                 let line = msg.substring(0, lineEnd);
                 msg = msg.substring(lineEnd+1);
                 if( line.startsWith("setup: ") ) {
-                    dolog('err', `${line.substring(7)}\n`);
+                    dolog('err', `${new Date().toTimeString().substring(0, 5)} ${line.substring(7)}\n`);
                 }else if( line.startsWith("moves: ") ) {
                     dolog('movecount', `${line}\n`);
                 }else if( line.startsWith("solution: ") ) {
