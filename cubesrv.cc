@@ -3231,12 +3231,9 @@ public:
     }
 
     typedef std::vector<cubeedges>::const_iterator edges_iter;
-    void initOccur() {
-        m_item11idxs.resize(24);
-        m_orientOccur.resize(64);
-    }
     cubecorner_orients getOrients() const { return m_orients; }
 	bool addCube(cubeedges);
+    void initOccur();
 	bool containsCubeEdges(cubeedges) const;
     bool empty() const { return m_items.empty(); }
     size_t size() const { return m_items.size(); }
@@ -3250,21 +3247,14 @@ public:
     void swap(CornerOrientReprCubes &other) {
         m_items.swap(other.m_items);
         m_orientOccur.swap(other.m_orientOccur);
-        std::swap(m_item11idxs, other.m_item11idxs);
+        m_item11idxs.swap(other.m_item11idxs);
         std::swap(m_orients, other.m_orients);
     }
 };
 
 bool CornerOrientReprCubes::addCube(cubeedges ce)
 {
-    unsigned item11val = ce.getItem11val();
-    unsigned lo = 0, itemsEnd = m_items.size();
-    if( !m_item11idxs.empty() ) {
-        lo = m_item11idxs[item11val];
-        if( item11val+1 < m_item11idxs.size() )
-            itemsEnd = m_item11idxs[item11val+1];
-    }
-    unsigned hi = itemsEnd;
+    unsigned lo = 0, hi = m_items.size();
 	while( lo < hi ) {
 		unsigned mi = (lo+hi) / 2;
 		if( m_items[mi] < ce )
@@ -3272,7 +3262,7 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
 		else
 			hi = mi;
 	}
-	if( lo < itemsEnd && m_items[lo] == ce )
+	if( lo < m_items.size() && m_items[lo] == ce )
 		return false;
 	if( lo == m_items.size() ) {
 		m_items.push_back(ce);
@@ -3281,13 +3271,20 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
         std::copy_backward(m_items.begin()+lo, m_items.end()-1, m_items.end());
 		m_items[lo] = ce;
 	}
-    if( ! m_orientOccur.empty() ) {
+    return true;
+}
+
+void CornerOrientReprCubes::initOccur() {
+    m_orientOccur.resize(64);
+    m_item11idxs.resize(24);
+    for(unsigned i = 0; i < m_items.size(); ++i) {
+        cubeedges ce = m_items[i];
         unsigned short orientIdx = ce.getOrientIdx();
         m_orientOccur[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
+        unsigned item11val = ce.getItem11val();
+        if( item11val+1 < m_item11idxs.size() )
+            m_item11idxs[item11val+1] = i+1;
     }
-    for(unsigned i = item11val + 1; i < m_item11idxs.size(); ++i)
-        ++m_item11idxs[i];
-    return true;
 }
 
 bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
@@ -3402,7 +3399,6 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
 class CornerPermReprCubes {
     static const CornerOrientReprCubes m_coreprCubesEmpty;
     std::vector<CornerOrientReprCubes> m_coreprCubes;
-    bool m_initOccur;
 
 public:
     typedef std::vector<CornerOrientReprCubes>::const_iterator ccocubes_iter;
@@ -3433,7 +3429,6 @@ public:
 const CornerOrientReprCubes CornerPermReprCubes::m_coreprCubesEmpty = CornerOrientReprCubes(cubecorner_orients());
 
 CornerPermReprCubes::CornerPermReprCubes()
-    : m_initOccur(false)
 {
 }
 
@@ -3451,7 +3446,6 @@ size_t CornerPermReprCubes::cubeCount() const {
 void CornerPermReprCubes::initOccur() {
     for(unsigned i = 0; i < m_coreprCubes.size(); ++i)
         m_coreprCubes[i].initOccur();
-    m_initOccur = true;
 }
 
 CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orients cco) {
@@ -3466,8 +3460,6 @@ CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orie
     if( lo == m_coreprCubes.size() || cco < m_coreprCubes[lo].getOrients() ) {
         hi = m_coreprCubes.size();
         m_coreprCubes.emplace_back(cco);
-        if( m_initOccur )
-            m_coreprCubes.back().initOccur();
         while( hi > lo ) {
             m_coreprCubes[hi].swap(m_coreprCubes[hi-1]);
             --hi;
@@ -3483,10 +3475,10 @@ public:
     CubesReprAtDepth();
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
     ~CubesReprAtDepth();
-    bool empty() const;
+    unsigned size() const { return m_cornerPermReprCubes.size(); }
     size_t cubeCount() const;
-    void initOccur();
     CornerPermReprCubes &add(unsigned idx);
+    void initOccur(unsigned idx);
     const CornerPermReprCubes &getAt(unsigned idx) const {
         return m_cornerPermReprCubes[idx].second;
     }
@@ -3504,13 +3496,6 @@ CubesReprAtDepth::CubesReprAtDepth()
 CubesReprAtDepth::~CubesReprAtDepth() {
 }
 
-bool CubesReprAtDepth::empty() const {
-    for(const std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
-        if( !reprCube.second.empty() )
-            return false;
-    return true;
-}
-
 size_t CubesReprAtDepth::cubeCount() const {
     size_t res = 0;
     for(const std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
@@ -3518,10 +3503,9 @@ size_t CubesReprAtDepth::cubeCount() const {
     return res;
 }
 
-void CubesReprAtDepth::initOccur()
+void CubesReprAtDepth::initOccur(unsigned idx)
 {
-    for(std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
-        reprCube.second.initOccur();
+    m_cornerPermReprCubes[idx].second.initOccur();
 }
 
 CornerPermReprCubes &CubesReprAtDepth::add(unsigned idx) {
@@ -3872,6 +3856,12 @@ static void addCubesT(unsigned threadNo,
     addCubesProgress->threadFinished(*responder);
 }
 
+static void initOccurT(unsigned threadNo, CubesReprAtDepth *cubesReprAtDepth)
+{
+    for(unsigned i = threadNo; i < cubesReprAtDepth->size(); i += THREAD_COUNT)
+        cubesReprAtDepth->initOccur(i);
+}
+
 static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth,
         bool onlyInSpace, Responder &responder)
 {
@@ -3895,8 +3885,6 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
     }
     while( cubesReprByDepth.availCount() <= requestedDepth ) {
         unsigned depth = cubesReprByDepth.availCount();
-        if( depth >= 8 )
-            cubesReprByDepth[depth].initOccur();
         const CubesReprAtDepth &cubesArr = cubesReprByDepth[depth-1];
         AddCubesProgress addCubesProgress(
                 std::distance(cubesArr.ccpCubesBegin(), cubesArr.ccpCubesEnd()),
@@ -3906,6 +3894,10 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
         if( ProgressBase::isStopRequested() ) {
             responder.message("canceled");
             return true;
+        }
+        if( !onlyInSpace && depth >= 8 ) {
+            responder.progress("depth %d init occur", depth);
+            runInThreadPool(initOccurT, &cubesReprByDepth[depth]);
         }
         responder.message("depth %d %scubes=%lu", depth, onlyInSpace? "in-space " : "",
                     cubesReprByDepth[depth].cubeCount());
@@ -5259,6 +5251,7 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
         m_solution = msg;
         break;
     }
+    std::cout << std::endl;
 }
 
 static void printStats()
