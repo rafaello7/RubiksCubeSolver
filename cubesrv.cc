@@ -2987,7 +2987,7 @@ struct elemLoc {
 	int col;
 };
 
-static bool cubeRead(Responder &responder, const char *squareColors, cube &c)
+static bool cubeFromColorsOnSquares(Responder &responder, const char *squareColors, cube &c)
 {
 	int walls[6][3][3];
 	const char colorLetters[] = "YOBRGW";
@@ -4963,7 +4963,7 @@ static void processCubeReq(int fdReq, const char *reqParam)
         char mode = reqParam[0];
         if( reqParam[1] == '=' ) {
             cube c;
-            if( cubeRead(responder, reqParam+2, c) ) {
+            if( cubeFromColorsOnSquares(responder, reqParam+2, c) ) {
                 responder.message("thread count: %d", THREAD_COUNT);
                 if( c == csolved )
                     responder.message("already solved");
@@ -5272,40 +5272,7 @@ static void printStats()
     exit(0);
 }
 
-static void solveCube(const char *cubeStr, char mode)
-{
-    ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
-    cube c;
-    if( !cubeRead(responder, cubeStr, c) )
-        return;
-    cubePrint(c);
-    searchMoves(c, mode, responder);
-    if( mode != 'q' )
-        std::cout << std::endl;
-    std::cout << std::endl;
-    const char *s = responder.getSolution();
-    unsigned moveCount = 0;
-    while( s ) {
-        if( *s == ' ' )
-            ++s;
-        int rd = rotateNameToDir(s);
-        if( rd == RCOUNT ) {
-            std::cout << "fatal: unrecognized move " << s << std::endl;
-            return;
-        }
-        c = cube::compose(c, crotated[rd]);
-        std::cout << rotateDirName(rd) << " " << c.toParamText() << std::endl;
-        cubePrint(c);
-        s = strchr(s, ' ');
-        ++moveCount;
-    }
-    if( c != csolved ) {
-        std::cout << "fatal: bad solution!" << std::endl;
-        return;
-    }
-}
-
-static void cubeTester(unsigned cubeCount, char mode)
+static void solveCubes(const std::vector<cube> &cubes, char mode)
 {
     if( mode == 'O' ) {
         ConsoleResponder responder(2);
@@ -5313,8 +5280,8 @@ static void cubeTester(unsigned cubeCount, char mode)
         std::cout << std::endl;
     }
     std::map<std::string, std::pair<unsigned, unsigned>> moveCounters;
-    for(unsigned i = 0; i < cubeCount; ++i) {
-        cube c = generateCube();
+    for(unsigned i = 0; i < cubes.size(); ++i) {
+        cube c = cubes[i];
         std::cout << i << "  " << c.toParamText() << std::endl;
         std::cout << std::endl;
         cubePrint(c);
@@ -5352,9 +5319,117 @@ static void cubeTester(unsigned cubeCount, char mode)
     }
     std::cout << "---------------  -----  -------------" << std::endl;
         std::cout << "total " << std::setw(7) << durationTimeTot/1000.0 << " s" << std::setw(7) <<
-            cubeCount << "  " << std::setprecision(4) <<
-            durationTimeTot/1000.0/cubeCount << std::endl;
+            cubes.size() << "  " << std::setprecision(4) <<
+            durationTimeTot/1000.0/cubes.size() << std::endl;
     std::cout << std::endl;
+}
+
+static std::string mapColorsOnSqaresFromExt(const char *ext) {
+    // external format:
+    //     U                Yellow
+    //   L F R B   =   Blue   Red   Green Orange
+    //     D                 White
+    // sequence:
+    //    yellow   green    red      white    blue     orange
+    //  UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
+    const unsigned squaremap[] = {
+         2,  5,  8,  1,  4,  7,  0,  3,  6, // upper -> yellow
+        45, 46, 47, 48, 49, 50, 51, 52, 53, // back -> orange
+        36, 37, 38, 39, 40, 41, 42, 43, 44, // left -> blue
+        18, 19, 20, 21, 22, 23, 24, 25, 26, // front -> red
+         9, 10, 11, 12, 13, 14, 15, 16, 17, // right -> green
+        33, 30, 27, 34, 31, 28, 35, 32, 29  // down -> white
+    };
+    std::map<char, char> colormap = {
+        {'U', 'Y'}, {'R', 'G'}, {'F', 'R'},
+        {'D', 'W'}, {'L', 'B'}, {'B', 'O'}
+    };
+    std::string res;
+    for(unsigned i = 0; i < 54; ++i) {
+        res += colormap[ext[squaremap[i]]];
+    }
+    return res;
+}
+
+static bool cubeFromScrambleStr(Responder &responder, const char *scrambleStr, cube &c) {
+    const char rotateMapFromExtFmt[][3] = {
+        "B1", "B2", "B3", "F1", "F2", "F3", "U1", "U2", "U3",
+        "D1", "D2", "D3", "R1", "R2", "R3", "L1", "L2", "L3"
+    };
+    c = csolved;
+    unsigned i = 0;
+    while(scrambleStr[i] && scrambleStr[i+1]) {
+        if( isalnum(scrambleStr[i]) ) {
+            unsigned rd = 0;
+            while( rd < RCOUNT && (scrambleStr[i] != rotateMapFromExtFmt[rd][0] ||
+                        scrambleStr[i+1] != rotateMapFromExtFmt[rd][1]) )
+                ++rd;
+            if( rd == RCOUNT ) {
+                responder.message("Unkown move: %c%c", scrambleStr[i], scrambleStr[i+1]);
+                return false;
+            }
+            c = cube::compose(c, crotated[rd]);
+            i += 2;
+        }else
+            ++i;
+    }
+    return true;
+}
+
+static bool cubeFromString(Responder &responder, const char *cubeStr, cube &c) {
+    bool res = false;
+    unsigned len = strlen(cubeStr);
+    if( strspn(cubeStr, "YOBRGW") == 54 )
+        res = cubeFromColorsOnSquares(responder, cubeStr, c);
+    else if( strspn(cubeStr, "URFDLB") == 54 ) {
+        std::string fromExt = mapColorsOnSqaresFromExt(cubeStr);
+        res = cubeFromColorsOnSquares(responder, fromExt.c_str(), c);
+    }else if( strspn(cubeStr, "URFDLB123 \t\r\n") == len )
+        res = cubeFromScrambleStr(responder, cubeStr, c);
+    else
+        responder.message("cube string format not recognized: %s", cubeStr);
+    return res;
+}
+
+static void solveCubes(const char *fnameOrCubeStr, char mode)
+{
+    std::vector<cube> cubes;
+
+    int len = strlen(fnameOrCubeStr);
+    if( len > 4 && !strcmp(fnameOrCubeStr+len-4, ".txt") ) {
+        FILE *fp = fopen(fnameOrCubeStr, "r");
+        if( fp == NULL ) {
+            perror(fnameOrCubeStr);
+            return;
+        }
+        ConsoleResponder responder(2);
+        cube c;
+        char buf[2000];
+        while( fgets(buf, sizeof(buf), fp) ) {
+            if( !cubeFromString(responder, buf, c) ) {
+                fclose(fp);
+                return;
+            }
+            cubes.push_back(c);
+        }
+        fclose(fp);
+    }else{
+        ConsoleResponder responder(2);
+        cube c;
+        if( !cubeFromString(responder, fnameOrCubeStr, c) )
+            return;
+        cubes.push_back(c);
+    }
+    solveCubes(cubes, mode);
+}
+
+static void cubeTester(unsigned cubeCount, char mode)
+{
+    std::vector<cube> cubes;
+
+    for(unsigned i = 0; i < cubeCount; ++i)
+        cubes.push_back(generateCube());
+    solveCubes(cubes, mode);
 }
 
 int main(int argc, char *argv[]) {
@@ -5375,7 +5450,7 @@ int main(int argc, char *argv[]) {
         if(isdigit(argv[3][0]))
             cubeTester(atoi(argv[3]), argv[2][0]);
         else
-            solveCube(argv[3], argv[2][0]);
+            solveCubes(argv[3], argv[2][0]);
     }else
         runServer();
     return 0;
