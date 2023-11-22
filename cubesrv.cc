@@ -5251,7 +5251,6 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
         m_solution = msg;
         break;
     }
-    std::cout << std::endl;
 }
 
 static void printStats()
