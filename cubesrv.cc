@@ -3247,23 +3247,19 @@ public:
 
 bool CornerOrientReprCubes::addCube(cubeedges ce)
 {
-    unsigned lo = 0, hi = m_items.size();
-	while( lo < hi ) {
-		unsigned mi = (lo+hi) / 2;
-		if( m_items[mi] < ce )
-			lo = mi + 1;
-		else
-			hi = mi;
-	}
-	if( lo < m_items.size() && m_items[lo] == ce )
-		return false;
-	if( lo == m_items.size() ) {
-		m_items.push_back(ce);
-	}else{
-		m_items.resize(m_items.size()+1);
-        std::copy_backward(m_items.begin()+lo, m_items.end()-1, m_items.end());
-		m_items[lo] = ce;
-	}
+    std::vector<cubeedges>::iterator edgeIt = std::lower_bound(
+            m_items.begin(), m_items.end(), ce);
+    if( edgeIt != m_items.end() && *edgeIt == ce )
+        return false;
+    if( edgeIt == m_items.end() ) {
+        m_items.push_back(ce);
+    }else{
+        unsigned edgePos = std::distance(m_items.begin(), edgeIt);
+        m_items.resize(m_items.size()+1);
+        edgeIt = m_items.begin() + edgePos;
+        std::copy_backward(edgeIt, m_items.end()-1, m_items.end());
+        *edgeIt = ce;
+    }
     return true;
 }
 
@@ -3283,15 +3279,8 @@ bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
         if( (m_orientOccur[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )
             return false;
     }
-	unsigned lo = 0, hi = m_items.size();
-	while( lo < hi ) {
-		unsigned mi = (lo+hi) / 2;
-		if( m_items[mi] < ce )
-			lo = mi + 1;
-		else
-			hi = mi;
-	}
-	return lo < m_items.size() && m_items[lo] == ce;
+    edges_iter edgeIt = std::lower_bound(m_items.begin(), m_items.end(), ce);
+	return edgeIt != m_items.end() && *edgeIt == ce;
 }
 
 cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
@@ -3381,6 +3370,11 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
 class CornerPermReprCubes {
     static const CornerOrientReprCubes m_coreprCubesEmpty;
     std::vector<CornerOrientReprCubes> m_coreprCubes;
+    struct ItemLessCco {
+        bool operator()(const CornerOrientReprCubes &a, const cubecorner_orients &b) {
+            return a.getOrients() < b;
+        }
+    };
 
 public:
     typedef std::vector<CornerOrientReprCubes>::const_iterator ccocubes_iter;
@@ -3391,16 +3385,10 @@ public:
     size_t cubeCount() const;
     void initOccur();
     const CornerOrientReprCubes &cornerOrientCubesAt(cubecorner_orients cco) const {
-        unsigned lo = 0, hi = m_coreprCubes.size();
-        while( lo < hi ) {
-            unsigned mi = (lo+hi) / 2;
-            if( m_coreprCubes[mi].getOrients() < cco )
-                lo = mi + 1;
-            else
-                hi = mi;
-        }
-        if( lo < m_coreprCubes.size() && m_coreprCubes[lo].getOrients() == cco )
-            return m_coreprCubes[lo];
+        ccocubes_iter ccoIt = std::lower_bound(m_coreprCubes.begin(),
+                m_coreprCubes.end(), cco, ItemLessCco());
+        if( ccoIt != m_coreprCubes.end() && ccoIt->getOrients() == cco )
+            return *ccoIt;
         return m_coreprCubesEmpty;
     }
 	CornerOrientReprCubes &cornerOrientCubesAdd(cubecorner_orients);
@@ -3431,23 +3419,18 @@ void CornerPermReprCubes::initOccur() {
 }
 
 CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orients cco) {
-    unsigned lo = 0, hi = m_coreprCubes.size();
-    while( lo < hi ) {
-        unsigned mi = (lo+hi) / 2;
-        if( m_coreprCubes[mi].getOrients() < cco )
-            lo = mi + 1;
-        else
-            hi = mi;
-    }
-    if( lo == m_coreprCubes.size() || cco < m_coreprCubes[lo].getOrients() ) {
-        hi = m_coreprCubes.size();
+    std::vector<CornerOrientReprCubes>::iterator ccoIt = std::lower_bound(m_coreprCubes.begin(),
+            m_coreprCubes.end(), cco, ItemLessCco());
+    if( ccoIt == m_coreprCubes.end() || cco < ccoIt->getOrients() ) {
+        unsigned lo = std::distance(m_coreprCubes.begin(), ccoIt), hi = m_coreprCubes.size();
         m_coreprCubes.emplace_back(cco);
         while( hi > lo ) {
             m_coreprCubes[hi].swap(m_coreprCubes[hi-1]);
             --hi;
         }
+        ccoIt = m_coreprCubes.begin()+lo;
     }
-    return m_coreprCubes[lo];
+    return *ccoIt;
 }
 
 class CubesReprAtDepth {
@@ -3513,6 +3496,8 @@ public:
 };
 
 class SpaceReprCubesAtDepth {
+    // std::pair<edges of representative cube, index in m_cubeArr of cubes reachable at depth>
+    // the representative cube corners permutation is identity; 2^7 corner orientations
     std::vector<std::pair<cubeedges, unsigned>> m_itemsArr[2187];
     std::vector<std::vector<cube>> m_cubeArr[2187];
 public:
@@ -3527,44 +3512,34 @@ bool SpaceReprCubesAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const
 {
     std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
 
-    unsigned lo = 0, hi = items.size();
-    while( lo < hi ) {
-        unsigned mi = (lo+hi) / 2;
-        if( items[mi].first < ceRepr )
-            lo = mi + 1;
-        else
-            hi = mi;
-    }
-    bool res = lo == items.size() || items[lo].first != ceRepr;
+    std::vector<std::pair<cubeedges, unsigned>>::iterator reprIt = std::lower_bound(
+            items.begin(), items.end(), std::make_pair(ceRepr, 0u));
+    bool res = reprIt == items.end() || reprIt->first != ceRepr;
     if( res ) {
         unsigned idx = m_cubeArr[ccoReprIdx].size();
         m_cubeArr[ccoReprIdx].emplace_back();
-        if( lo == items.size() ) {
+        if( reprIt == items.end() ) {
             items.emplace_back(std::make_pair(ceRepr, idx));
+            reprIt = items.end()-1;
         }else{
+            unsigned reprPos = std::distance(items.begin(), reprIt);
             items.resize(items.size()+1);
-            std::copy_backward(items.begin()+lo, items.end()-1, items.end());
-            items[lo] = std::make_pair(ceRepr, idx);
+            reprIt = items.begin() + reprPos;
+            std::copy_backward(reprIt, items.end()-1, items.end());
+            *reprIt = std::make_pair(ceRepr, idx);
         }
     }
-    m_cubeArr[ccoReprIdx][items[lo].second].push_back(c);
+    m_cubeArr[ccoReprIdx][reprIt->second].push_back(c);
     return res;
 }
 
 const std::vector<cube> *SpaceReprCubesAtDepth::getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const
 {
     const std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
-
-	unsigned lo = 0, hi = items.size();
-	while( lo < hi ) {
-		unsigned mi = (lo+hi) / 2;
-		if( items[mi].first < ceRepr )
-			lo = mi + 1;
-		else
-			hi = mi;
-	}
-	return lo < items.size() && items[lo].first == ceRepr ?
-        &m_cubeArr[ccoReprIdx][items[lo].second] : NULL;
+    std::vector<std::pair<cubeedges, unsigned>>::const_iterator reprIt = std::lower_bound(
+            items.begin(), items.end(), std::make_pair(ceRepr, 0u));
+	return reprIt != items.end() && reprIt->first == ceRepr ?
+        &m_cubeArr[ccoReprIdx][reprIt->second] : NULL;
 }
 
 class SpaceReprCubes {
@@ -5447,10 +5422,10 @@ int main(int argc, char *argv[]) {
     permReprInit();
     //printStats();
     if( argc >= 4 ) {
-        if(isdigit(argv[3][0]))
-            cubeTester(atoi(argv[3]), argv[2][0]);
+        if(isdigit(argv[2][0]))
+            cubeTester(atoi(argv[2]), argv[3][0]);
         else
-            solveCubes(argv[3], argv[2][0]);
+            solveCubes(argv[2], argv[3][0]);
     }else
         runServer();
     return 0;
