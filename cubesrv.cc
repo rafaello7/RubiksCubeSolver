@@ -3226,7 +3226,7 @@ public:
 
     typedef std::vector<cubeedges>::const_iterator edges_iter;
     cubecorner_orients getOrients() const { return m_orients; }
-	bool addCube(cubeedges);
+    unsigned addCubes(const std::vector<cubeedges>&);
     void initOccur();
 	bool containsCubeEdges(cubeedges) const;
     bool empty() const { return m_items.empty(); }
@@ -3245,22 +3245,38 @@ public:
     }
 };
 
-bool CornerOrientReprCubes::addCube(cubeedges ce)
+unsigned CornerOrientReprCubes::addCubes(const std::vector<cubeedges> &cearr)
 {
-    std::vector<cubeedges>::iterator edgeIt = std::lower_bound(
-            m_items.begin(), m_items.end(), ce);
-    if( edgeIt != m_items.end() && *edgeIt == ce )
-        return false;
-    if( edgeIt == m_items.end() ) {
-        m_items.push_back(ce);
-    }else{
-        unsigned edgePos = std::distance(m_items.begin(), edgeIt);
-        m_items.resize(m_items.size()+1);
-        edgeIt = m_items.begin() + edgePos;
-        std::copy_backward(edgeIt, m_items.end()-1, m_items.end());
-        *edgeIt = ce;
+    if( cearr.empty() )
+        return 0;
+    std::vector<cubeedges> addedCubes;
+    addedCubes.reserve(cearr.size());
+    for(cubeedges ce : cearr) {
+        std::vector<cubeedges>::iterator edgeIt = std::lower_bound(
+                m_items.begin(), m_items.end(), ce);
+        if( edgeIt == m_items.end() || *edgeIt != ce ) {
+            addedCubes.push_back(ce);
+        }
     }
-    return true;
+    if( addedCubes.empty() )
+        return 0;
+    if( addedCubes.size() > 1 ) {
+        std::sort(addedCubes.begin(), addedCubes.end());
+        std::vector<cubeedges>::iterator uniqEnd = std::unique(addedCubes.begin(), addedCubes.end());
+        addedCubes.resize(std::distance(addedCubes.begin(), uniqEnd));
+    }
+    m_items.resize(m_items.size() + addedCubes.size());
+    std::vector<cubeedges>::reverse_iterator destIt = m_items.rbegin();
+    std::vector<cubeedges>::reverse_iterator srcIt = m_items.rbegin() + addedCubes.size();
+    std::vector<cubeedges>::reverse_iterator addedIt = addedCubes.rbegin();
+    while( addedIt != addedCubes.rend() ) {
+        if( *srcIt < *addedIt )
+            *destIt = *addedIt++;
+        else
+            *destIt = *srcIt++;
+        ++destIt;
+    }
+    return addedCubes.size();
 }
 
 void CornerOrientReprCubes::initOccur() {
@@ -3797,10 +3813,7 @@ static void addCubesT(unsigned threadNo,
                             if( !ceNewArr.empty() ) {
                                 CornerPermReprCubes &ccpReprCubesNewN = (*cubesReprByDepth)[depth].add(cornerPermReprIdxNew);
                                 CornerOrientReprCubes &corientReprCubesNewN = ccpReprCubesNewN.cornerOrientCubesAdd(ccoReprNew);
-                                for(cubeedges cenewRepr : ceNewArr) {
-                                    if( corientReprCubesNewN.addCube(cenewRepr) )
-                                        ++cubeCount;
-                                }
+                                cubeCount += corientReprCubesNewN.addCubes(ceNewArr);
                             }
                         }
                     }
@@ -3837,7 +3850,8 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
                 csolved.cco, otransform);
         CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoRepr);
         cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
-        ccoCubes.addCube(ceRepr);
+        std::vector<cubeedges> ceReprArr = { ceRepr };
+        ccoCubes.addCubes(ceReprArr);
         cubesReprByDepth.incAvailCount();
     }
     while( cubesReprByDepth.availCount() <= requestedDepth ) {
