@@ -3685,7 +3685,7 @@ void CornerOrientReprCubes::initOccur() {
         }
     }
     m_orientIters2.clear();
-    if( m_items.size() >= 256 ) {
+    if( m_items.size() >= 1024 ) {
         m_orientIters2.reserve(2049);
         curOrientIdx = 0;
         for(edges_iter edgeIt = m_items.begin(); edgeIt != m_items.end(); ++edgeIt) {
@@ -3733,77 +3733,86 @@ void CornerOrientReprCubes::getMappedEdgeOrientSearches(cubeedges cetrans,
         unsigned *mappedOrientSearches) const
 {
     const unsigned long PARITY = 0x6996966996696996;
-    unsigned mappedOrients012[8];
-    unsigned mappedOrients345[8];
-    unsigned mappedOrients678[8];
-    unsigned mappedOrients9AB[8];
+    unsigned mappedOrients0123[16];
+    unsigned mappedOrients4567[16];
+    unsigned mappedOrients89AB[16];
     unsigned cetransOrientIdx = cetrans.getOrientIdx();
     cubeedges cetransrev = cetrans.reverse();
     if( flip )
         cetransOrientIdx ^= 0x7ff;
 
     if( symmetric ) {
-        mappedOrients012[1] = 1 << cetransrev.getPermAt(8);
-        mappedOrients012[2] = 1 << cetransrev.getPermAt(9);
-        mappedOrients012[4] = 1 << cetransrev.getPermAt(10);
+        mappedOrients0123[1] = 1 << cetransrev.getPermAt(8);
+        mappedOrients0123[2] = 1 << cetransrev.getPermAt(9);
+        mappedOrients0123[4] = 1 << cetransrev.getPermAt(10);
+        mappedOrients0123[8] = 1 << cetransrev.getPermAt(11);
 
-        mappedOrients345[1] = 1 << cetransrev.getPermAt(11);
-
-        mappedOrients678[4] = 1 << cetransrev.getPermAt(0);
-
-        mappedOrients9AB[1] = 1 << cetransrev.getPermAt(1);
-        mappedOrients9AB[2] = 1 << cetransrev.getPermAt(2);
-        mappedOrients9AB[4] = 1 << cetransrev.getPermAt(3);
+        mappedOrients89AB[1] = 1 << cetransrev.getPermAt(0);
+        mappedOrients89AB[2] = 1 << cetransrev.getPermAt(1);
+        mappedOrients89AB[4] = 1 << cetransrev.getPermAt(2);
+        mappedOrients89AB[8] = 1 << cetransrev.getPermAt(3);
     }else{
-        mappedOrients012[1] = 1 << cetransrev.getPermAt(0);
-        mappedOrients012[2] = 1 << cetransrev.getPermAt(1);
-        mappedOrients012[4] = 1 << cetransrev.getPermAt(2);
+        mappedOrients0123[1] = 1 << cetransrev.getPermAt(0);
+        mappedOrients0123[2] = 1 << cetransrev.getPermAt(1);
+        mappedOrients0123[4] = 1 << cetransrev.getPermAt(2);
+        mappedOrients0123[8] = 1 << cetransrev.getPermAt(3);
 
-        mappedOrients345[1] = 1 << cetransrev.getPermAt(3);
-
-        mappedOrients678[4] = 1 << cetransrev.getPermAt(8);
-
-        mappedOrients9AB[1] = 1 << cetransrev.getPermAt(9);
-        mappedOrients9AB[2] = 1 << cetransrev.getPermAt(10);
-        mappedOrients9AB[4] = 1 << cetransrev.getPermAt(11);
+        mappedOrients89AB[1] = 1 << cetransrev.getPermAt(8);
+        mappedOrients89AB[2] = 1 << cetransrev.getPermAt(9);
+        mappedOrients89AB[4] = 1 << cetransrev.getPermAt(10);
+        mappedOrients89AB[8] = 1 << cetransrev.getPermAt(11);
     }
 
-    mappedOrients012[0] = 0;
-    mappedOrients012[3] = mappedOrients012[2] | mappedOrients012[1];
-    mappedOrients012[5] = mappedOrients012[4] | mappedOrients012[1];
-    mappedOrients012[6] = mappedOrients012[4] | mappedOrients012[2];
-    mappedOrients012[7] = mappedOrients012[4] | mappedOrients012[3];
+    mappedOrients0123[0] = 0;
+    mappedOrients0123[3] = mappedOrients0123[2] | mappedOrients0123[1];
+    mappedOrients0123[5] = mappedOrients0123[4] | mappedOrients0123[1];
+    mappedOrients0123[6] = mappedOrients0123[4] | mappedOrients0123[2];
+    mappedOrients0123[7] = mappedOrients0123[4] | mappedOrients0123[3];
+    mappedOrients0123[9] = mappedOrients0123[8] | mappedOrients0123[1];
+    mappedOrients0123[10] = mappedOrients0123[8] | mappedOrients0123[2];
+    mappedOrients0123[11] = mappedOrients0123[8] | mappedOrients0123[3];
+    mappedOrients0123[12] = mappedOrients0123[8] | mappedOrients0123[4];
+    mappedOrients0123[13] = mappedOrients0123[8] | mappedOrients0123[5];
+    mappedOrients0123[14] = mappedOrients0123[8] | mappedOrients0123[6];
+    mappedOrients0123[15] = mappedOrients0123[8] | mappedOrients0123[7];
 
-    mappedOrients345[0] = 0;
-    mappedOrients345[2] = 1 << cetransrev.getPermAt(4);
-    mappedOrients345[3] = mappedOrients345[2] | mappedOrients345[1];
-    mappedOrients345[4] = 1 << cetransrev.getPermAt(5);
-    mappedOrients345[5] = mappedOrients345[4] | mappedOrients345[1];
-    mappedOrients345[6] = mappedOrients345[4] | mappedOrients345[2];
-    mappedOrients345[7] = mappedOrients345[4] | mappedOrients345[3];
+    mappedOrients4567[0] = 0;
+    mappedOrients4567[1] = 1 << cetransrev.getPermAt(4);
+    mappedOrients4567[2] = 1 << cetransrev.getPermAt(5);
+    mappedOrients4567[3] = mappedOrients4567[2] | mappedOrients4567[1];
+    mappedOrients4567[4] = 1 << cetransrev.getPermAt(6);
+    mappedOrients4567[5] = mappedOrients4567[4] | mappedOrients4567[1];
+    mappedOrients4567[6] = mappedOrients4567[4] | mappedOrients4567[2];
+    mappedOrients4567[7] = mappedOrients4567[4] | mappedOrients4567[3];
+    mappedOrients4567[8] = 1 << cetransrev.getPermAt(7);
+    mappedOrients4567[9] = mappedOrients4567[8] | mappedOrients4567[1];
+    mappedOrients4567[10] = mappedOrients4567[8] | mappedOrients4567[2];
+    mappedOrients4567[11] = mappedOrients4567[8] | mappedOrients4567[3];
+    mappedOrients4567[12] = mappedOrients4567[8] | mappedOrients4567[4];
+    mappedOrients4567[13] = mappedOrients4567[8] | mappedOrients4567[5];
+    mappedOrients4567[14] = mappedOrients4567[8] | mappedOrients4567[6];
+    mappedOrients4567[15] = mappedOrients4567[8] | mappedOrients4567[7];
 
-    mappedOrients678[0] = 0;
-    mappedOrients678[1] = 1 << cetransrev.getPermAt(6);
-    mappedOrients678[2] = 1 << cetransrev.getPermAt(7);
-    mappedOrients678[3] = mappedOrients678[2] | mappedOrients678[1];
-    mappedOrients678[5] = mappedOrients678[4] | mappedOrients678[1];
-    mappedOrients678[6] = mappedOrients678[4] | mappedOrients678[2];
-    mappedOrients678[7] = mappedOrients678[4] | mappedOrients678[3];
-
-    mappedOrients9AB[0] = 0;
-    mappedOrients9AB[3] = mappedOrients9AB[2] | mappedOrients9AB[1];
-    mappedOrients9AB[5] = mappedOrients9AB[4] | mappedOrients9AB[1];
-    mappedOrients9AB[6] = mappedOrients9AB[4] | mappedOrients9AB[2];
-    mappedOrients9AB[7] = mappedOrients9AB[4] | mappedOrients9AB[3];
+    mappedOrients89AB[0] = 0;
+    mappedOrients89AB[3] = mappedOrients89AB[2] | mappedOrients89AB[1];
+    mappedOrients89AB[5] = mappedOrients89AB[4] | mappedOrients89AB[1];
+    mappedOrients89AB[6] = mappedOrients89AB[4] | mappedOrients89AB[2];
+    mappedOrients89AB[7] = mappedOrients89AB[4] | mappedOrients89AB[3];
+    mappedOrients89AB[9] = mappedOrients89AB[8] | mappedOrients89AB[1];
+    mappedOrients89AB[10] = mappedOrients89AB[8] | mappedOrients89AB[2];
+    mappedOrients89AB[11] = mappedOrients89AB[8] | mappedOrients89AB[3];
+    mappedOrients89AB[12] = mappedOrients89AB[8] | mappedOrients89AB[4];
+    mappedOrients89AB[13] = mappedOrients89AB[8] | mappedOrients89AB[5];
+    mappedOrients89AB[14] = mappedOrients89AB[8] | mappedOrients89AB[6];
+    mappedOrients89AB[15] = mappedOrients89AB[8] | mappedOrients89AB[7];
 
     for(eorients_iter eorientIt = m_orientIters.begin(); eorientIt != m_orientIters.end(); ++eorientIt)
     {
         unsigned orientIdx = eorientIt->first;
         unsigned orient11 = PARITY >> (orientIdx&0x1f ^ orientIdx>>5) & 1;
         unsigned orients = orientIdx | orient11 << 11;
-        unsigned mappedOrients = mappedOrients012[orients&7] |
-            mappedOrients345[orients>>3&7] | mappedOrients678[orients>>6&7] |
-                mappedOrients9AB[orients>>9];
+        unsigned mappedOrients = mappedOrients0123[orients&0xf] |
+            mappedOrients4567[orients>>4&0xf] | mappedOrients89AB[orients>>8&0xf];
         mappedOrients = (mappedOrients ^ cetransOrientIdx) & 0x7ff;
         *mappedOrientSearches = mappedOrients;
         ++mappedOrientSearches;
@@ -3940,13 +3949,12 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeSingle(
         bool edgeReverse)
 {
     //const unsigned long PARITY = 0x6996966996696996;
-    const unsigned MIN_SIZE = 256;
     unsigned mappedOrientsArr[2048];
 
     cubeedges cetrans = ctransformed[erct.transformedIdx].ce;
     cubeedges cetransRev = ctransformed[transformReverse(erct.transformedIdx)].ce;
     if( ccoReprCubes.size() <= ccoReprSearchCubes.size() ) {
-        if( ccoReprCubes.m_orientIters.size() >= MIN_SIZE && ccoReprSearchCubes.m_orientIters.size() >= MIN_SIZE &&
+        if( !ccoReprCubes.m_orientIters2.empty() && !ccoReprSearchCubes.m_orientIters2.empty() &&
                 !erct.reversed && !edgeReverse)
         {
             ccoReprCubes.getMappedEdgeOrientSearches(erct.ceTrans, erct.symmetric, cetrans.getOrientAt(0),
@@ -4010,7 +4018,7 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeSingle(
         }
     }else{
         cubeedges erctCeTransRev = erct.ceTrans.reverse();
-        if( ccoReprCubes.m_orientIters.size() >= MIN_SIZE && ccoReprSearchCubes.m_orientIters.size() >= MIN_SIZE &&
+        if( !ccoReprCubes.m_orientIters2.empty() && !ccoReprSearchCubes.m_orientIters2.empty() &&
                 !erct.reversed && !edgeReverse)
         {
             ccoReprSearchCubes.getMappedEdgeOrientHits(erct.ceTrans, erct.symmetric,
