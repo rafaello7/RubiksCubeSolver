@@ -371,6 +371,140 @@ static const char *transformName(unsigned td) {
     return "unknown";
 }
 
+static unsigned bitCount(unsigned long val) {
+    unsigned long bitcnt;
+#ifdef USE_ASM
+    asm("popcnt %[val], %[bitcnt]"
+        : [bitcnt]  "=rm"   (bitcnt)
+        : [val]     "r"     (val)
+    );
+#ifdef ASMCHECK
+    unsigned long bitcntasm = bitcnt;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    bitcnt = (val    >> 1 & 0x5555555555555555ul)  + (val &    0x5555555555555555ul);
+    bitcnt = (bitcnt >> 2 & 0x3333333333333333ul)  + (bitcnt & 0x3333333333333333ul);
+    bitcnt = (bitcnt >> 4 + bitcnt) & 0xf0f0f0f0f0f0f0ful;
+    bitcnt = (bitcnt >> 8)  + bitcnt;
+    bitcnt = (bitcnt >> 16) + bitcnt;
+    bitcnt = ((bitcnt >>32) + bitcnt) & 0x7f;
+#endif
+#ifdef ASMCHECK
+    if( bitcnt != bitcntasm ) {
+        flockfile(stdout);
+        std::cout << "bitCount mismatch!" << std::endl;
+        std::cout << "val = " << val << std::endl;
+        std::cout << "exp   = " << bitcnt << std::endl;
+        std::cout << "got   = " << bitcntasm << std::endl;
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return bitcnt;
+}
+
+static unsigned lowestBitNum(unsigned val) {
+    unsigned lowest;
+#ifdef USE_ASM
+    asm("bsf %[val], %[lowest]"
+        : [lowest]  "=rm"   (lowest)
+        : [val]     "r"     (val)
+    );
+#ifdef ASMCHECK
+    unsigned lowestasm = lowest;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    unsigned mask = val ^ val-1;
+    lowest = mask >> 12 & 0x10;
+    lowest += mask >> lowest+5 & 8;
+    lowest += mask >> lowest+2 & 4;
+    lowest += mask >> lowest+1 & 2;
+    lowest += mask >> lowest+1 & 1;
+#endif
+#ifdef ASMCHECK
+    if( lowest != lowestasm ) {
+        flockfile(stdout);
+        std::cout << "lowestBitNum mismatch!" << std::endl;
+        std::cout << "val = " << val << std::endl;
+        std::cout << "exp   = " << lowest << std::endl;
+        std::cout << "got   = " << lowestasm << std::endl;
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return lowest;
+}
+
+static unsigned lowestBitNum(unsigned long val) {
+    unsigned lowest;
+#ifdef USE_ASM
+    asm("bsf %[val], %q[lowest]"
+        : [lowest]  "=rm"   (lowest)
+        : [val]     "r"     (val)
+    );
+#ifdef ASMCHECK
+    unsigned lowestasm = lowest;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    unsigned long mask = val ^ val-1;
+    lowest =  mask >> 27 & 0x20;
+    lowest += mask >> lowest+12 & 0x10;
+    lowest += mask >> lowest+5 & 8;
+    lowest += mask >> lowest+2 & 4;
+    lowest += mask >> lowest+1 & 2;
+    lowest += mask >> lowest+1 & 1;
+#endif
+#ifdef ASMCHECK
+    if( lowest != lowestasm ) {
+        flockfile(stdout);
+        std::cout << "lowestBitNum mismatch!" << std::endl;
+        std::cout << "val = " << val << std::endl;
+        std::cout << "exp   = " << lowest << std::endl;
+        std::cout << "got   = " << lowestasm << std::endl;
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return lowest;
+}
+
+static unsigned highestBitNum(unsigned long val) {
+    unsigned highest;
+#ifdef USE_ASM
+    asm("bsr %[val], %q[highest]"
+        : [highest]  "=rm"   (highest)
+        : [val]      "r"     (val)
+    );
+#ifdef ASMCHECK
+    unsigned highestasm = highest;
+#endif
+#endif // USE_ASM
+#if defined(ASMCHECK) || !defined(USE_ASM)
+    highest = 0;
+    unsigned n = 32;
+    while( n ) {
+        if( val >= (1ul << highest+n) )
+            highest += n;
+        n >>= 1;
+    }
+#endif
+#ifdef ASMCHECK
+    if( highest != highestasm ) {
+        flockfile(stdout);
+        std::cout << "highestBitNum mismatch!" << std::endl;
+        std::cout << "val = 0x" << std::hex << val << std::endl;
+        std::cout << "exp = " << std::dec << highest << std::endl;
+        std::cout << "got = " << highestasm << std::endl;
+        funlockfile(stdout);
+        exit(1);
+    }
+#endif  // ASMCHECK
+    return highest;
+}
+
 static const unsigned char R120[3] = { 1, 2, 0 };
 static const unsigned char R240[3] = { 2, 0, 1 };
 
@@ -1110,7 +1244,11 @@ public:
 	unsigned getOrientAt(unsigned idx) const { return edges >> (5*idx+4) & 1; }
 	bool operator==(const cubeedges &ce) const { return edges == ce.edges; }
 	bool operator!=(const cubeedges &ce) const { return edges != ce.edges; }
-	bool operator<(const cubeedges &ce) const { return edges < ce.edges; }
+	bool operator<(const cubeedges &ce) const {
+        unsigned orientIdx = getOrientIdx();
+        unsigned ceOrientIdx = ce.getOrientIdx();
+        return orientIdx < ceOrientIdx || orientIdx == ceOrientIdx && edges < ce.edges;
+    }
     unsigned getPermIdx() const;
     unsigned short getOrientIdx() const;
     static cubeedges fromPermAndOrientIdx(unsigned permIdx, unsigned short orientIdx);
@@ -3200,9 +3338,140 @@ static std::string getSetup() {
     return res.str();
 }
 
+class EdgeOrientIdxSet {
+    unsigned long m_orientHiSet;
+    std::vector<unsigned> m_orientLoSets;
+
+    unsigned getOrientLoIdx(unsigned orienthi) const {
+        return bitCount(m_orientHiSet & (1ul << orienthi)-1);
+    }
+public:
+    class Construct {
+        unsigned long m_orientHiSet;
+        unsigned m_orientLoSets[64];
+        friend class EdgeOrientIdxSet;
+    public:
+        Construct() : m_orientHiSet(0)
+        {
+        }
+
+        void set(unsigned orient) {
+            unsigned orienthi = orient >> 5;
+            unsigned long orienthiBit = 1ul << orienthi;
+            unsigned itemBit = 1u << (orient & 0x1f);
+            if( (m_orientHiSet & orienthiBit) == 0 ) {
+                m_orientLoSets[orienthi] = itemBit;
+                m_orientHiSet |= orienthiBit;
+            }else
+                m_orientLoSets[orienthi] |= itemBit;
+        }
+    };
+
+    EdgeOrientIdxSet();
+    ~EdgeOrientIdxSet();
+    bool empty() const { return m_orientHiSet == 0; }
+    unsigned size() const;
+    void set(const Construct&);
+    bool isSet(unsigned orient) const {
+        unsigned orienthi = orient >> 5;
+        if( (m_orientHiSet & 1ul << orienthi) == 0 )
+            return false;
+        unsigned orientLoIdx = getOrientLoIdx(orienthi);
+        return  m_orientLoSets[orientLoIdx] & 1 << (orient & 0x1f);
+    }
+    int getFirst() const;
+    int getNext(unsigned after) const;
+    void swap(EdgeOrientIdxSet &other) {
+        std::swap(m_orientHiSet, other.m_orientHiSet);
+        m_orientLoSets.swap(other.m_orientLoSets);
+    }
+    std::string dump() const;
+    static void getIntersection(const EdgeOrientIdxSet &set1, const EdgeOrientIdxSet &set2,
+            EdgeOrientIdxSet &res);
+};
+
+EdgeOrientIdxSet::EdgeOrientIdxSet()
+    : m_orientHiSet(0)
+{
+}
+
+EdgeOrientIdxSet::~EdgeOrientIdxSet()
+{
+}
+
+unsigned EdgeOrientIdxSet::size() const {
+    unsigned res = 0;
+    for(unsigned loset : m_orientLoSets)
+        res += bitCount(loset);
+    return res;
+}
+
+void EdgeOrientIdxSet::set(const Construct &construct)
+{
+    unsigned long bitsetsSet = m_orientHiSet = construct.m_orientHiSet;
+    m_orientLoSets.clear();
+    m_orientLoSets.reserve(bitCount(bitsetsSet));
+    while( bitsetsSet ) {
+        unsigned idx = lowestBitNum(bitsetsSet);
+        m_orientLoSets.push_back(construct.m_orientLoSets[idx]);
+        bitsetsSet ^= 1ul << idx;
+    }
+}
+
+int EdgeOrientIdxSet::getFirst() const
+{
+    if( m_orientHiSet == 0 )
+        return -1;
+    unsigned orienthi = lowestBitNum(m_orientHiSet);
+    return 32 * orienthi + lowestBitNum(m_orientLoSets[0]);
+}
+
+int EdgeOrientIdxSet::getNext(unsigned after) const
+{
+    unsigned orienthi = after >> 5;
+    unsigned orientLoIdx = getOrientLoIdx(orienthi);
+    unsigned item = m_orientLoSets[orientLoIdx] & -(2u << (after & 0x1f));
+    if( item == 0 ) {
+        unsigned long bitsetsSet = m_orientHiSet & -(2ul << orienthi);
+        if( bitsetsSet == 0 )
+            return -1;
+        orienthi = lowestBitNum(bitsetsSet);
+        item = m_orientLoSets[orientLoIdx+1];
+    }
+    return 32 * orienthi + lowestBitNum(item);
+}
+
+std::string EdgeOrientIdxSet::dump() const {
+    std::ostringstream os;
+    os << "[";
+    for(int orientIdx = getFirst(); orientIdx >= 0; orientIdx = getNext(orientIdx))
+        os << " " << orientIdx;
+    os << "]";
+    return os.str();
+}
+
+void EdgeOrientIdxSet::getIntersection(const EdgeOrientIdxSet &set1, const EdgeOrientIdxSet &set2,
+            EdgeOrientIdxSet &res)
+{
+    res.m_orientLoSets.clear();
+    res.m_orientHiSet = 0;
+    unsigned long bitsetsToCheck = set1.m_orientHiSet & set2.m_orientHiSet;
+    while( bitsetsToCheck ) {
+        unsigned orienthi = lowestBitNum(bitsetsToCheck);
+        unsigned set1Idx = set1.getOrientLoIdx(orienthi);
+        unsigned set2Idx = set2.getOrientLoIdx(orienthi);
+        unsigned item = set1.m_orientLoSets[set1Idx] & set2.m_orientLoSets[set2Idx];
+        if( item ) {
+            res.m_orientHiSet |= 1ul << orienthi;
+            res.m_orientLoSets.push_back(item);
+        }
+        bitsetsToCheck ^= 1ul << orienthi;
+    }
+}
+
 class CornerOrientReprCubes {
 	std::vector<cubeedges> m_items;
-    std::vector<unsigned> m_orientOccur;
+    EdgeOrientIdxSet m_orientOccur;
     cubecorner_orients m_orients;
     CornerOrientReprCubes(const CornerOrientReprCubes&) = delete;
     static cubeedges findSolutionEdgeMulti(
@@ -3214,6 +3483,13 @@ class CornerOrientReprCubes {
             const CornerOrientReprCubes &ccoReprCubes,
             const CornerOrientReprCubes &ccoReprSearchCubes,
             const EdgeReprCandidateTransform&, bool edgeReverse);
+    void getMappedEdgeOrientSearches(cubeedges cetrans,
+            bool symmetric, bool flip,
+            EdgeOrientIdxSet &orientOccurMapped) const;
+    void getMappedEdgeOrientHits(cubeedges cetrans,
+            bool symmetric, bool flip,
+            const EdgeOrientIdxSet &mappedOrientSearches,
+            EdgeOrientIdxSet &mappedOrientHits) const;
 public:
     explicit CornerOrientReprCubes(cubecorner_orients orients)
         : m_orients(orients)
@@ -3233,6 +3509,8 @@ public:
     size_t size() const { return m_items.size(); }
     edges_iter edgeBegin() const { return m_items.begin(); }
     edges_iter edgeEnd() const { return m_items.end(); }
+    std::pair<edges_iter, edges_iter> edgesForOrientIdx(unsigned) const;
+    std::string dumpOrients() const;
     static cubeedges findSolutionEdge(
             const CornerOrientReprCubes &ccoReprCubes,
             const CornerOrientReprCubes &ccoReprSearchCubes,
@@ -3264,23 +3542,41 @@ bool CornerOrientReprCubes::addCube(cubeedges ce)
 }
 
 void CornerOrientReprCubes::initOccur() {
-    m_orientOccur.resize(64);
-    for(unsigned i = 0; i < m_items.size(); ++i) {
-        cubeedges ce = m_items[i];
-        unsigned short orientIdx = ce.getOrientIdx();
-        m_orientOccur[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
-    }
+    EdgeOrientIdxSet::Construct edgeOrientSet;
+    for(unsigned i = 0; i < m_items.size(); ++i)
+        edgeOrientSet.set(m_items[i].getOrientIdx());
+    m_orientOccur.set(edgeOrientSet);
 }
 
 bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
 {
-    if( ! m_orientOccur.empty() ) {
-        unsigned short orientIdx = ce.getOrientIdx();
-        if( (m_orientOccur[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )
-            return false;
-    }
+    if( ! m_orientOccur.empty() && !m_orientOccur.isSet(ce.getOrientIdx()) )
+        return false;
     edges_iter edgeIt = std::lower_bound(m_items.begin(), m_items.end(), ce);
 	return edgeIt != m_items.end() && *edgeIt == ce;
+}
+
+std::pair<CornerOrientReprCubes::edges_iter, CornerOrientReprCubes::edges_iter>
+CornerOrientReprCubes::edgesForOrientIdx(unsigned orientIdx) const
+{
+    edges_iter lo = std::lower_bound(m_items.begin(), m_items.end(), orientIdx,
+            [](const cubeedges &ce, unsigned orientIdx) { return ce.getOrientIdx() < orientIdx; });
+    edges_iter hi = std::upper_bound(m_items.begin(), m_items.end(), orientIdx,
+            [](unsigned orientIdx, const cubeedges &ce) { return orientIdx < ce.getOrientIdx(); });
+    return std::make_pair(lo, hi);
+}
+
+std::string CornerOrientReprCubes::dumpOrients() const
+{
+    std::ostringstream os;
+
+    os << "[";
+    for(edges_iter it = m_items.begin(); it != m_items.end(); ++it) {
+        unsigned oi = it->getOrientIdx();
+        os << " " << oi;
+    }
+    os << "]";
+    return os.str();
 }
 
 cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
@@ -3300,6 +3596,207 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
     return cubeedges();
 }
 
+static unsigned cubeedgeOrientsCompose(unsigned orients1, cubeedges ce2) {
+    unsigned resOrient = 0;
+    unsigned orient11 = orients1 ^ orients1 >> 6;
+    orient11 ^= orient11 >> 3;
+    orient11 = (orient11 ^ orient11>>1 ^ orient11>>2) & 1;
+    orients1 |= orient11 << 11;
+    for(int i = 0; i < 11; ++i) {
+        unsigned char edge2perm = ce2.getPermAt(i);
+        unsigned edge1orient = orients1 >> edge2perm & 1;
+        resOrient |= edge1orient << i;
+    }
+    resOrient ^= ce2.getOrientIdx();
+    return resOrient;
+}
+
+static unsigned cubeedgeOrientsCompose2(unsigned orients1, cubeedges ce2) {
+    unsigned resOrient = 0;
+    unsigned orient11 = orients1 ^ orients1 >> 6;
+    orient11 ^= orient11 >> 3;
+    orient11 = (orient11 ^ orient11>>1 ^ orient11>>2) & 1;
+    orients1 |= orient11 << 11;
+    cubeedges ce2rev = ce2.reverse();
+    for(int i = 0; i < 12; ++i) {
+        unsigned edge1orient = orients1 >> i & 1;
+        unsigned char edge2permRev = ce2rev.getPermAt(i);
+        resOrient |= edge1orient << edge2permRev;
+    }
+    resOrient &= 0x7ff;
+    resOrient ^= ce2.getOrientIdx();
+    return resOrient;
+}
+
+static unsigned cubeedgeOrientsCompose3(unsigned orients1, cubeedges ce2) {
+    const unsigned long PARITY = 0x6996966996696996;
+
+    unsigned resOrient = 0;
+    unsigned orient11 = PARITY >> (orients1&0x3f ^ orients1>>6) & 1;
+    orients1 |= orient11 << 11;
+    cubeedges ce2rev = ce2.reverse();
+    for(int i = 0; i < 12; ++i)
+        resOrient |= (orients1>>i & 1) << ce2rev.getPermAt(i);
+    resOrient &= 0x7ff;
+    resOrient ^= ce2.getOrientIdx();
+    return resOrient;
+}
+
+void CornerOrientReprCubes::getMappedEdgeOrientSearches(cubeedges cetrans,
+        bool symmetric, bool flip,
+        EdgeOrientIdxSet &mappedOrientSearches) const
+{
+    const unsigned long PARITY = 0x6996966996696996;
+    unsigned mappedOrients012[8];
+    unsigned mappedOrients345[8];
+    unsigned mappedOrients678[8];
+    unsigned mappedOrients9AB[8];
+    unsigned cetransOrientIdx = cetrans.getOrientIdx();
+    cubeedges cetransrev = cetrans.reverse();
+    if( flip )
+        cetransOrientIdx ^= 0x7ff;
+
+    if( symmetric ) {
+        mappedOrients012[1] = 1 << cetransrev.getPermAt(8);
+        mappedOrients012[2] = 1 << cetransrev.getPermAt(9);
+        mappedOrients012[4] = 1 << cetransrev.getPermAt(10);
+
+        mappedOrients345[1] = 1 << cetransrev.getPermAt(11);
+
+        mappedOrients678[4] = 1 << cetransrev.getPermAt(0);
+
+        mappedOrients9AB[1] = 1 << cetransrev.getPermAt(1);
+        mappedOrients9AB[2] = 1 << cetransrev.getPermAt(2);
+        mappedOrients9AB[4] = 1 << cetransrev.getPermAt(3);
+    }else{
+        mappedOrients012[1] = 1 << cetransrev.getPermAt(0);
+        mappedOrients012[2] = 1 << cetransrev.getPermAt(1);
+        mappedOrients012[4] = 1 << cetransrev.getPermAt(2);
+
+        mappedOrients345[1] = 1 << cetransrev.getPermAt(3);
+
+        mappedOrients678[4] = 1 << cetransrev.getPermAt(8);
+
+        mappedOrients9AB[1] = 1 << cetransrev.getPermAt(9);
+        mappedOrients9AB[2] = 1 << cetransrev.getPermAt(10);
+        mappedOrients9AB[4] = 1 << cetransrev.getPermAt(11);
+    }
+
+    mappedOrients012[0] = 0;
+    mappedOrients012[3] = mappedOrients012[2] | mappedOrients012[1];
+    mappedOrients012[5] = mappedOrients012[4] | mappedOrients012[1];
+    mappedOrients012[6] = mappedOrients012[4] | mappedOrients012[2];
+    mappedOrients012[7] = mappedOrients012[4] | mappedOrients012[3];
+
+    mappedOrients345[0] = 0;
+    mappedOrients345[2] = 1 << cetransrev.getPermAt(4);
+    mappedOrients345[3] = mappedOrients345[2] | mappedOrients345[1];
+    mappedOrients345[4] = 1 << cetransrev.getPermAt(5);
+    mappedOrients345[5] = mappedOrients345[4] | mappedOrients345[1];
+    mappedOrients345[6] = mappedOrients345[4] | mappedOrients345[2];
+    mappedOrients345[7] = mappedOrients345[4] | mappedOrients345[3];
+
+    mappedOrients678[0] = 0;
+    mappedOrients678[1] = 1 << cetransrev.getPermAt(6);
+    mappedOrients678[2] = 1 << cetransrev.getPermAt(7);
+    mappedOrients678[3] = mappedOrients678[2] | mappedOrients678[1];
+    mappedOrients678[5] = mappedOrients678[4] | mappedOrients678[1];
+    mappedOrients678[6] = mappedOrients678[4] | mappedOrients678[2];
+    mappedOrients678[7] = mappedOrients678[4] | mappedOrients678[3];
+
+    mappedOrients9AB[0] = 0;
+    mappedOrients9AB[3] = mappedOrients9AB[2] | mappedOrients9AB[1];
+    mappedOrients9AB[5] = mappedOrients9AB[4] | mappedOrients9AB[1];
+    mappedOrients9AB[6] = mappedOrients9AB[4] | mappedOrients9AB[2];
+    mappedOrients9AB[7] = mappedOrients9AB[4] | mappedOrients9AB[3];
+
+    EdgeOrientIdxSet::Construct edgeOrientSet;
+    for(int orientIdx = m_orientOccur.getFirst(); orientIdx >= 0;
+            orientIdx = m_orientOccur.getNext(orientIdx))
+    {
+        unsigned orient11 = PARITY >> (orientIdx&0x1f ^ orientIdx>>5) & 1;
+        unsigned orients = orientIdx | orient11 << 11;
+        unsigned mappedOrients = mappedOrients012[orients&7] |
+            mappedOrients345[orients>>3&7] | mappedOrients678[orients>>6&7] |
+                mappedOrients9AB[orients>>9];
+        mappedOrients = (mappedOrients ^ cetransOrientIdx) & 0x7ff;
+        edgeOrientSet.set(mappedOrients);
+    }
+    mappedOrientSearches.set(edgeOrientSet);
+}
+
+void CornerOrientReprCubes::getMappedEdgeOrientHits(cubeedges cetrans,
+        bool symmetric, bool flip,
+        const EdgeOrientIdxSet &mappedOrientSearches,
+        EdgeOrientIdxSet &mappedOrientHits) const
+{
+    const unsigned long PARITY = 0x6996966996696996;
+    unsigned mappedOrients012[8];
+    unsigned mappedOrients345[8];
+    unsigned mappedOrients678[8];
+    unsigned mappedOrients9AB[8];
+    cubeedges cetransRev = cetrans.reverse();
+    unsigned cetransOrients = cetransRev.getOrientIdx();
+    cetransOrients |= (PARITY >> (cetransOrients&0x1f ^ cetransOrients>>5) & 1) << 11;
+    if( flip )
+        cetransOrients ^= 0xfff;
+
+    mappedOrients012[0] = 0;
+    mappedOrients012[1] = 1 << cetrans.getPermAt(0);
+    mappedOrients012[2] = 1 << cetrans.getPermAt(1);
+    mappedOrients012[3] = mappedOrients012[2] | mappedOrients012[1];
+    mappedOrients012[4] = 1 << cetrans.getPermAt(2);
+    mappedOrients012[5] = mappedOrients012[4] | mappedOrients012[1];
+    mappedOrients012[6] = mappedOrients012[4] | mappedOrients012[2];
+    mappedOrients012[7] = mappedOrients012[4] | mappedOrients012[3];
+
+    mappedOrients345[0] = 0;
+    mappedOrients345[1] = 1 << cetrans.getPermAt(3);
+    mappedOrients345[2] = 1 << cetrans.getPermAt(4);
+    mappedOrients345[3] = mappedOrients345[2] | mappedOrients345[1];
+    mappedOrients345[4] = 1 << cetrans.getPermAt(5);
+    mappedOrients345[5] = mappedOrients345[4] | mappedOrients345[1];
+    mappedOrients345[6] = mappedOrients345[4] | mappedOrients345[2];
+    mappedOrients345[7] = mappedOrients345[4] | mappedOrients345[3];
+
+    mappedOrients678[0] = 0;
+    mappedOrients678[1] = 1 << cetrans.getPermAt(6);
+    mappedOrients678[2] = 1 << cetrans.getPermAt(7);
+    mappedOrients678[3] = mappedOrients678[2] | mappedOrients678[1];
+    mappedOrients678[4] = 1 << cetrans.getPermAt(8);
+    mappedOrients678[5] = mappedOrients678[4] | mappedOrients678[1];
+    mappedOrients678[6] = mappedOrients678[4] | mappedOrients678[2];
+    mappedOrients678[7] = mappedOrients678[4] | mappedOrients678[3];
+
+    mappedOrients9AB[0] = 0;
+    mappedOrients9AB[1] = 1 << cetrans.getPermAt(9);
+    mappedOrients9AB[2] = 1 << cetrans.getPermAt(10);
+    mappedOrients9AB[3] = mappedOrients9AB[2] | mappedOrients9AB[1];
+    mappedOrients9AB[4] = 1 << cetrans.getPermAt(11);
+    mappedOrients9AB[5] = mappedOrients9AB[4] | mappedOrients9AB[1];
+    mappedOrients9AB[6] = mappedOrients9AB[4] | mappedOrients9AB[2];
+    mappedOrients9AB[7] = mappedOrients9AB[4] | mappedOrients9AB[3];
+
+    EdgeOrientIdxSet::Construct edgeOrientSet;
+    EdgeOrientIdxSet orientOccur;
+    EdgeOrientIdxSet::getIntersection(mappedOrientSearches, m_orientOccur, orientOccur);
+    for(int orientIdx = orientOccur.getFirst(); orientIdx >= 0;
+            orientIdx = orientOccur.getNext(orientIdx))
+    {
+        unsigned orient11 = PARITY >> (orientIdx&0x1f ^ orientIdx>>5) & 1;
+        unsigned orients = orientIdx | orient11 << 11;
+        unsigned mappedOrients = mappedOrients012[orients&7] |
+            mappedOrients345[orients>>3&7] | mappedOrients678[orients>>6&7] |
+                mappedOrients9AB[orients>>9];
+        mappedOrients ^= cetransOrients;
+        if( symmetric )
+            mappedOrients = mappedOrients>>8 | mappedOrients & 0xf0 | (mappedOrients&0xf) << 8;
+        mappedOrients &= 0x7ff;
+        edgeOrientSet.set(mappedOrients);
+    }
+    mappedOrientHits.set(edgeOrientSet);
+}
+
 cubeedges CornerOrientReprCubes::findSolutionEdgeSingle(
         const CornerOrientReprCubes &ccoReprCubes,
         const CornerOrientReprCubes &ccoReprSearchCubes,
@@ -3309,25 +3806,53 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeSingle(
     cubeedges cetrans = ctransformed[erct.transformedIdx].ce;
     cubeedges cetransRev = ctransformed[transformReverse(erct.transformedIdx)].ce;
     if( ccoReprCubes.size() <= ccoReprSearchCubes.size() ) {
-        for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
-                edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
+        if( ccoReprCubes.size() >= 0 && !ccoReprSearchCubes.m_orientOccur.empty() &&
+                !erct.reversed && !edgeReverse)
         {
-            cubeedges ce = *edgeIt;
-            cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
-            cubeedges ceSearchRepr;
-            if( erct.reversed ) {
-                if( edgeReverse )
-                    ceSearchRepr = cubeedges::compose3(erct.ceTrans, ces, cetransRev);
-                else
-                    ceSearchRepr = cubeedges::compose3revmid(erct.ceTrans, ces, cetransRev);
-            }else{
-                if( edgeReverse )
-                    ceSearchRepr = cubeedges::compose3revmid(cetrans, ces, erct.ceTrans);
-                else
-                    ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
+            EdgeOrientIdxSet mappedOrientSearches;
+            ccoReprCubes.getMappedEdgeOrientSearches(erct.ceTrans,
+                    erct.symmetric, cetrans.getOrientAt(0), mappedOrientSearches);
+            EdgeOrientIdxSet mappedOrientHits;
+            ccoReprSearchCubes.getMappedEdgeOrientHits(erct.ceTrans, erct.symmetric,
+                    cetransRev.getOrientAt(0), mappedOrientSearches, mappedOrientHits);
+            for(int orientIdx = mappedOrientHits.getFirst(); orientIdx >= 0;
+                    orientIdx = mappedOrientHits.getNext(orientIdx))
+            {
+                std::pair<CornerOrientReprCubes::edges_iter, CornerOrientReprCubes::edges_iter>
+                    edgeRange = ccoReprCubes.edgesForOrientIdx(orientIdx);
+                for(CornerOrientReprCubes::edges_iter edgeIt = edgeRange.first;
+                        edgeIt != edgeRange.second; ++edgeIt)
+                {
+                    cubeedges ce = *edgeIt;
+                    cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
+                    cubeedges ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
+                    const std::vector<cubeedges> &items = ccoReprSearchCubes.m_items;
+                    edges_iter srchEdgeIt = std::lower_bound(items.begin(), items.end(), ceSearchRepr);
+                    if( srchEdgeIt != items.end() && *srchEdgeIt == ceSearchRepr )
+                        return edgeReverse ? ce.reverse() : ce;
+                }
             }
-            if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
-                return edgeReverse ? ce.reverse() : ce;
+        }else{
+            for(CornerOrientReprCubes::edges_iter edgeIt = ccoReprCubes.edgeBegin();
+                    edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
+            {
+                cubeedges ce = *edgeIt;
+                cubeedges ces = erct.symmetric ? ce.symmetric() : ce;
+                cubeedges ceSearchRepr;
+                if( erct.reversed ) {
+                    if( edgeReverse )
+                        ceSearchRepr = cubeedges::compose3(erct.ceTrans, ces, cetransRev);
+                    else
+                        ceSearchRepr = cubeedges::compose3revmid(erct.ceTrans, ces, cetransRev);
+                }else{
+                    if( edgeReverse )
+                        ceSearchRepr = cubeedges::compose3revmid(cetrans, ces, erct.ceTrans);
+                    else
+                        ceSearchRepr = cubeedges::compose3(cetrans, ces, erct.ceTrans);
+                }
+                if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
+                    return edgeReverse ? ce.reverse() : ce;
+            }
         }
     }else{
         cubeedges erctCeTransRev = erct.ceTrans.reverse();
@@ -3838,6 +4363,8 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
         CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoRepr);
         cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
         ccoCubes.addCube(ceRepr);
+        // TODO: remove after testing
+        ccpCubes.initOccur();
         cubesReprByDepth.incAvailCount();
     }
     while( cubesReprByDepth.availCount() <= requestedDepth ) {
@@ -3852,7 +4379,7 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
             responder.message("canceled");
             return true;
         }
-        if( !onlyInSpace && depth >= 8 ) {
+        if( !onlyInSpace && depth >= 1 ) {
             responder.progress("depth %d init occur", depth);
             runInThreadPool(initOccurT, &cubesReprByDepth[depth]);
         }
