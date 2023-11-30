@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cmath>
+#include <array>
 #include <vector>
 #include <map>
 #include <set>
@@ -3242,7 +3243,7 @@ static std::string getSetup() {
 
 class CornerOrientReprCubes {
 	std::vector<cubeedges> m_items;
-    std::vector<unsigned> m_orientOccur;
+    const std::array<unsigned,64> *m_orientOccur;
     cubecorner_orients m_orients;
     CornerOrientReprCubes(const CornerOrientReprCubes&) = delete;
     static cubeedges findSolutionEdgeMulti(
@@ -3257,7 +3258,7 @@ class CornerOrientReprCubes {
             bool reversed);
 public:
     explicit CornerOrientReprCubes(cubecorner_orients orients)
-        : m_orients(orients)
+        : m_orientOccur(nullptr), m_orients(orients)
     {
     }
 
@@ -3268,7 +3269,7 @@ public:
     typedef std::vector<cubeedges>::const_iterator edges_iter;
     cubecorner_orients getOrients() const { return m_orients; }
     unsigned addCubes(const std::vector<cubeedges>&);
-    void initOccur();
+    void initOccur(std::array<unsigned, 64>&);
 	bool containsCubeEdges(cubeedges) const;
     bool empty() const { return m_items.empty(); }
     size_t size() const { return m_items.size(); }
@@ -3281,7 +3282,7 @@ public:
             bool reversed);
     void swap(CornerOrientReprCubes &other) {
         m_items.swap(other.m_items);
-        m_orientOccur.swap(other.m_orientOccur);
+        std::swap(m_orientOccur, other.m_orientOccur);
         std::swap(m_orients, other.m_orients);
     }
 };
@@ -3322,20 +3323,20 @@ unsigned CornerOrientReprCubes::addCubes(const std::vector<cubeedges> &cearr)
     return addedCubes.size();
 }
 
-void CornerOrientReprCubes::initOccur() {
-    m_orientOccur.resize(64);
+void CornerOrientReprCubes::initOccur(std::array<unsigned,64> &orientOcc) {
+    m_orientOccur = &orientOcc;
     for(unsigned i = 0; i < m_items.size(); ++i) {
         cubeedges ce = m_items[i];
         unsigned short orientIdx = ce.getOrientIdx();
-        m_orientOccur[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
+        orientOcc[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
     }
 }
 
 bool CornerOrientReprCubes::containsCubeEdges(cubeedges ce) const
 {
-    if( ! m_orientOccur.empty() ) {
+    if( m_orientOccur ) {
         unsigned short orientIdx = ce.getOrientIdx();
-        if( (m_orientOccur[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )
+        if( ((*m_orientOccur)[orientIdx >> 5] & 1ul << (orientIdx & 0x1f)) == 0 )
             return false;
     }
     edges_iter edgeIt = std::lower_bound(m_items.begin(), m_items.end(), ce);
@@ -3437,6 +3438,7 @@ cubeedges CornerOrientReprCubes::findSolutionEdge(
 class CornerPermReprCubes {
     static const CornerOrientReprCubes m_coreprCubesEmpty;
     std::vector<CornerOrientReprCubes> m_coreprCubes;
+    std::vector<std::array<unsigned,64>> m_orientOccurMem;
     struct ItemLessCco {
         bool operator()(const CornerOrientReprCubes &a, const cubecorner_orients &b) {
             return a.getOrients() < b;
@@ -3481,8 +3483,9 @@ size_t CornerPermReprCubes::cubeCount() const {
 }
 
 void CornerPermReprCubes::initOccur() {
+    m_orientOccurMem.resize(m_coreprCubes.size());
     for(unsigned i = 0; i < m_coreprCubes.size(); ++i)
-        m_coreprCubes[i].initOccur();
+        m_coreprCubes[i].initOccur(m_orientOccurMem[i]);
 }
 
 CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orients cco) {
