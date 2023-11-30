@@ -3325,8 +3325,7 @@ unsigned CornerOrientReprCubes::addCubes(const std::vector<cubeedges> &cearr)
 
 void CornerOrientReprCubes::initOccur(std::array<unsigned,64> &orientOcc) {
     m_orientOccur = &orientOcc;
-    for(unsigned i = 0; i < m_items.size(); ++i) {
-        cubeedges ce = m_items[i];
+    for(cubeedges ce : m_items) {
         unsigned short orientIdx = ce.getOrientIdx();
         orientOcc[orientIdx >> 5] |= 1ul << (orientIdx & 0x1f);
     }
