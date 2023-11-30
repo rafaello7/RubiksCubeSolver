@@ -1464,6 +1464,7 @@ cubeedges cubeedges::compose3revmid(cubeedges ce1, cubeedges ce2, cubeedges ce3)
         "pext %[depItem], %[res], %[res]\n"
         "shl $40, %[res]\n"
         "or %[tmp1], %[res]\n"
+        "vzeroupper\n"
             : [res]         "=&r"  (res.edges),
               [tmp1]        "=&r" (tmp1)
             : [ce1]         "r"   (ce1.edges),
