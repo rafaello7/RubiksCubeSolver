@@ -1336,91 +1336,58 @@ cubeedges cubeedges::compose3revmid(cubeedges ce1, cubeedges ce2, cubeedges ce3)
 #ifdef USE_ASM
     unsigned long tmp1;
 
-    // needs: bmi2 (pext, pdep), sse3 (pshufb), sse4.1 (pinsrq, pextrq)
     asm(
-        // xmm1 := 1
-        "mov $1, %[tmp1]\n"
-        "vmovq %[tmp1], %%xmm1\n"
-        "vpbroadcastb %%xmm1, %%xmm1\n"
-
-        // xmm4 := edgeItem
-        "pdep %[depItem], %[ce2], %[tmp1]\n"
-        "vpinsrq $0, %[tmp1], %%xmm4, %%xmm4\n"
-        "mov %[ce2], %[tmp1]\n"
-        "shr $40, %[tmp1]\n"
-        "pdep %[depItem], %[tmp1], %[tmp1]\n"
-        "vpinsrq $1, %[tmp1], %%xmm4, %%xmm4\n"
-
-        // xmm5 := 16
-        "vpsllw $4, %%xmm1, %%xmm5\n"
-        // xmm3 := edgeItem & 0x10
-        "vpand %%xmm4, %%xmm5, %%xmm3\n"
-
-        // xmm5 := 15
-        "vpsubb %%xmm1, %%xmm5, %%xmm5\n"
-
-        // store values b a 9 8 7 6 5 4 3 2 1 0 in xmm1 -> i
+        // store values b a 9 8 7 6 5 4 3 2 1 0 in xmm1
         "mov $0x0706050403020100, %[tmp1]\n"
         "vpinsrq $0, %[tmp1], %%xmm1, %%xmm1\n"
         "mov $0xb0a0908, %[tmp1]\n"
         "vpinsrq $1, %[tmp1], %%xmm1, %%xmm1\n"
 
-        // xmm1 := edgeItem & 0x10 | i
-        "vpor %%xmm3, %%xmm1, %%xmm1\n"
+        // xmm2 := ce2
+        "pdep %[depItem], %[ce2], %[tmp1]\n"
+        "vpinsrq $0, %[tmp1], %%xmm2, %%xmm2\n"
+        "mov %[ce2], %[tmp1]\n"
+        "shr $40, %[tmp1]\n"
+        "pdep %[depItem], %[tmp1], %[tmp1]\n"
+        "vpinsrq $1, %[tmp1], %%xmm2, %%xmm2\n"
 
-        // xmm3 := edgeItem & 0xf
-        "vpand %%xmm4, %%xmm5, %%xmm3\n"
-        // xmm2 := 8 * (edgeItem & 0xf)
-        "vpsllw $3, %%xmm3, %%xmm2\n"
+        // xmm3 := ce2 & 0xf
+        "mov $0xf, %[tmp1]\n"
+        "movq %[tmp1], %%xmm3\n"
+        "vpbroadcastb %%xmm3, %%xmm3\n"
+        "vpand %%xmm3, %%xmm2, %%xmm3\n"
 
-        // ymm8 := 64
-        "mov $64, %[tmp1]\n"
-        "vmovq %[tmp1], %%xmm8\n"
-        "vpbroadcastq %%xmm8, %%ymm8\n"
+        // blend together the reversed cycles of length 1 .. 12
 
-        // ymm5,ymm6 = (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=0,1,2,3
-        // ymm5 - values shifthed less than 64, ymm6 - >=64
-        "vpmovzxbq %%xmm1, %%ymm3\n"
-        "vpmovzxbq %%xmm2, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm5\n"
-        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm6\n"
+        "vpshufb %%xmm3, %%xmm3, %%xmm4\n"              // xmm4 := 2x shuffled edges
+        "vpshufb %%xmm4, %%xmm4, %%xmm5\n"              // 4x
+        "vpshufb %%xmm4, %%xmm5, %%xmm0\n"              // 6x
+        "vpshufb %%xmm3, %%xmm0, %%xmm5\n"              // 7x
 
-        // ymm5,ymm6 |= (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=4,5,6,7
-        "vpsrldq $4, %%xmm1, %%xmm3\n"
-        "vpmovzxbq %%xmm3, %%ymm3\n"
-        "vpsrldq $4, %%xmm2, %%xmm4\n"
-        "vpmovzxbq %%xmm4, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
-        "vpor %%ymm7, %%ymm5, %%ymm5\n"
-        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
-        "vpor %%ymm7, %%ymm6, %%ymm6\n"
+        "vpshufb %%xmm3, %%xmm5, %%xmm4\n"              // 8x
+        "vpcmpeqb %%xmm1, %%xmm4, %%xmm6\n"
+        "vpblendvb %%xmm6, %%xmm5, %%xmm0, %%xmm8\n"
 
-        // ymm5,ymm6 |= (edgeItem & 0x10 | i) <<  8*(edgeItem & 0xf) : i=8,9,10,11
-        "vpsrldq $8, %%xmm1, %%xmm3\n"
-        "vpmovzxbq %%xmm3, %%ymm3\n"
-        "vpsrldq $8, %%xmm2, %%xmm4\n"
-        "vpmovzxbq %%xmm4, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
-        "vpor %%ymm7, %%ymm5, %%ymm5\n"
-        "vpsubq %%ymm8, %%ymm4, %%ymm4\n"
-        "vpsllvq %%ymm4, %%ymm3, %%ymm7\n"
-        "vpor %%ymm7, %%ymm6, %%ymm6\n"
+        "vpshufb %%xmm3, %%xmm4, %%xmm5\n"              // 9x
+        "vpcmpeqb %%xmm1, %%xmm5, %%xmm6\n"
+        "vpblendvb %%xmm6, %%xmm4, %%xmm8, %%xmm8\n"
 
-        // perform horizontal OR on ymm5
-        "vextracti128 $1, %%ymm5, %%xmm7\n"
-        "vpor %%xmm7, %%xmm5, %%xmm5\n"
-        "vpshufd $0x4e, %%xmm5, %%xmm7\n"
-        "vpor %%xmm7, %%xmm5, %%xmm5\n"
+        "vpshufb %%xmm3, %%xmm5, %%xmm4\n"              // 10x
+        "vpcmpeqb %%xmm1, %%xmm4, %%xmm6\n"
+        "vpblendvb %%xmm6, %%xmm5, %%xmm8, %%xmm8\n"
 
-        // perform horizontal OR on ymm6
-        "vextracti128 $1, %%ymm6, %%xmm7\n"
-        "vpor %%xmm7, %%xmm6, %%xmm6\n"
-        "vpshufd $0x4e, %%xmm6, %%xmm7\n"
-        "vpor %%xmm7, %%xmm6, %%xmm6\n"
+        "vpshufb %%xmm3, %%xmm4, %%xmm5\n"              // 11x
+        "vpcmpeqb %%xmm1, %%xmm5, %%xmm6\n"
+        "vpblendvb %%xmm6, %%xmm4, %%xmm8, %%xmm8\n"
+
+        "vpshufb %%xmm3, %%xmm5, %%xmm4\n"              // 12x
+        "vpcmpeqb %%xmm1, %%xmm4, %%xmm6\n"
+        "vpblendvb %%xmm6, %%xmm5, %%xmm8, %%xmm8\n"
+
         // store the reversed ce2 in xmm0
-        "vpblendd $3, %%xmm5, %%xmm6, %%xmm0\n"
+        "vpshufb %%xmm8, %%xmm2, %%xmm0\n"
+        "vpxor %%xmm1, %%xmm0, %%xmm0\n"                // retrieve orients
+        "vpxor %%xmm8, %%xmm0, %%xmm0\n"                // add orients to perm
 
         // store 0xf in xmm3
         "mov $0xf, %[tmp1]\n"
