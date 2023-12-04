@@ -135,24 +135,7 @@ The cube to solve (second parameter) can be passed as follows:
         YYYYYYYYYOOOOOOOOOBBBBBBBBBRRRRRRRRRGGGGGGGGGWWWWWWWWW
 
    This format is used internally by the program, when the cube to solve
-   is passed by web browser in query. The sequence is as follows:
-
-<div style='margin-left: 8em; width: 24em; height: 18em; display: grid; grid-template-columns: repeat(12, 1fr); text-align: center'>
-    <div style='grid-area: 1/1/4/4'></div>
-    <div style='grid-area: 1/7/4/13'></div>
-    <div style='grid-area: 7/1/10/4'></div>
-    <div style='grid-area: 7/7/10/13'></div>
-    <div style='border-style: solid; border-width: 1px'>1</div><div style='border-style: solid; border-width: 1px'>2</div><div style='border-style: solid; border-width: 1px'>3</div>
-    <div style='border-style: solid; border-width: 1px'>4</div><div style='background-color: yellow'>Y</div><div style='border-style: solid; border-width: 1px'>6</div>
-    <div style='border-style: solid; border-width: 1px'>7</div><div style='border-style: solid; border-width: 1px'>8</div><div style='border-style: solid; border-width: 1px'>9</div>
-    <div style='border-style: solid; border-width: 1px'>10</div><div style='border-style: solid; border-width: 1px'>11</div><div style='border-style: solid; border-width: 1px'>12</div> <div style='border-style: solid; border-width: 1px'>19</div><div style='border-style: solid; border-width: 1px'>20</div><div style='border-style: solid; border-width: 1px'>21</div> <div style='border-style: solid; border-width: 1px'>28</div><div style='border-style: solid; border-width: 1px'>29</div><div style='border-style: solid; border-width: 1px'>30</div> <div style='border-style: solid; border-width: 1px'>37</div><div style='border-style: solid; border-width: 1px'>38</div><div style='border-style: solid; border-width: 1px'>39</div> 
-    <div style='border-style: solid; border-width: 1px'>13</div><div style='background-color: orange'>O</div><div style='border-style: solid; border-width: 1px'>15</div> <div style='border-style: solid; border-width: 1px'>22</div><div style='background-color: blue; color: white'>B</div><div style='border-style: solid; border-width: 1px'>24</div> <div style='border-style: solid; border-width: 1px'>31</div><div style='background-color: red'>R</div><div style='border-style: solid; border-width: 1px'>33</div> <div style='border-style: solid; border-width: 1px'>40</div><div style='background-color: green; color: white'>G</div><div style='border-style: solid; border-width: 1px'>42</div> 
-    <div style='border-style: solid; border-width: 1px'>16</div><div style='border-style: solid; border-width: 1px'>17</div><div style='border-style: solid; border-width: 1px'>18</div> <div style='border-style: solid; border-width: 1px'>25</div><div style='border-style: solid; border-width: 1px'>26</div><div style='border-style: solid; border-width: 1px'>27</div> <div style='border-style: solid; border-width: 1px'>34</div><div style='border-style: solid; border-width: 1px'>35</div><div style='border-style: solid; border-width: 1px'>36</div> <div style='border-style: solid; border-width: 1px'>43</div><div style='border-style: solid; border-width: 1px'>44</div><div style='border-style: solid; border-width: 1px'>45</div> 
-    <div style='border-style: solid; border-width: 1px'>46</div><div style='border-style: solid; border-width: 1px'>47</div><div style='border-style: solid; border-width: 1px'>48</div>
-    <div style='border-style: solid; border-width: 1px'>49</div><div style='background-color: white'>W</div><div style='border-style: solid; border-width: 1px'>51</div>
-    <div style='border-style: solid; border-width: 1px'>52</div><div style='border-style: solid; border-width: 1px'>53</div><div style='border-style: solid; border-width: 1px'>54</div>
-</div>
-
+   is passed by web browser in query.
  * Also 54 letters of the cube in format used by Herbert Kociemba solver:
 
         UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
