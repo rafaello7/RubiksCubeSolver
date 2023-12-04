@@ -65,14 +65,14 @@ The list of moves to solve the cube appears on the right side of the cube.
 Clicking on an item on the list moves the cube to an intermediate state, the
 one after the selected (clicked) move.
 
-## Optimal Searching
+## Optimal Search
 
 If the Optimal mode is selected, searching for a solution may take from a few
 seconds to hours.  On a modern PC (PassMark ~4000) the solution search of a
 randomly mixed cube (typically requiring 17-18 moves) takes about 1-2 minutes.
-Solving the first cube (since program startup) takes longer due to data
-structures initialization. Note that the program does not build any persistent
-data structures on disk. All the data structures are kept in memory.
+Solving the first cube (since program startup) takes slightly longer due to data
+structures initialization. Note that the program does not store any persistent
+data structures on disk.
 
 ## Quick Mode Search
 
@@ -85,15 +85,83 @@ solution found.
 ## Algorithm
 
 For _Optimal_ mode the program uses a dumb algorithm, without any heuristics,
-group theory, prunning tables etc. The algorithm is to build a set of mixed
-cubes which can be solved in a few moves, then attempt to find a cube in the
-set among all which can be reached from the cube to solve with a few moves. The
-program does it repeatedly with more and more moves (on both ends), until
-found.
+group theory, etc. The algorithm is to build a set of mixed cubes which can
+be solved in a few moves, then attempt to find a cube in the set among all
+which can be reached from the cube to solve with a few moves. The program does
+it repeatedly with more and more moves (on both ends), until found.  The cube
+sets built by program contain only distinct cubes in respect of a cube
+rotation, symmetry and optionally the cube moves reversing.
 
 In _Quick_ mode the program searches for moves in two phases. The algorithm
 resembles the Two-Phase algorihm developed by Herbert Kociemba, but it does
 not use any prunning tables.
+
+## Command line
+
+The _cubesrv_ program accepts either one or three parameters. The first parameter
+is the maximum depth of search sets used for optimal search. The number
+can be suffixed with `r` letter, which means that moves reversing will
+be included in check for distinct cubes. Including the moves reversing
+decreases the search set sizes rougly by half. The rough amount of memory
+used by program for particular depths is shown below:
+
+    8r      270MB
+    8       500MB
+    9r      2.3GB
+    9       4.5GB
+    10r     25GB
+
+If the depth is not provided, the program selects it using the computer
+RAM size as a base. Among the following three options is made the choice:
+8r, 9r, 9.
+
+The maximum search depth is 3 times larger than maximum depth of the sets.
+For example, if the maximum depth is set to 4, the solution is searched
+maximum 12 moves deep.
+
+It is also possible to specify cubes to solve in the command line. The
+possibility is generally used for testing. The cube(s) to solve are
+passed as the second parameter. The third parameter is the solve mode:
+
+ * `o` - _optimal_,
+ * `O` - also _optimal_, but before search the cube sets are built
+ * `q` - _quick_
+ * `m` - _quick multi_
+
+The cube to solve (second parameter) can be passed as follows:
+
+ * 54 letters with colors on walls, like:
+
+        YYYYYYYYYOOOOOOOOOBBBBBBBBBRRRRRRRRRGGGGGGGGGWWWWWWWWW
+
+   This format is used internally by the program, when the cube to solve
+   is passed by web browser in query. The sequence is as follows:
+
+<div style='margin-left: 8em; width: 24em; height: 18em; display: grid; grid-template-columns: repeat(12, 1fr); text-align: center'>
+    <div style='grid-area: 1/1/4/4'></div>
+    <div style='grid-area: 1/7/4/13'></div>
+    <div style='grid-area: 7/1/10/4'></div>
+    <div style='grid-area: 7/7/10/13'></div>
+    <div style='border-style: solid; border-width: 1px'>1</div><div style='border-style: solid; border-width: 1px'>2</div><div style='border-style: solid; border-width: 1px'>3</div>
+    <div style='border-style: solid; border-width: 1px'>4</div><div style='background-color: yellow'>Y</div><div style='border-style: solid; border-width: 1px'>6</div>
+    <div style='border-style: solid; border-width: 1px'>7</div><div style='border-style: solid; border-width: 1px'>8</div><div style='border-style: solid; border-width: 1px'>9</div>
+    <div style='border-style: solid; border-width: 1px'>10</div><div style='border-style: solid; border-width: 1px'>11</div><div style='border-style: solid; border-width: 1px'>12</div> <div style='border-style: solid; border-width: 1px'>19</div><div style='border-style: solid; border-width: 1px'>20</div><div style='border-style: solid; border-width: 1px'>21</div> <div style='border-style: solid; border-width: 1px'>28</div><div style='border-style: solid; border-width: 1px'>29</div><div style='border-style: solid; border-width: 1px'>30</div> <div style='border-style: solid; border-width: 1px'>37</div><div style='border-style: solid; border-width: 1px'>38</div><div style='border-style: solid; border-width: 1px'>39</div> 
+    <div style='border-style: solid; border-width: 1px'>13</div><div style='background-color: orange'>O</div><div style='border-style: solid; border-width: 1px'>15</div> <div style='border-style: solid; border-width: 1px'>22</div><div style='background-color: blue; color: white'>B</div><div style='border-style: solid; border-width: 1px'>24</div> <div style='border-style: solid; border-width: 1px'>31</div><div style='background-color: red'>R</div><div style='border-style: solid; border-width: 1px'>33</div> <div style='border-style: solid; border-width: 1px'>40</div><div style='background-color: green; color: white'>G</div><div style='border-style: solid; border-width: 1px'>42</div> 
+    <div style='border-style: solid; border-width: 1px'>16</div><div style='border-style: solid; border-width: 1px'>17</div><div style='border-style: solid; border-width: 1px'>18</div> <div style='border-style: solid; border-width: 1px'>25</div><div style='border-style: solid; border-width: 1px'>26</div><div style='border-style: solid; border-width: 1px'>27</div> <div style='border-style: solid; border-width: 1px'>34</div><div style='border-style: solid; border-width: 1px'>35</div><div style='border-style: solid; border-width: 1px'>36</div> <div style='border-style: solid; border-width: 1px'>43</div><div style='border-style: solid; border-width: 1px'>44</div><div style='border-style: solid; border-width: 1px'>45</div> 
+    <div style='border-style: solid; border-width: 1px'>46</div><div style='border-style: solid; border-width: 1px'>47</div><div style='border-style: solid; border-width: 1px'>48</div>
+    <div style='border-style: solid; border-width: 1px'>49</div><div style='background-color: white'>W</div><div style='border-style: solid; border-width: 1px'>51</div>
+    <div style='border-style: solid; border-width: 1px'>52</div><div style='border-style: solid; border-width: 1px'>53</div><div style='border-style: solid; border-width: 1px'>54</div>
+</div>
+
+ * Also 54 letters of the cube in format used by Herbert Kociemba solver:
+
+        UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB
+
+ * The wall rotations (scramble), like: `B3L3D3F1D3B2L`...
+ * Name of a file with list of cubes to solve. One cube per line, in
+   formats specified above. The file name must have `.txt` extension. 
+ * A number. In this case random cubes will be generated. The number is
+   the number of cubes to generate.
 
 ## More About Two Phase algorithm
 
@@ -119,61 +187,6 @@ using only moves from the subset.
 Any cube space can be reached from another using up to 12 moves. Each
 cube within the space can be reached from another cube state in the same space
 using 18 moves at maximum. Hence the 30 moves max in quick mode.
-
-Below are the space counts reachable by particular move numbers:
-
-    moves   spaces
-    0       1
-    1       4
-    2       50
-    3       592
-    4       7156
-    5       87236
-    6       1043817
-    7       12070278
-    8       124946368
-    9       821605960
-    10      1199128738
-    11      58202444
-    12      476
-
-About 6% spaces can be reached using 8 moves or less. About 43% spaces
-using 9 moves or less, and about 97% of spaces using 10 moves or less.
-
-As mentioned, within the space each cube can be reached using 18 moves
-or less. Below are the counts of distinct cubes reachable by particular
-move counts. Distinct means that one cube cannot be transformed into another
-using cube rotations, symmetry, or reversing move sequence. The cubes are
-counted for union of three cube spaces, for three move subsets. Lets
-name the subsets: blue-green, yellow-white and orange-red. If some cube
-is reached from the solved cube using moves from blue-green subset,
-the cube remains in blue-green space. The cube transformation can change
-the space to yellow-white or orange-red, but always will remain in one
-of the three kinds of spaces common with the solved cube. Hence the union
-of the three spaces. If a cube is in at least one of the three spaces, it is
-counted.
-
-    moves   cubes
-    0       1
-    1       2
-    2       6
-    3       20
-    4       109
-    5       671
-    6       3972
-    7       23809
-    8       135388
-    9       739198
-    10      3827216
-    11      18080333
-    12      70352435
-    13      177573980
-    14      222191002
-    15      111124247
-    16      6715395
-    17      47795
-    18      75
-
 
 The Two-Phase algorithm uses the same search technique as for the
 _Optimal_ mode. First, it builds a set of cube spaces which can be reached
@@ -229,142 +242,4 @@ For both phases the program does it repeatedly with more and more moves
 (on both ends), until found.
 
 Finally, the steps from both phases are concatenated.
-
-### Calculating The Numbers
-
-To better understand the algorithm, it is imortant to know origin of the
-mentioned values.
-
-The cube consists of 8 corners and 12 edges. Each corner has 3 walls, so it can
-be at any given position in one of 3 orientations. Each edge has 2 walls, so it
-can be in one of 2 orientations. The 8 corners can be in one of 8! (factorial
-of 8) combinations; edges - 12!. Taking all this into account, we get the
-number of combinations:
-
-<p>
-    8! * 3<sup>8</sup> * 12! * 2<sup>12</sup> = 519024039293878272000
-</p>
-
-(about 5.1e20). But the right number is 43252003274489856000, i.e. 12 times less.
-Why the difference? There are 3 reasons.
-
-The first reason is that not all combinations of corner orientations are valid.
-The orientation of 7 corners determine 8th corner orientation. It is
-impossible to have two cubes having all the 8 corners at the same locations,
-with only one corner rotated by 120&deg; or 240&deg;. If one corner is
-rotated by 120&deg; clockwise, then another one must be rotated 120&deg;
-counterclockwise. Or, other two corners must be also rotated by 120&deg;.
-Or whatever. The sum of rotations modulo 3 must be always 0, counting
-1 for 120&deg; rotation and counting 2 for 240&deg; rotation. Hence the
-number of all corner orientations is divided by 3.
-
-Similar situation applies to the edges. For edges there are only
-two possible rotations, by 0&deg; and 180&deg;. The sum is calculated modulo 2.
-The number of all edge orientations is divided by 2.
-
-The third reason is permutation parity. What is permutation parity?
-Each permutation can be split into some number of element swaps. For example,
-assume we have the following permutation of numbers in range 1..8:
-
-    2 7 3 8 1 5 4 6
-
-To sort the numbers, we can use the following sequence of the number swaps:
-
-    swap        outcome
-    ----        -------
-    2 <-> 1     1 7 3 8 2 5 4 6
-    2 <-> 7     1 2 3 8 7 5 4 6
-    4 <-> 8     1 2 3 4 7 5 8 6
-    5 <-> 7     1 2 3 4 5 7 8 6
-    6 <-> 7     1 2 3 4 5 6 8 7
-    7 <-> 8     1 2 3 4 5 6 7 8
-
-The above sequence has 6 swaps. We can select different swap sequences,
-but for the above permutation the number of swaps always will be even.
-Similar, if for some permutation some sequence has odd number of element
-swaps, then all swap sequences for the permutation have odd length.
-
-
-Coming back to the cube: the corner permutations and edge permutations
-can be both even and odd, but, if the corner permutation is even, then
-also the edge permutation must be even. If the corner permutation is
-odd, then also the edge permutation must be odd. Hence the above number
-of all combinations is divided by 2.
-
-Summarizing, the number of all combinations is divided by
-
-    3 * 2 * 2 = 12
-
-Another number that appeared above is the space size, 19508428800. This
-is the value calculated as:
-
-    8! * 8! * 4! / 2 = 19508428800
-
-Let's take the blue-green subset, which includes the solved cube.
-
-The first number, 8!, is the number of corner permutations. All the
-corner permutations in the subset are possible. On the other hand
-the corner orientations are determined: the blue and green squares
-always remain on either green or blue wall (i.e. on the walls having
-blue and green squares in the middle). So, the number of possible
-corner orientations is 1.
-
-The second number, also 8!, is the permutation count of the
-edges having blue or green square. There are 8 such edges and any
-permutation of the 8 edges is possible. But the edge orientation is
-determined: the edges, like corners, have
-also blue and green squares always on blue and green walls.
-
-The third number, 4!, is the number of permutations of the remaining
-4 edges. The edge orientations also cannot be changed: on
-yellow and white walls are always yellow or white squares of the edges.
-On orange and red walls are always orange or red squares. It is
-impossible to have an orange or red square of the edge on yellow or
-white wall.
-
-The division by 2 in the above equation comes from permutation parity. To have
-the cube solvable, the overall cube permutation parity must be achieved.
-
-The number of spaces, 2217093120, is the division of the all
-cube combinations, 43252003274489856000 by the space
-size, 19508428800. But it can be also calculated in different way:
-
-<p>
-    3<sup>7</sup> * 2<sup>11</sup> * 495 = 2217093120
-</p>
-
-<p>
-The first number, 3<sup>7</sup> (=2187) is the number of possible
-corner orientations. As the combination of corner orientations is determined in
-space, each change in the combination of corner orientations causes transition
-to a different space. As the valid cube has only 3<sup>7</sup> possible
-orientations (orientation of 8th corner is determined by the remaining 7
-corners), hence the number.
-</p>
-
-<p>
-The second number, 2<sup>11</sup> (=2048) is the number of possible
-edge orientations. Like corner orientations, the edge orientations are also
-determined in space.
-</p>
-
-The third number, 495, is the number of possible choices of 4 elements from a set
-of 12. This is the number of choices of the 4 edges which are in the 4 locations
-beyond blue and green walls. In the blue-green space which includes the solved
-cube, they are the edges having only white, yellow, orange or red squares. Other
-spaces have different edges chosen.
-
-The general formula for choice of k elements out of n is:
-
-            n!
-        -----------
-        k! * (n-k)!
-
-For n = 12 and k = 4 we have:
-
-         479001600
-        ------------  =  495
-         24 * 40320
-
-
 
