@@ -12,6 +12,12 @@ practice the length rarely exceeds 25 steps.
 
 The program can be compiled and run under Linux. It is compiled using `g++`.
 
+On x86 architecture the program compiles with assembly code which
+requires AVX2 and BMI2 instruction set support by CPU. If the processor does
+not support these instructions, the program will not work.
+The assembly can be disabled manually in source file (_cubesrv.cc_) by
+remove/comment out a line containing `#define USE_ASM`.
+
 To search for optimal solutions, a computer with at least 6GB RAM
 is recommended.  With 3-4 GB of RAM the program executes slightly slower.
 With 2GB RAM or less it will perform rather poorly
