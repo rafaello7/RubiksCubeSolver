@@ -4077,8 +4077,21 @@ static std::string getMovesForMatch(const CubesReprByDepth &cubesReprByDepth,
     return moves;
 }
 
+static void generateSearchTarr(const cube &csearch, cube cSearchTarr[2][2][TCOUNT])
+{
+    for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
+        cube csearchrev = reversed ? csearch.reverse() : csearch;
+        for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
+            cube csearchrevsymm = symmetric ? csearchrev.symmetric() : csearchrev;
+            for(unsigned td = 0; td < TCOUNT; ++td)
+                cSearchTarr[reversed][symmetric][td] =
+                    csearchrevsymm.transform(td);
+        }
+    }
+}
+
 static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
-        unsigned depthMax, const cube &csearch, cubecorners_perm ccp,
+        unsigned depthMax, const cube cSearchTarr[2][2][TCOUNT], cubecorners_perm ccp,
         const CornerPermReprCubes &ccpReprCubes, std::string &moves,
         unsigned searchRev, unsigned searchTd)
 {
@@ -4087,11 +4100,9 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
     if( ccpReprCubes.empty() )
         return false;
     for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-        cube csearchrev = reversed ? csearch.reverse() : csearch;
         for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-            cube csearchrevsymm = symmetric ? csearchrev.symmetric() : csearchrev;
             for(unsigned td = 0; td < TCOUNT; ++td) {
-                const cube cSearchT = csearchrevsymm.transform(td);
+                const cube &cSearchT = cSearchTarr[reversed][symmetric][td];
                 cubecorners_perm ccpSearch = reversed ? 
                     cubecorners_perm::compose(cSearchT.ccp, ccp) :
                     cubecorners_perm::compose(ccp, cSearchT.ccp);
@@ -4162,16 +4173,17 @@ static bool searchMovesForCcp(const CubesReprByDepth &cubesReprByDepth,
 
 static void searchMovesTa(unsigned threadNo,
         const CubesReprByDepth *cubesReprByDepth,
-        unsigned depth, unsigned depthMax, const cube *csearch, Responder *responder,
+        unsigned depth, unsigned depthMax,
+        const cube cSearchTarr[2][2][TCOUNT], Responder *responder,
         SearchProgress *searchProgress)
 {
     CubesReprAtDepth::ccpcubes_iter ccpIt;
 
-	while( searchProgress->inc(*responder, &ccpIt) ) {
+    while( searchProgress->inc(*responder, &ccpIt) ) {
         const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
         cubecorners_perm ccp = ccpIt->first;
         std::string moves;
-        if( searchMovesForCcp(*cubesReprByDepth, depthMax, *csearch, ccp, ccpReprCubes, moves, 0, 0) ) {
+        if( searchMovesForCcp(*cubesReprByDepth, depthMax, cSearchTarr, ccp, ccpReprCubes, moves, 0, 0) ) {
             responder->solution(moves.c_str());
             searchProgress->inc(*responder, NULL);
             return;
@@ -4220,9 +4232,11 @@ static void searchMovesTb(unsigned threadNo,
                                     continue;
                                 cubesChecked.push_back(c1T);
                                 cube cSearch1 = cube::compose(c1T, *csearch);
+                                cube cSearchTarr[2][2][TCOUNT];
+                                generateSearchTarr(cSearch1, cSearchTarr);
                                 std::string moves2;
                                 if( searchMovesForCcp(*cubesReprByDepth,
-                                        DEPTH_MAX, cSearch1, ccp2, ccpReprCubes2, moves2, 0, 0) )
+                                        DEPTH_MAX, cSearchTarr, ccp2, ccpReprCubes2, moves2, 0, 0) )
                                 {
                                     std::string moves = moves2;
                                     moves += printMoves(*cubesReprByDepth, c1T);
@@ -4252,8 +4266,8 @@ static const CubesReprByDepth *getCubesInSpace(unsigned depth, Responder &respon
 }
 
 static bool searchMovesInSpaceA(const CubesReprByDepth &cubesReprByDepthBG,
-        const cube &cSpace, unsigned searchRev, unsigned searchTd, unsigned depth, unsigned depthMax,
-        std::string &moves)
+        const cube cSpaceArr[2][2][TCOUNT], unsigned searchRev, unsigned searchTd,
+        unsigned depth, unsigned depthMax, std::string &moves)
 {
     const CubesReprAtDepth &ccReprCubesC = cubesReprByDepthBG[depth];
     for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccReprCubesC.ccpCubesBegin();
@@ -4261,7 +4275,8 @@ static bool searchMovesInSpaceA(const CubesReprByDepth &cubesReprByDepthBG,
     {
         const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
         cubecorners_perm ccp = ccpCubesIt->first;
-        if( searchMovesForCcp(cubesReprByDepthBG, depthMax, cSpace, ccp, ccpCubes, moves, searchRev, searchTd) )
+        if( searchMovesForCcp(cubesReprByDepthBG, depthMax, cSpaceArr, ccp, ccpCubes,
+                    moves, searchRev, searchTd) )
             return true;
     }
     return false;
@@ -4303,7 +4318,9 @@ static bool searchMovesInSpaceB(const CubesReprByDepth &cubesReprByDepthBG,
                             cubesChecked.push_back(c1T);
                             cube cSearch1 = cube::compose(c1T, cSpace);
                             std::string moves2;
-                            if( searchMovesInSpaceA(cubesReprByDepthBG, cSearch1, searchRev,
+                            cube cSpaceArr[2][2][TCOUNT];
+                            generateSearchTarr(cSearch1, cSpaceArr);
+                            if( searchMovesInSpaceA(cubesReprByDepthBG, cSpaceArr, searchRev,
                                         searchTd, depthMax, depthMax, moves2) )
                             {
                                 cube c1Trev = c1T.transform(transformReverse(searchTd));
@@ -4329,6 +4346,8 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
     const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(0, responder);
     if( cubesReprByDepthBG == NULL )
         return -1;
+    cube cSpaceTarr[2][2][TCOUNT];
+    generateSearchTarr(cSpace, cSpaceTarr);
     for(unsigned depthSearch = 0; depthSearch <= movesMax && depthSearch <= 3*TWOPHASE_DEPTH2_MAX;
             ++depthSearch)
     {
@@ -4343,7 +4362,7 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
         }else if( depthSearch < 2*cubesReprByDepthBG->availCount()-1 && depthSearch <= movesMax )
         {
             unsigned depthMax = cubesReprByDepthBG->availCount() - 1;
-            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchRev, searchTd,
+            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
                         depthSearch-depthMax, depthMax, moves) )
                 return depthSearch;
         }else if( depthSearch <= 2*TWOPHASE_DEPTH2_MAX ) {
@@ -4352,7 +4371,8 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
             cubesReprByDepthBG = getCubesInSpace(depthMax, responder);
             if( cubesReprByDepthBG == NULL )
                 return -1;
-            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpace, searchRev, searchTd, depth, depthMax, moves) )
+            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
+                        depth, depthMax, moves) )
                 return depthSearch;
             ++depthSearch;
         }else{
@@ -4787,10 +4807,12 @@ static bool searchMovesOptimalA(const cube &csearch, unsigned depthSearch, Respo
         if( cubesReprByDepth == NULL )
             return true;
     }
+    cube cSearchTarr[2][2][TCOUNT];
+    generateSearchTarr(csearch, cSearchTarr);
     SearchProgress searchProgress((*cubesReprByDepth)[depth].ccpCubesBegin(),
             (*cubesReprByDepth)[depth].ccpCubesEnd(), depthSearch);
     runInThreadPool(searchMovesTa, cubesReprByDepth,
-                depth, depthMax, &csearch, &responder, &searchProgress);
+                depth, depthMax, cSearchTarr, &responder, &searchProgress);
     if( searchProgress.isFinish() ) {
         responder.movecount("%u", depthSearch);
         responder.message("finished at %s", searchProgress.progressStr().c_str());
