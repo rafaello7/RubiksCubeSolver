@@ -4082,20 +4082,19 @@ static std::string getMovesForMatch(const CubesReprByDepth &cubesReprByDepth,
     //      (csearch rev) = (symmetric(transformReverse(cSearch)) rev) ⊙  (symmetric(transformReverse(c rev)) rev)
     cube cSearchT = cSearch.transform(transformReverse(td));
     cube cSearchTsymm = symmetric ? cSearchT.symmetric() : cSearchT;
-    cube crev = c.reverse();
-    cube crevT = crev.transform(transformReverse(td));
-    cube crevTsymm = symmetric ? crevT.symmetric() : crevT;
+    cube cT = c.transform(transformReverse(td));
+    cube cTsymm = symmetric ? cT.symmetric() : cT;
     if( searchTd ) {
         cSearchTsymm = cSearchTsymm.transform(transformReverse(searchTd));
-        crevTsymm = crevTsymm.transform(transformReverse(searchTd));
+        cTsymm = cTsymm.transform(transformReverse(searchTd));
     }
     std::string moves;
     if( searchRev ) {
-        moves = printMoves(cubesReprByDepth, crevTsymm, reversed);
+        moves = printMoves(cubesReprByDepth, cTsymm, !reversed);
         moves += printMoves(cubesReprByDepth, cSearchTsymm, reversed);
     }else{
         moves = printMoves(cubesReprByDepth, cSearchTsymm, !reversed);
-        moves += printMoves(cubesReprByDepth, crevTsymm, !reversed);
+        moves += printMoves(cubesReprByDepth, cTsymm, reversed);
     }
     return moves;
 }
