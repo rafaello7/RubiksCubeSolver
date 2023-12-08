@@ -17,7 +17,7 @@ h3 {
 #splitleftpane {
     display: flex;
     flex-direction: column;
-    gap: 1em;
+    gap: 1ex;
 }
 
 #cubewithcontrols {
@@ -28,7 +28,7 @@ h3 {
 #controls {
     display: flex;
     flex-direction: column;
-    gap: 1em;
+    gap: 1ex;
 }
 
 #editbuttons {
