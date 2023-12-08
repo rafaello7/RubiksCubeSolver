@@ -3846,7 +3846,6 @@ static void addCubesT(unsigned threadNo,
         CubesReprByDepth *cubesReprByDepth, int depth, bool onlyInSpace, 
         Responder *responder, AddCubesProgress *addCubesProgress)
 {
-    std::vector<EdgeReprCandidateTransform> otransformNew;
     unsigned long cubeCount = 0;
     unsigned permReprIdx;
 
