@@ -4038,8 +4038,8 @@ bool SearchProgress::inc(Responder &responder, SearchIndexes *indexesBuf)
             unsigned procCountNext = 100 * (itemIdx+1) / m_itemCount;
             unsigned procCountCur = 100 * itemIdx / m_itemCount;
             if( procCountNext != procCountCur && (m_depth>=18 || procCountCur % 10 == 0) )
-                responder.progress("depth %d search %d of %d, %d%%",
-                        m_depth, itemIdx, m_itemCount, 100 * itemIdx / m_itemCount);
+                responder.progress("depth %d search %d%%",
+                        m_depth, 100 * itemIdx / m_itemCount);
         }
     }else{
         if( m_depth >= 17 ) {
@@ -4053,8 +4053,7 @@ bool SearchProgress::inc(Responder &responder, SearchIndexes *indexesBuf)
 std::string SearchProgress::progressStr()
 {
     std::ostringstream res;
-    res << m_nextItemIdx << " of " << m_itemCount << ", " <<
-        100 * m_nextItemIdx / m_itemCount << "%";
+    res << 100 * m_nextItemIdx / m_itemCount << "%";
     return res.str();
 }
 
@@ -4492,8 +4491,8 @@ int QuickSearchProgress::inc(Responder &responder, CubesReprAtDepth::ccpcubes_it
             unsigned procCountNext = 100 * (itemIdx+1) / itemCount;
             unsigned procCountCur = 100 * itemIdx / itemCount;
             if( procCountNext != procCountCur && (m_depthSearch>=10 || procCountCur % 10 == 0) )
-                responder.progress("depth %d search %d of %d, %d%%",
-                        m_depthSearch, itemIdx, itemCount, 100 * itemIdx / itemCount);
+                responder.progress("depth %d search %d%%",
+                        m_depthSearch, 100 * itemIdx / itemCount);
         }
     }
     return movesMax;
@@ -5273,22 +5272,31 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     switch(mt) {
     case MT_UNQUALIFIED:
         if( m_verboseLevel ) {
+            flockfile(stdout);
             std::cout << "\r" << durationTime() << " " << msg << pad << std::flush;
             if( !strncmp(msg, "finished at ", 12) )
                 std::cout << std::endl;
+            funlockfile(stdout);
         }
         break;
     case MT_PROGRESS:
-        if( m_verboseLevel > 1 )
+        if( m_verboseLevel > 1 ) {
+            flockfile(stdout);
             std::cout << "\r" << durationTime() << " " << msg << pad << std::flush;
+            funlockfile(stdout);
+        }
         break;
     case MT_MOVECOUNT:
+        flockfile(stdout);
         std::cout << "\r" << durationTime() << " moves: " << msg << pad << std::endl;
         m_movecount = msg;
+        funlockfile(stdout);
         break;
     case MT_SOLUTION:
+        flockfile(stdout);
         std::cout << "\r" << durationTime() << msg << pad << std::endl;
         m_solution = msg;
+        funlockfile(stdout);
         break;
     }
 }
