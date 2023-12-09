@@ -3526,8 +3526,8 @@ class CubesReprByDepth {
     CubesReprByDepth(const CubesReprByDepth&) = delete;
     CubesReprByDepth &operator=(const CubesReprByDepth&) = delete;
 public:
-    CubesReprByDepth(unsigned depthMax)
-        : m_cubesAtDepths(depthMax+1), m_availCount(0)
+    CubesReprByDepth(unsigned size)
+        : m_cubesAtDepths(size), m_availCount(0)
     {
     }
 
@@ -3783,6 +3783,17 @@ static unsigned long addCubesForReprPerm(CubesReprByDepth *cubesReprByDepth, uns
                         cubecorner_orients cco = corientReprCubesC.getOrients();
                         bool isBGorient, isYWorient, isORorient;
                         if( onlyInSpace ) {
+                            // check whether the cube composed with rotation will remain in one
+                            // of the three spaces: blue-green, orange-red or yellow-white.
+
+                            // FIXME: when the cube to rotate is in all spaces simultaneously,
+                            // the produced cube might be not able to decompose into moves
+                            // from entire BG, or OR, or YW space.
+                            // This is a problem for reversed cubes: to decompose a cube
+                            // into steps, each intermediate cube should be in either the BG,
+                            // or OR, or YW space. This might be not true for reversed cubes, thus,
+                            // the reversed cube may be not able to decompose by printMoves.
+
                             isBGorient = cco.isBGspace();
                             isYWorient = cco.isYWspace(ccp);
                             isORorient = cco.isORspace(ccp);
@@ -4364,43 +4375,49 @@ static int searchMovesInSpace(const cube &cSpace, unsigned searchRev, unsigned s
     const CubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(0, responder);
     if( cubesReprByDepthBG == NULL )
         return -1;
-    cube cSpaceTarr[2][2][TCOUNT];
-    generateSearchTarr(cSpace, cSpaceTarr);
-    for(unsigned depthSearch = 0; depthSearch <= movesMax && depthSearch <= 3*TWOPHASE_DEPTH2_MAX;
-            ++depthSearch)
+    for(unsigned depthSearch = 0; depthSearch <= movesMax &&
+            depthSearch < cubesReprByDepthBG->availCount(); ++depthSearch)
     {
-        if( depthSearch < cubesReprByDepthBG->availCount() ) {
-            if( containsCube((*cubesReprByDepthBG)[depthSearch], cSpace) ) {
-                cube cSpaceT = cSpace;
-                if( searchTd )
-                    cSpaceT = cSpace.transform(transformReverse(searchTd));
-                moves = printMoves(*cubesReprByDepthBG, cSpaceT, !searchRev);
-                return depthSearch;
-            }
-        }else if( depthSearch < 2*cubesReprByDepthBG->availCount()-1 && depthSearch <= movesMax )
+        if( containsCube((*cubesReprByDepthBG)[depthSearch], cSpace) ) {
+            cube cSpaceT = cSpace;
+            if( searchTd )
+                cSpaceT = cSpace.transform(transformReverse(searchTd));
+            moves = printMoves(*cubesReprByDepthBG, cSpaceT, !searchRev);
+            return depthSearch;
+        }
+    }
+    if( cubesReprByDepthBG->availCount() <= movesMax ) {
+        cube cSpaceTarr[2][2][TCOUNT];
+        generateSearchTarr(cSpace, cSpaceTarr);
+        for(unsigned depthSearch = cubesReprByDepthBG->availCount();
+                depthSearch <= movesMax && depthSearch <= 3*TWOPHASE_DEPTH2_MAX;
+                ++depthSearch)
         {
-            unsigned depthMax = cubesReprByDepthBG->availCount() - 1;
-            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
-                        depthSearch-depthMax, depthMax, moves) )
-                return depthSearch;
-        }else if( depthSearch <= 2*TWOPHASE_DEPTH2_MAX ) {
-            unsigned depth = depthSearch / 2;
-            unsigned depthMax = depthSearch - depth;
-            cubesReprByDepthBG = getCubesInSpace(depthMax, responder);
-            if( cubesReprByDepthBG == NULL )
-                return -1;
-            if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
-                        depth, depthMax, moves) )
-                return depthSearch;
-            ++depthSearch;
-        }else{
-            cubesReprByDepthBG = getCubesInSpace(TWOPHASE_DEPTH2_MAX, responder);
-            if( cubesReprByDepthBG == NULL )
-                return -1;
-            unsigned depth = depthSearch - 2*TWOPHASE_DEPTH2_MAX;
-            if( searchMovesInSpaceB(*cubesReprByDepthBG, cSpace, searchRev, searchTd,
-                        depth, TWOPHASE_DEPTH2_MAX, moves) )
-                return 2*TWOPHASE_DEPTH2_MAX + depth;
+            if( depthSearch < 2*cubesReprByDepthBG->availCount()-1 && depthSearch <= movesMax )
+            {
+                unsigned depthMax = cubesReprByDepthBG->availCount() - 1;
+                if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
+                            depthSearch-depthMax, depthMax, moves) )
+                    return depthSearch;
+            }else if( depthSearch <= 2*TWOPHASE_DEPTH2_MAX ) {
+                unsigned depth = depthSearch / 2;
+                unsigned depthMax = depthSearch - depth;
+                cubesReprByDepthBG = getCubesInSpace(depthMax, responder);
+                if( cubesReprByDepthBG == NULL )
+                    return -1;
+                if( searchMovesInSpaceA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
+                            depth, depthMax, moves) )
+                    return depthSearch;
+                ++depthSearch;
+            }else{
+                cubesReprByDepthBG = getCubesInSpace(TWOPHASE_DEPTH2_MAX, responder);
+                if( cubesReprByDepthBG == NULL )
+                    return -1;
+                unsigned depth = depthSearch - 2*TWOPHASE_DEPTH2_MAX;
+                if( searchMovesInSpaceB(*cubesReprByDepthBG, cSpace, searchRev, searchTd,
+                            depth, TWOPHASE_DEPTH2_MAX, moves) )
+                    return 2*TWOPHASE_DEPTH2_MAX + depth;
+            }
         }
     }
     return -1;
@@ -4733,7 +4750,7 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
 
 static const CubesReprByDepth *getReprCubes(unsigned depth, Responder &responder)
 {
-    static CubesReprByDepth cubesReprByDepth(DEPTH_MAX);
+    static CubesReprByDepth cubesReprByDepth(DEPTH_MAX+1);
     bool isCanceled =  addCubes(cubesReprByDepth, depth, false, responder);
     return isCanceled ? NULL : &cubesReprByDepth;
 }
