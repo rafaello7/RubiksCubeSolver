@@ -4161,6 +4161,7 @@ public:
     }
 
     bool inc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf);
+    bool inbginc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf);
 };
 
 bool AddCubesProgress::inc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf)
@@ -4190,6 +4191,22 @@ bool AddCubesProgress::inc(Responder &responder, unsigned long cubeCount, unsign
                         m_depth, cubeCountTot, 100 * permReprIdx / gReprPerms.size());
         }
     }
+    return isFinish;
+}
+
+bool AddCubesProgress::inbginc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf)
+{
+    unsigned permReprIdx = 0;
+    bool isFinish;
+    mutexLock();
+    m_cubeCount += cubeCount;
+    isFinish = m_nextPermReprIdx >= gBGSpaceReprPerms.size() || isStopRequestedNoLock();
+    if( isFinish )
+        --m_runningThreadCount;
+    else
+        permReprIdx = m_nextPermReprIdx++;
+    mutexUnlock();
+    *permReprIdxBuf = permReprIdx;
     return isFinish;
 }
 
@@ -4373,7 +4390,7 @@ static void addInSpaceCubesT(unsigned threadNo,
     unsigned long cubeCount = 0;
     unsigned permReprIdx;
 
-    while( !addCubesProgress->inc(*responder, cubeCount, &permReprIdx) ) {
+    while( !addCubesProgress->inbginc(*responder, cubeCount, &permReprIdx) ) {
         cubeCount = addInSpaceCubesForReprPerm(cubesReprByDepth,
                 permReprIdx, depth, responder);
     }
@@ -4942,13 +4959,12 @@ static bool searchInSpaceMovesB(const BGSpaceCubesReprByDepth &cubesReprByDepthB
                         if( searchInSpaceMovesA(cubesReprByDepthBG, cSpaceArr, searchRev,
                                     searchTd, depthMax, depthMax, moves2) )
                         {
-                            cube c1Trev = c1T; //c1T.transform(transformReverse(searchTd));
                             if( searchRev ) {
                                 moves = printInSpaceMoves(
-                                        cubesReprByDepthBG, c1Trev, searchTd, true) + moves2;
+                                        cubesReprByDepthBG, c1T, searchTd, true) + moves2;
                             }else{
                                 moves = moves2 + printInSpaceMoves(
-                                        cubesReprByDepthBG, c1Trev, searchTd);
+                                        cubesReprByDepthBG, c1T, searchTd);
                             }
                             return true;
                         }
@@ -4962,7 +4978,7 @@ static bool searchInSpaceMovesB(const BGSpaceCubesReprByDepth &cubesReprByDepthB
 
 static bool containsInSpaceCube(const BGSpaceCubesReprAtDepth &cubesRepr, const cube &c)
 {
-    unsigned ccpReprSearchIdx = cubecornerPermRepresentativeIdx(c.ccp);
+    unsigned ccpReprSearchIdx = inbgspaceCubecornerPermRepresentativeIdx(c.ccp);
     const BGSpaceCornerPermReprCubes &ccpReprSearchCubes = cubesRepr.getAt(ccpReprSearchIdx);
     cubeedges ceSearchRepr = inbgspaceCubeedgesRepresentative(c.ccp, c.ce);
     return ccpReprSearchCubes.containsCubeEdges(ceSearchRepr);
@@ -4978,10 +4994,7 @@ static int searchInSpaceMoves(const cube &cSpace, unsigned searchRev, unsigned s
             depthSearch < cubesReprByDepthBG->availCount(); ++depthSearch)
     {
         if( containsInSpaceCube((*cubesReprByDepthBG)[depthSearch], cSpace) ) {
-            cube cSpaceT = cSpace;
-            //if( searchTd )
-            //    cSpaceT = cSpace.transform(transformReverse(searchTd));
-            moves = printInSpaceMoves(*cubesReprByDepthBG, cSpaceT, searchTd, !searchRev);
+            moves = printInSpaceMoves(*cubesReprByDepthBG, cSpace, searchTd, !searchRev);
             return depthSearch;
         }
     }
@@ -6111,13 +6124,6 @@ static void cubeTester(unsigned cubeCount, char mode)
     for(unsigned i = 0; i < cubeCount; ++i)
         cubes.push_back(generateCube());
     solveCubes(cubes, mode);
-}
-
-static void doTest()
-{
-    ConsoleResponder responder(3);
-    getCubesInSpace(TWOPHASE_DEPTH2_MAX, responder);
-    std::cout << std::endl;
 }
 
 int main(int argc, char *argv[]) {
