@@ -4520,10 +4520,10 @@ struct SearchIndexes {
         if( ++td == TCOUNTBG ) {
             if( symmetric ) {
                 if( USEREVERSE ) {
-                    if( reversed && ++permReprIdx == 654 )
+                    if( reversed && ++permReprIdx == 1672 )
                         return false;
                     reversed = !reversed;
-                }else if( ++permReprIdx == 984 )
+                }else if( ++permReprIdx == 2768 )
                     return false;
             }
             symmetric = !symmetric;
