@@ -4,7 +4,7 @@
 #include "cubedefs.h"
 #include "responder.h"
 
-void searchMovesQuickCatchFirst(const cube &csearch, Responder&, bool useTwoPhaseSearchRev = true);
-void searchMovesQuickMulti(const cube &csearch, Responder&, bool useTwoPhaseSearchRev = true);
+void searchMovesQuickCatchFirst(const cube &csearch, Responder&);
+void searchMovesQuickMulti(const cube &csearch, Responder&);
 
 #endif // SEARCHQUICK_H
