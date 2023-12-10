@@ -26,7 +26,7 @@ struct SearchIndexes {
 };
 
 static std::string getInSpaceMovesForMatch(const BGSpaceCubesReprByDepth &cubesReprByDepth,
-        const cube &cSearch, const cube &c, unsigned searchRev, unsigned searchTd,
+        const cube &cSearch, const cube &c, bool searchRev, unsigned searchTd,
         unsigned reversed, unsigned symmetric, unsigned tdidx)
 {
     // cube found:
@@ -68,7 +68,7 @@ static void generateInSpaceSearchTarr(const cube &csearch, cube cSearchTarr[2][2
 static bool searchInSpaceMovesForIdxs(const BGSpaceCubesReprByDepth &cubesReprByDepth,
         unsigned depth, unsigned depthMax, const cube cSearchTarr[2][2][TCOUNTBG],
         const SearchIndexes &indexes, std::string &moves,
-        unsigned searchRev, unsigned searchTd)
+        bool searchRev, unsigned searchTd)
 {
     BGSpaceCubesReprAtDepth::ccpcubes_iter ccpIt =
         cubesReprByDepth[depth].ccpCubesBegin() + indexes.permReprIdx;
@@ -123,7 +123,7 @@ static bool searchInSpaceMovesForIdxs(const BGSpaceCubesReprByDepth &cubesReprBy
 }
 
 static bool searchInSpaceMovesA(const BGSpaceCubesReprByDepth &cubesReprByDepthBG,
-        const cube cSpaceArr[2][2][TCOUNTBG], unsigned searchRev, unsigned searchTd,
+        const cube cSpaceArr[2][2][TCOUNTBG], bool searchRev, unsigned searchTd,
         unsigned depth, unsigned depthMax, std::string &moves)
 {
     SearchIndexes indexes {};
@@ -136,7 +136,7 @@ static bool searchInSpaceMovesA(const BGSpaceCubesReprByDepth &cubesReprByDepthB
 }
 
 static bool searchInSpaceMovesB(const BGSpaceCubesReprByDepth &cubesReprByDepthBG,
-		const cube &cSpace, unsigned searchRev, unsigned searchTd, unsigned depth, unsigned depthMax,
+		const cube &cSpace, bool searchRev, unsigned searchTd, unsigned depth, unsigned depthMax,
         std::string &moves)
 {
     const BGSpaceCubesReprAtDepth &ccReprCubesC = cubesReprByDepthBG[depth];
@@ -198,7 +198,7 @@ static bool containsInSpaceCube(const BGSpaceCubesReprAtDepth &cubesRepr, const 
     return ccpReprSearchCubes.containsCubeEdges(ceSearchRepr);
 }
 
-int searchInSpaceMoves(const cube &cSpace, unsigned searchRev, unsigned searchTd,
+int searchInSpaceMoves(const cube &cSpace, bool searchRev, unsigned searchTd,
         unsigned movesMax, Responder &responder, std::string &moves)
 {
     const BGSpaceCubesReprByDepth *cubesReprByDepthBG = getCubesInSpace(0, responder);
