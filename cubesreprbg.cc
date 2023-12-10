@@ -227,11 +227,11 @@ std::string printInSpaceMoves(
     };
     static const unsigned transformedMoves[2][RCOUNTBG] = {
         {
-            YELLOW180, WHITE180, BLUE180, GREEN180,
-            REDCW, RED180, REDCCW, ORANGECW, ORANGE180, ORANGECCW
-        },{
             BLUE180, GREEN180, ORANGE180, RED180,
             WHITECW, WHITE180, WHITECCW, YELLOWCW, YELLOW180, YELLOWCCW
+        },{
+            YELLOW180, WHITE180, BLUE180, GREEN180,
+            REDCW, RED180, REDCCW, ORANGECW, ORANGE180, ORANGECCW
         },
     };
     std::vector<unsigned> rotateIdxs;

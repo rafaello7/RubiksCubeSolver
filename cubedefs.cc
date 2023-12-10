@@ -130,7 +130,7 @@ int transformReverse(int idx) {
     return idx;
 }
 
-static const char *transformName(unsigned td) {
+const char *transformName(unsigned td) {
     switch( td ) {
     case TD_0: return "0";
     case TD_C0_7_CW: return "c0-7.cw";
@@ -1796,122 +1796,119 @@ const struct cube crotated[RCOUNT] = {
 	}
 };
 
-//   Y
-// O B R G      == Y O B R G W
-//   W
 const struct cube ctransformed[TCOUNT] = {
     csolved,
-    {    // O B Y G W R, TD_C0_7_CW
-		.ccp =   cubecorners_perm(0, 4, 1, 5, 2, 6, 3, 7),
-        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
-		.ce  = cubeedges(4, 0, 8, 5, 1, 9, 2, 10, 6, 3, 11, 7,
-                         0, 0, 0, 0, 0, 0, 0,  0, 0, 0,  0, 0)
-    },{     // B Y O W R G, TD_C0_7_CCW
+    {   // TD_C0_7_CW
 		.ccp =   cubecorners_perm(0, 2, 4, 6, 1, 3, 5, 7),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(1, 4, 6, 9, 0, 3, 8, 11, 2, 5, 7, 10,
                          0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0,  0)
-    },{     // B W R Y O G, TD_C1_6_CW
-		.ccp =   cubecorners_perm(3, 1, 7, 5, 2, 0, 6, 4),
-        .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
-		.ce  = cubeedges(2, 7, 5, 10, 3, 0, 11, 8, 1, 6, 4, 9,
-                         0, 0, 0,  0, 0, 0,  0, 0, 0, 0, 0, 0)
-    },{     // R G Y B W O, TD_C1_6_CCW
+    },{ // TD_C0_7_CCW
+		.ccp =   cubecorners_perm(0, 4, 1, 5, 2, 6, 3, 7),
+        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
+		.ce  = cubeedges(4, 0, 8, 5, 1, 9, 2, 10, 6, 3, 11, 7,
+                         0, 0, 0, 0, 0, 0, 0,  0, 0, 0,  0, 0)
+    },{ // TD_C1_6_CW
         .ccp =   cubecorners_perm(5, 1, 4, 0, 7, 3, 6, 2),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
         .ce  = cubeedges(5, 8, 0, 4, 10, 2, 9, 1, 7, 11, 3, 6,
                          0, 0, 0, 0,  0, 0, 0, 0, 0,  0, 0, 0)
-    },{     // G W O Y R B, TD_C2_5_CW
-		.ccp =   cubecorners_perm(6, 4, 2, 0, 7, 5, 3, 1),
+    },{ // TD_C1_6_CCW
+		.ccp =   cubecorners_perm(3, 1, 7, 5, 2, 0, 6, 4),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
-		.ce  = cubeedges(9, 6, 4, 1, 11, 8, 3, 0, 10, 7, 5, 2,
-                         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0)
-    },{     // R B W G Y O, TD_C2_5_CCW
+		.ce  = cubeedges(2, 7, 5, 10, 3, 0, 11, 8, 1, 6, 4, 9,
+                         0, 0, 0,  0, 0, 0,  0, 0, 0, 0, 0, 0)
+    },{ // TD_C2_5_CW
 		.ccp =   cubecorners_perm(3, 7, 2, 6, 1, 5, 0, 4),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(7, 3, 11, 6, 2, 10, 1, 9, 5, 0, 8, 4,
                          0, 0,  0, 0, 0,  0, 0, 0, 0, 0, 0, 0)
-    },{     // O G W B Y R, TD_C3_4_CW
-		.ccp =   cubecorners_perm(6, 2, 7, 3, 4, 0, 5, 1),
-        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
-		.ce  = cubeedges(6, 11, 3, 7, 9, 1, 10, 2, 4, 8, 0, 5,
-                         0,  0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0)
-    },{     // G Y R W O B, TD_C3_4_CCW
+    },{ // TD_C2_5_CCW
+		.ccp =   cubecorners_perm(6, 4, 2, 0, 7, 5, 3, 1),
+        .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
+		.ce  = cubeedges(9, 6, 4, 1, 11, 8, 3, 0, 10, 7, 5, 2,
+                         0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0)
+    },{ // TD_C3_4_CW
 		.ccp =   cubecorners_perm(5, 7, 1, 3, 4, 6, 0, 2),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(10, 5, 7, 2, 8, 11, 0, 3, 9, 4, 6, 1,
                           0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0, 0)
-    },{     // O W B Y G R, TD_BG_CW
-		.ccp =   cubecorners_perm(2, 0, 3, 1, 6, 4, 7, 5),
-        .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
-		.ce  = cubeedges(1, 3, 0, 2, 6, 4, 7, 5, 9, 11, 8, 10,
-                         1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1,  1)
-    },{     // W R B O G Y, TD_BG_180
-		.ccp =   cubecorners_perm(3, 2, 1, 0, 7, 6, 5, 4),
-        .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
-		.ce  = cubeedges(3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8,
-                         0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0)
-    },{     // R Y B W G O, TD_BG_CCW
+    },{ // TD_C3_4_CCW
+		.ccp =   cubecorners_perm(6, 2, 7, 3, 4, 0, 5, 1),
+        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
+		.ce  = cubeedges(6, 11, 3, 7, 9, 1, 10, 2, 4, 8, 0, 5,
+                         0,  0, 0, 0, 0, 0,  0, 0, 0, 0, 0, 0)
+    },{ // TD_BG_CW
 		.ccp =   cubecorners_perm(1, 3, 0, 2, 5, 7, 4, 6),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(2, 0, 3, 1, 5, 7, 4, 6, 10, 8, 11, 9,
                          1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1)
-    },{     // Y B R G O W, TD_YW_CW
-		.ccp =   cubecorners_perm(1, 5, 3, 7, 0, 4, 2, 6),
-        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
-		.ce  = cubeedges(5, 2, 10, 7, 0, 8, 3, 11, 4, 1, 9, 6,
-                         1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1, 1)
-    },{     // Y R G O B W, TD_YW_180
-		.ccp =   cubecorners_perm(5, 4, 7, 6, 1, 0, 3, 2),
+    },{ // TD_BG_180
+		.ccp =   cubecorners_perm(3, 2, 1, 0, 7, 6, 5, 4),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
-		.ce  = cubeedges(8, 10, 9, 11, 5, 4, 7, 6, 0, 2, 1, 3,
-                         0,  0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0)
-    },{     // Y G O B R W, TD_YW_CCW
+		.ce  = cubeedges(3, 2, 1, 0, 7, 6, 5, 4, 11, 10, 9, 8,
+                         0, 0, 0, 0, 0, 0, 0, 0,  0, 0, 0, 0)
+    },{ // TD_BG_CCW
+		.ccp =   cubecorners_perm(2, 0, 3, 1, 6, 4, 7, 5),
+        .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
+		.ce  = cubeedges(1, 3, 0, 2, 6, 4, 7, 5, 9, 11, 8, 10,
+                         1, 1, 1, 1, 1, 1, 1, 1, 1,  1, 1,  1)
+    },{ // TD_YW_CW
 		.ccp =   cubecorners_perm(4, 0, 6, 2, 5, 1, 7, 3),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(4, 9, 1, 6, 8, 0, 11, 3, 5, 10, 2, 7,
                          1, 1, 1, 1, 1, 1,  1, 1, 1,  1, 1, 1)
-    },{     // B O W R Y G, TD_OR_CW
-		.ccp =   cubecorners_perm(2, 3, 6, 7, 0, 1, 4, 5),
-        .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
-		.ce  = cubeedges(3, 6, 7, 11, 1, 2, 9, 10, 0, 4, 5, 8,
-                         1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1)
-    },{     // W O G R B Y, TD_OR_180
-		.ccp =   cubecorners_perm(6, 7, 4, 5, 2, 3, 0, 1),
+    },{ // TD_YW_180
+		.ccp =   cubecorners_perm(5, 4, 7, 6, 1, 0, 3, 2),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
-		.ce  = cubeedges(11, 9, 10, 8, 6, 7, 4, 5, 3, 1, 2, 0,
-                          0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    },{     // G O Y R W B, TD_OR_CCW
+		.ce  = cubeedges(8, 10, 9, 11, 5, 4, 7, 6, 0, 2, 1, 3,
+                         0,  0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0)
+    },{ // TD_YW_CCW
+		.ccp =   cubecorners_perm(1, 5, 3, 7, 0, 4, 2, 6),
+        .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
+		.ce  = cubeedges(5, 2, 10, 7, 0, 8, 3, 11, 4, 1, 9, 6,
+                         1, 1,  1, 1, 1, 1, 1,  1, 1, 1, 1, 1)
+    },{ // TD_OR_CW
 		.ccp =   cubecorners_perm(4, 5, 0, 1, 6, 7, 2, 3),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(8, 4, 5, 0, 9, 10, 1, 2, 11, 6, 7, 3,
                          1, 1, 1, 1, 1,  1, 1, 1,  1, 1, 1, 1)
-    },{     // B R Y O W G, TD_E0_11
+    },{ // TD_OR_180
+		.ccp =   cubecorners_perm(6, 7, 4, 5, 2, 3, 0, 1),
+        .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
+		.ce  = cubeedges(11, 9, 10, 8, 6, 7, 4, 5, 3, 1, 2, 0,
+                          0, 0,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    },{ // TD_OR_CCW
+		.ccp =   cubecorners_perm(2, 3, 6, 7, 0, 1, 4, 5),
+        .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
+		.ce  = cubeedges(3, 6, 7, 11, 1, 2, 9, 10, 0, 4, 5, 8,
+                         1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1)
+    },{ // TD_E0_11
 		.ccp =   cubecorners_perm(1, 0, 5, 4, 3, 2, 7, 6),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(0, 5, 4, 8, 2, 1, 10, 9, 3, 7, 6, 11,
                          1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1)
-    },{     // W B O G R Y, TD_E1_10
+    },{ // TD_E1_10
 		.ccp =   cubecorners_perm(2, 6, 0, 4, 3, 7, 1, 5),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(6, 1, 9, 4, 3, 11, 0, 8, 7, 2, 10, 5,
                          1, 1, 1, 1, 1,  1, 1, 1, 1, 1,  1, 1)
-    },{     // W G R B O Y, TD_E2_9
+    },{ // TD_E2_9
 		.ccp =   cubecorners_perm(7, 3, 5, 1, 6, 2, 4, 0),
         .cco = cubecorner_orients(2, 1, 1, 2, 1, 2, 2, 1),
 		.ce  = cubeedges(7, 10, 2, 5, 11, 3, 8, 0, 6, 9, 1, 4,
                          1,  1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1)
-    },{     // G R W O Y B, TD_E3_8
+    },{ // TD_E3_8
 		.ccp =   cubecorners_perm(7, 6, 3, 2, 5, 4, 1, 0),
         .cco = cubecorner_orients(1, 2, 2, 1, 2, 1, 1, 2),
 		.ce  = cubeedges(11, 7, 6, 3, 10, 9, 2, 1, 8, 5, 4, 0,
                           1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1)
-    },{     // O Y G W B R, TD_E4_7
+    },{ // TD_E4_7
 		.ccp =   cubecorners_perm(4, 6, 5, 7, 0, 2, 1, 3),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(9, 8, 11, 10, 4, 6, 5, 7, 1, 0, 3, 2,
                          1, 1,  1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
-    },{     // R W G Y B O, TD_E5_6
+    },{ // TD_E5_6
 		.ccp =   cubecorners_perm(7, 5, 6, 4, 3, 1, 2, 0),
         .cco = cubecorner_orients(0, 0, 0, 0, 0, 0, 0, 0),
 		.ce  = cubeedges(10, 11, 8, 9, 7, 5, 6, 4, 2, 3, 0, 1,

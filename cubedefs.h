@@ -264,6 +264,7 @@ extern const struct cube crotated[RCOUNT];
 extern const struct cube ctransformed[TCOUNT];
 const char *rotateDirName(int rd);
 int rotateNameToDir(const char *rotateName);
+const char *transformName(unsigned);
 int rotateDirReverse(int rd);
 int transformReverse(int idx);
 void cubePrint(const cube&);
