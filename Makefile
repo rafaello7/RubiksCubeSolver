@@ -1,7 +1,9 @@
 O = -O3
 
-cubesrv: cubesrv.o
-	g++ $O -pthread cubesrv.o -o cubesrv
+OBJS = cubedefs.o cubesrepr.o cubesreprbg.o cubecosets.o cubesrv.o
+
+cubesrv: $(OBJS)
+	g++ $O -pthread $(OBJS) -o cubesrv
 
 .cc.o:
 	g++ -pthread $O -c -Wall -Wno-parentheses -Wno-unused-function $<
