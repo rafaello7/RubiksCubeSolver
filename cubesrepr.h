@@ -104,10 +104,10 @@ class CubesReprAtDepth {
     std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>> m_cornerPermReprCubes;
 public:
     typedef std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>>::const_iterator ccpcubes_iter;
+    static unsigned size();
     CubesReprAtDepth();
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
     ~CubesReprAtDepth();
-    unsigned size() const { return m_cornerPermReprCubes.size(); }
     size_t cubeCount() const;
     CornerPermReprCubes &add(unsigned idx);
     void initOccur(unsigned idx);
@@ -124,6 +124,8 @@ class CubesReprByDepth {
     CubesReprByDepth(const CubesReprByDepth&) = delete;
     CubesReprByDepth &operator=(const CubesReprByDepth&) = delete;
 public:
+    static bool isUseReverse();
+
     CubesReprByDepth(unsigned size)
         : m_cubesAtDepths(size), m_availCount(0)
     {
@@ -131,7 +133,6 @@ public:
 
     unsigned availCount() const { return m_availCount; }
     void incAvailCount() { ++m_availCount; }
-    unsigned availMaxCount() const { return m_cubesAtDepths.size(); }
     const CubesReprAtDepth &operator[](unsigned idx) const { return m_cubesAtDepths[idx]; }
     CubesReprAtDepth &operator[](unsigned idx) { return m_cubesAtDepths[idx]; }
 };

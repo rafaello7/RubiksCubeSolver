@@ -23,6 +23,15 @@ static std::string dumpedges(unsigned long edges) {
 }
 #endif
 
+const char ASM_SETUP[] =
+#ifdef USE_ASM
+    " asm"
+#endif
+#ifdef ASMCHECK
+    " with check"
+#endif
+    "";
+
 const int cubeCornerColors[8][3] = {
   { CBLUE,   CORANGE, CYELLOW }, { CBLUE,  CYELLOW, CRED },
   { CBLUE,   CWHITE,  CORANGE }, { CBLUE,  CRED,    CWHITE },

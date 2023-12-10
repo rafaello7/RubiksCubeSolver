@@ -45,10 +45,10 @@ class BGSpaceCubesReprAtDepth {
     std::vector<std::pair<cubecorners_perm, BGSpaceCornerPermReprCubes>> m_cornerPermReprCubes;
 public:
     typedef std::vector<std::pair<cubecorners_perm, BGSpaceCornerPermReprCubes>>::const_iterator ccpcubes_iter;
+    static unsigned size();
     BGSpaceCubesReprAtDepth();
     BGSpaceCubesReprAtDepth(const BGSpaceCubesReprAtDepth&) = delete;
     ~BGSpaceCubesReprAtDepth();
-    unsigned size() const { return m_cornerPermReprCubes.size(); }
     size_t cubeCount() const;
     BGSpaceCornerPermReprCubes &add(unsigned idx);
     const BGSpaceCornerPermReprCubes &getAt(unsigned idx) const {
@@ -68,6 +68,8 @@ class BGSpaceCubesReprByDepth {
     BGSpaceCubesReprByDepth(const BGSpaceCubesReprByDepth&) = delete;
     BGSpaceCubesReprByDepth &operator=(const BGSpaceCubesReprByDepth&) = delete;
 public:
+    static bool isUseReverse();
+
     BGSpaceCubesReprByDepth(unsigned size)
         : m_cubesAtDepths(size), m_availCount(0)
     {

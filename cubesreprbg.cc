@@ -189,8 +189,12 @@ bool BGSpaceCornerPermReprCubes::containsCubeEdges(cubeedges ce) const
     return edgeIt != m_items.end() && *edgeIt == ce;
 }
 
+unsigned BGSpaceCubesReprAtDepth::size() {
+    return USEREVERSE ? 1672 : 2768;
+}
+
 BGSpaceCubesReprAtDepth::BGSpaceCubesReprAtDepth()
-    : m_cornerPermReprCubes(USEREVERSE ? 1672 : 2768)
+    : m_cornerPermReprCubes(size())
 {
     for(unsigned i = 0; i < m_cornerPermReprCubes.size(); ++i)
         m_cornerPermReprCubes[i].first = gBGSpaceReprPerms[i].ccp;
@@ -208,6 +212,10 @@ size_t BGSpaceCubesReprAtDepth::cubeCount() const {
 
 BGSpaceCornerPermReprCubes &BGSpaceCubesReprAtDepth::add(unsigned idx) {
     return m_cornerPermReprCubes[idx].second;
+}
+
+bool BGSpaceCubesReprByDepth::isUseReverse() {
+    return USEREVERSE;
 }
 
 std::string printInSpaceMoves(

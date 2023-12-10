@@ -593,8 +593,12 @@ CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orie
     return *ccoIt;
 }
 
+unsigned CubesReprAtDepth::size() {
+    return USEREVERSE ? 654 : 984;
+}
+
 CubesReprAtDepth::CubesReprAtDepth()
-    : m_cornerPermReprCubes(USEREVERSE ? 654 : 984)
+    : m_cornerPermReprCubes(size())
 {
     for(unsigned i = 0; i < m_cornerPermReprCubes.size(); ++i)
         m_cornerPermReprCubes[i].first = gReprPerms[i].ccp;
@@ -617,6 +621,10 @@ void CubesReprAtDepth::initOccur(unsigned idx)
 
 CornerPermReprCubes &CubesReprAtDepth::add(unsigned idx) {
     return m_cornerPermReprCubes[idx].second;
+}
+
+bool CubesReprByDepth::isUseReverse() {
+    return USEREVERSE;
 }
 
 std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &c, bool movesRev)

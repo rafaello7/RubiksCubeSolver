@@ -258,6 +258,7 @@ struct cube {
     std::string toParamText() const;
 };
 
+extern const char ASM_SETUP[];
 extern const struct cube csolved;
 extern const struct cube crotated[RCOUNT];
 extern const struct cube ctransformed[TCOUNT];

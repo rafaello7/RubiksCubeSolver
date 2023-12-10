@@ -1,6 +1,9 @@
 O = -O3
 
-OBJS = cubedefs.o cubesrepr.o cubesreprbg.o cubecosets.o cubesrv.o
+OBJS = cubedefs.o cubesrepr.o cubesreprbg.o cubecosets.o responder.o cuberead.o \
+	   progressbase.o threadpoolhelper.o cubesadd.o cubesaddbg.o cubecosetsadd.o \
+	   searchoptimal.o searchbg.o searchquick.o cubesearch.o cserver.o cconsole.o \
+	   cubesrv.o
 
 cubesrv: $(OBJS)
 	g++ $O -pthread $(OBJS) -o cubesrv
@@ -9,7 +12,7 @@ cubesrv: $(OBJS)
 	g++ -pthread $O -c -Wall -Wno-parentheses -Wno-unused-function $<
 
 clean:
-	rm -f cubesrv.o cubesrv
+	rm -f $(OBJS) cubesrv
 
 tar:
 	d=$${PWD##*/}; cd .. && tar czf $$d.tar.gz $$d/*.[chijm]* $$d/Makefile
