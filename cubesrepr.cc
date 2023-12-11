@@ -66,6 +66,11 @@ unsigned cubecornerPermRepresentativeIdx(cubecorners_perm ccp)
     return gPermToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
+cubecorners_perm cubecornerPermForIdx(unsigned permReprIdx)
+{
+    return gReprPerms[permReprIdx].ccp;
+}
+
 cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
 {
     unsigned permReprIdx = gPermToRepr.at(ccp.getPermIdx()).reprIdx;
@@ -600,8 +605,6 @@ unsigned CubesReprAtDepth::size() {
 CubesReprAtDepth::CubesReprAtDepth()
     : m_cornerPermReprCubes(size())
 {
-    for(unsigned i = 0; i < m_cornerPermReprCubes.size(); ++i)
-        m_cornerPermReprCubes[i].first = gReprPerms[i].ccp;
 }
 
 CubesReprAtDepth::~CubesReprAtDepth() {
@@ -609,18 +612,24 @@ CubesReprAtDepth::~CubesReprAtDepth() {
 
 size_t CubesReprAtDepth::cubeCount() const {
     size_t res = 0;
-    for(const std::pair<cubecorners_perm, CornerPermReprCubes> &reprCube : m_cornerPermReprCubes)
-        res += reprCube.second.cubeCount();
+    for(const CornerPermReprCubes &reprCube : m_cornerPermReprCubes)
+        res += reprCube.cubeCount();
     return res;
 }
 
 void CubesReprAtDepth::initOccur(unsigned idx)
 {
-    m_cornerPermReprCubes[idx].second.initOccur();
+    m_cornerPermReprCubes[idx].initOccur();
 }
 
 CornerPermReprCubes &CubesReprAtDepth::add(unsigned idx) {
-    return m_cornerPermReprCubes[idx].second;
+    return m_cornerPermReprCubes[idx];
+}
+
+cubecorners_perm CubesReprAtDepth::getPermAt(ccpcubes_iter it) const
+{
+    unsigned permReprIdx = std::distance(m_cornerPermReprCubes.begin(), it);
+    return gReprPerms[permReprIdx].ccp;
 }
 
 bool CubesReprByDepth::isUseReverse() {

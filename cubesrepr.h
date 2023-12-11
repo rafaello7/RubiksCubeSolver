@@ -44,6 +44,8 @@ cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm);
  */
 unsigned cubecornerPermRepresentativeIdx(cubecorners_perm);
 
+cubecorners_perm cubecornerPermForIdx(unsigned permReprIdx);
+
 /* Returns true when the corners permutation determines uniquely
  * the transformation needed to convert a cube having the permutation to
  * representative one.
@@ -156,9 +158,9 @@ public:
 /* A set of representative cubes reachable at specific depth.
  */
 class CubesReprAtDepth {
-    std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>> m_cornerPermReprCubes;
+    std::vector<CornerPermReprCubes> m_cornerPermReprCubes;
 public:
-    typedef std::vector<std::pair<cubecorners_perm, CornerPermReprCubes>>::const_iterator ccpcubes_iter;
+    typedef std::vector<CornerPermReprCubes>::const_iterator ccpcubes_iter;
     static unsigned size();
     CubesReprAtDepth();
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
@@ -167,10 +169,11 @@ public:
     CornerPermReprCubes &add(unsigned idx);
     void initOccur(unsigned idx);
     const CornerPermReprCubes &getAt(unsigned idx) const {
-        return m_cornerPermReprCubes[idx].second;
+        return m_cornerPermReprCubes[idx];
     }
     ccpcubes_iter ccpCubesBegin() const { return m_cornerPermReprCubes.begin(); }
     ccpcubes_iter ccpCubesEnd() const { return m_cornerPermReprCubes.end(); }
+    cubecorners_perm getPermAt(ccpcubes_iter) const;
 };
 
 class CubesReprByDepth {

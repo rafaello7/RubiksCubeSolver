@@ -143,8 +143,8 @@ static bool searchMovesForIdxs(const CubesReprByDepth &cubesReprByDepth,
     std::vector<EdgeReprCandidateTransform> otransform;
     CubesReprAtDepth::ccpcubes_iter ccpIt =
         cubesReprByDepth[depth].ccpCubesBegin() + indexes.permReprIdx;
-    const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
-    cubecorners_perm ccp = ccpIt->first;
+    const CornerPermReprCubes &ccpReprCubes = *ccpIt;
+    cubecorners_perm ccp = cubesReprByDepth[depth].getPermAt(ccpIt);
     if( ccpReprCubes.empty() )
         return false;
     const cube &cSearchT = cSearchTarr[indexes.reversed][indexes.symmetric][indexes.td];
@@ -241,7 +241,7 @@ static void searchMovesTb(unsigned threadNo,
     for(CubesReprAtDepth::ccpcubes_iter ccpCubes1It = ccReprCubesC.ccpCubesBegin();
             ccpCubes1It != ccReprCubesC.ccpCubesEnd(); ++ccpCubes1It)
     {
-        if( !ccpCubes1It->second.empty() )
+        if( !ccpCubes1It->empty() )
             ccp1FilledIters.push_back(ccpCubes1It);
     }
 
@@ -249,12 +249,12 @@ static void searchMovesTb(unsigned threadNo,
 	while( searchProgress->inc(*responder, &indexes2) ) {
         CubesReprAtDepth::ccpcubes_iter cornerPerm2It =
             (*cubesReprByDepth)[depthMax].ccpCubesBegin() + indexes2.permReprIdx;
-        const CornerPermReprCubes &ccpReprCubes2 = cornerPerm2It->second;
+        const CornerPermReprCubes &ccpReprCubes2 = *cornerPerm2It;
         if( ccpReprCubes2.empty() )
             continue;
         for(CubesReprAtDepth::ccpcubes_iter ccpCubes1It : ccp1FilledIters) {
-            const CornerPermReprCubes &ccpCubes1 = ccpCubes1It->second;
-            cubecorners_perm ccp1 = ccpCubes1It->first;
+            const CornerPermReprCubes &ccpCubes1 = *ccpCubes1It;
+            cubecorners_perm ccp1 = ccReprCubesC.getPermAt(ccpCubes1It);
             for(CornerPermReprCubes::ccocubes_iter ccoCubes1It = ccpCubes1.ccoCubesBegin();
                     ccoCubes1It != ccpCubes1.ccoCubesEnd(); ++ccoCubes1It)
             {

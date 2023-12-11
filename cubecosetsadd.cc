@@ -13,8 +13,8 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
     for(CubesReprAtDepth::ccpcubes_iter ccpCubesIt = ccReprCubesC.ccpCubesBegin();
             ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
-        const CornerPermReprCubes &ccpCubes = ccpCubesIt->second;
-        cubecorners_perm ccp = ccpCubesIt->first;
+        const CornerPermReprCubes &ccpCubes = *ccpCubesIt;
+        cubecorners_perm ccp = ccReprCubesC.getPermAt(ccpCubesIt);
         for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
                 ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
         {

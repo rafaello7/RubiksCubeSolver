@@ -71,6 +71,9 @@ public:
 
     bool isCatchFirst() const { return m_catchFirst; }
     int inc(Responder &responder, CubesReprAtDepth::ccpcubes_iter *ccpItBuf);
+    cubecorners_perm getPermAt(CubesReprAtDepth::ccpcubes_iter ccpIt) const {
+        return cubecornerPermForIdx(std::distance(m_ccpItBeg, ccpIt));
+    }
     int setBestMoves(const std::string &moves, int moveCount, Responder &responder);
     int getBestMoves(std::string &moves) const;
 };
@@ -223,13 +226,12 @@ static void searchMovesQuickTa(unsigned threadNo,
         const cube *csearch, unsigned depth, unsigned depth1Max,
         Responder *responder, QuickSearchProgress *searchProgress)
 {
-    //const char transformToSpace[][3] = { "BG", "OR", "YW" };
     CubesReprAtDepth::ccpcubes_iter ccpIt;
     int movesMax;
 
     while( (movesMax = searchProgress->inc(*responder, &ccpIt)) >= 0 ) {
-        const CornerPermReprCubes &ccpReprCubes = ccpIt->second;
-        cubecorners_perm ccp = ccpIt->first;
+        const CornerPermReprCubes &ccpReprCubes = *ccpIt;
+        cubecorners_perm ccp = searchProgress->getPermAt(ccpIt);
         if( !ccpReprCubes.empty() ) {
             std::vector<std::pair<cube, std::string>> cubesWithMoves;
             cubesWithMoves.emplace_back(std::make_pair(*csearch, std::string()));
@@ -248,8 +250,8 @@ static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubes
     CubesReprAtDepth::ccpcubes_iter ccp2It;
     int movesMax;
     while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
-        const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
-        cubecorners_perm ccp2 = ccp2It->first;
+        const CornerPermReprCubes &ccp2ReprCubes = *ccp2It;
+        cubecorners_perm ccp2 = searchProgress->getPermAt(ccp2It);
         if( ccp2ReprCubes.empty() )
             continue;
         std::vector<std::pair<cube, std::string>> cubesWithMoves;
@@ -274,15 +276,15 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
     const CubesReprAtDepth &ccReprCubesC = (*cubesReprByDepth)[depth];
 
     while( (movesMax = searchProgress->inc(*responder, &ccp2It)) >= 0 ) {
-        const CornerPermReprCubes &ccp2ReprCubes = ccp2It->second;
-        cubecorners_perm ccp2 = ccp2It->first;
+        const CornerPermReprCubes &ccp2ReprCubes = *ccp2It;
+        cubecorners_perm ccp2 = searchProgress->getPermAt(ccp2It);
         if( ccp2ReprCubes.empty() )
             continue;
         for(CubesReprAtDepth::ccpcubes_iter ccp1It = ccReprCubesC.ccpCubesBegin();
                 ccp1It != ccReprCubesC.ccpCubesEnd(); ++ccp1It)
         {
-            const CornerPermReprCubes &ccp1ReprCubes = ccp1It->second;
-            cubecorners_perm ccp1 = ccp1It->first;
+            const CornerPermReprCubes &ccp1ReprCubes = *ccp1It;
+            cubecorners_perm ccp1 = ccReprCubesC.getPermAt(ccp1It);
             if( ccp1ReprCubes.empty() )
                 continue;
             for(CornerPermReprCubes::ccocubes_iter cco1CubesIt = ccp1ReprCubes.ccoCubesBegin();
