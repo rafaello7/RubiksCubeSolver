@@ -16,7 +16,8 @@ void CubeSearcher::fillCubes(Responder &responder)
 void CubeSearcher::searchMoves(
         const cube &csearch, char mode, Responder &responder)
 {
-    responder.message("setup: depth %d", m_depthMax);
+    responder.message("setup: depth %d%s%s", m_depthMax,
+            m_cubesReprByDepthAdd.isUseReverse() ? " rev" :"", ASM_SETUP);
     switch( mode ) {
     case 'q':
         searchMovesQuickCatchFirst(m_cubesReprByDepthAdd, csearch, responder);
