@@ -3,11 +3,12 @@
 
 #include "cubesadd.h"
 #include "cubesaddbg.h"
+#include "cubecosetsadd.h"
 #include "responder.h"
 
 void searchMovesQuickCatchFirst(CubesReprByDepthAdd&, BGCubesReprByDepthAdd&,
-        const cube &csearch, Responder&);
+        SpaceReprCubesAdd&, const cube &csearch, Responder&);
 void searchMovesQuickMulti(CubesReprByDepthAdd&, BGCubesReprByDepthAdd&,
-        const cube &csearch, Responder&);
+        SpaceReprCubesAdd&, const cube &csearch, Responder&);
 
 #endif // SEARCHQUICK_H

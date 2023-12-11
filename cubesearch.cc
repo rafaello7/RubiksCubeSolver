@@ -22,11 +22,11 @@ void CubeSearcher::searchMoves(
     switch( mode ) {
     case 'q':
         searchMovesQuickCatchFirst(m_cubesReprByDepthAdd, m_bgcubesReprByDepthAdd,
-                csearch, responder);
+                m_spaceReprCubesAdd, csearch, responder);
         break;
     case 'm':
         searchMovesQuickMulti(m_cubesReprByDepthAdd, m_bgcubesReprByDepthAdd,
-                csearch, responder);
+                m_spaceReprCubesAdd, csearch, responder);
         break;
     default:
         searchMovesOptimal(m_cubesReprByDepthAdd, csearch, m_depthMax, responder);

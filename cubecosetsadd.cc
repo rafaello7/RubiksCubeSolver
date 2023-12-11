@@ -70,18 +70,20 @@ void addBGSpaceReprCubes(const CubesReprByDepth &cubesReprByDepth,
     }
 }
 
-const SpaceReprCubes *getBGSpaceReprCubes(CubesReprByDepthAdd &cubesReprByDepthAdd,
+SpaceReprCubesAdd::SpaceReprCubesAdd()
+    : m_spaceReprCubes(std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1)
+{
+}
+
+const SpaceReprCubes *SpaceReprCubesAdd::getBGCosetReprCubes(CubesReprByDepthAdd &cubesReprByDepthAdd,
         unsigned depth, Responder &responder)
 {
-    static SpaceReprCubes bgSpaceCubes(
-            std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1);
-
-    if( bgSpaceCubes.availCount() <= depth ) {
+    if( m_spaceReprCubes.availCount() <= depth ) {
         const CubesReprByDepth *cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return NULL;
-        addBGSpaceReprCubes(*cubesReprByDepth, bgSpaceCubes, depth, responder);
+        addBGSpaceReprCubes(*cubesReprByDepth, m_spaceReprCubes, depth, responder);
     }
-    return &bgSpaceCubes;
+    return &m_spaceReprCubes;
 }
 
