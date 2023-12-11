@@ -35,7 +35,7 @@ static int searchPhase1Cube2(const CubesReprByDepth &cubesReprByDepth,
         if( depthInSpace >= 0 ) {
             //responder.message("found in-space cube at depth %d", depthInSpace);
             cube cube2T = cube2.transform(transformReverse(searchTd));
-            std::string cube2Moves = printMoves(cubesReprByDepth, cube2T, !searchRev);
+            std::string cube2Moves = cubesReprByDepth.getMoves(cube2T, !searchRev);
             if( searchRev )
                 moves = cube2Moves + movesInSpace;
             else
@@ -189,7 +189,7 @@ static bool searchMovesQuickForCcp(cubecorners_perm ccp, const CornerPermReprCub
                                             if( moveCount >= 0 ) {
                                                 cube cube1 = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
                                                 cube cube1T = cube1.transform(transformReverse(searchTd));
-                                                std::string cube1Moves = printMoves(cubesReprByDepth, cube1T, searchRev);
+                                                std::string cube1Moves = cubesReprByDepth.getMoves(cube1T, searchRev);
                                                 const std::string &cubeMovesAppend =
                                                     csearchWithMovesAppend[srchItem].second;
                                                 std::string moves;
@@ -255,7 +255,7 @@ static void searchMovesQuickTb1(unsigned threadNo, const CubesReprByDepth *cubes
         std::vector<std::pair<cube, std::string>> cubesWithMoves;
         for(unsigned rd = 0; rd < RCOUNT; ++rd) {
             cube c1Search = cube::compose(crotated[rd], *csearch);
-            std::string cube1Moves = printMoves(*cubesReprByDepth, crotated[rd]);
+            std::string cube1Moves = cubesReprByDepth->getMoves(crotated[rd]);
             cubesWithMoves.emplace_back(std::make_pair(c1Search, cube1Moves));
         }
         if( searchMovesQuickForCcp(ccp2, ccp2ReprCubes, *cubesReprByDepth, bgSpaceCubes,
@@ -322,7 +322,7 @@ static void searchMovesQuickTb(unsigned threadNo, const CubesReprByDepth *cubesR
                                         csearch->ccp, csearch->cco);
                                 cubeedges ce1Search = cubeedges::compose(ce1T, csearch->ce);
                                 cube c1Search = { .ccp = ccp1Search, .cco = cco1Search, .ce = ce1Search };
-                                std::string cube1Moves = printMoves(*cubesReprByDepth, c1T);
+                                std::string cube1Moves = cubesReprByDepth->getMoves(c1T);
                                 cubesWithMoves.emplace_back(std::make_pair(c1Search, cube1Moves));
                             }
                         }

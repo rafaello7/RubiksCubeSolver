@@ -113,11 +113,11 @@ static std::string getMovesForMatch(const CubesReprByDepth &cubesReprByDepth,
     }
     std::string moves;
     if( searchRev ) {
-        moves = printMoves(cubesReprByDepth, cTsymm, !reversed);
-        moves += printMoves(cubesReprByDepth, cSearchTsymm, reversed);
+        moves = cubesReprByDepth.getMoves(cTsymm, !reversed);
+        moves += cubesReprByDepth.getMoves(cSearchTsymm, reversed);
     }else{
-        moves = printMoves(cubesReprByDepth, cSearchTsymm, !reversed);
-        moves += printMoves(cubesReprByDepth, cTsymm, reversed);
+        moves = cubesReprByDepth.getMoves(cSearchTsymm, !reversed);
+        moves += cubesReprByDepth.getMoves(cTsymm, reversed);
     }
     return moves;
 }
@@ -287,7 +287,7 @@ static void searchMovesTb(unsigned threadNo,
                                             depthMax, cSearchTarr, indexes2, moves2, 0, 0) )
                                 {
                                     std::string moves = moves2;
-                                    moves += printMoves(*cubesReprByDepth, c1T);
+                                    moves += cubesReprByDepth->getMoves(c1T);
                                     responder->solution(moves.c_str());
                                     searchProgress->inc(*responder, NULL);
                                     return;

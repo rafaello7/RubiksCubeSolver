@@ -190,9 +190,12 @@ public:
     void incAvailCount() { ++m_availCount; }
     const CubesReprAtDepth &operator[](unsigned idx) const { return m_cubesAtDepths[idx]; }
     CubesReprAtDepth &operator[](unsigned idx) { return m_cubesAtDepths[idx]; }
+
+    // the cube passed as parameter shall exist in the set
+    // returns the list of moves separated by spaces
+    std::string getMoves(const cube&, bool movesRev = false) const;
 };
 
-std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &c, bool movesRev = false);
 unsigned long addCubesForReprPerm(CubesReprByDepth*, unsigned permReprIdx, int depth);
 void permReprInit(bool useReverse);
 

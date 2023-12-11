@@ -627,7 +627,7 @@ bool CubesReprByDepth::isUseReverse() {
     return USEREVERSE;
 }
 
-std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &c, bool movesRev)
+std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
 {
 	std::vector<int> rotateDirs;
     std::vector<int>::iterator insertPos = rotateDirs.end();
@@ -635,12 +635,12 @@ std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &c, bool
     unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.ccp);
 	unsigned depth = 0;
 	while( true ) {
-        const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
+        const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth].getAt(ccpReprIdx);
         const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(crepr.cco);
 		if( ccoReprCubes.containsCubeEdges(crepr.ce) )
 			break;
 		++depth;
-        if( depth >= cubesByDepth.availCount() ) {
+        if( depth >= m_availCount ) {
             std::cout << "printMoves: depth reached maximum, cube NOT FOUND" << std::endl;
             exit(1);
         }
@@ -654,14 +654,14 @@ std::string printMoves(const CubesReprByDepth &cubesByDepth, const cube &c, bool
 			cc1 = cube::compose(cc, crotated[cm]);
             cube cc1repr = cubeRepresentative(cc1);
             ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            const CornerPermReprCubes &ccpReprCubes = cubesByDepth[depth].getAt(ccpReprIdx);
+            const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth].getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubes.containsCubeEdges(cc1repr.ce) )
                 break;
 			cc1 = cube::compose(ccRev, crotated[cm]);
             cc1repr = cubeRepresentative(cc1);
             ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            const CornerPermReprCubes &ccpReprCubesRev = cubesByDepth[depth].getAt(ccpReprIdx);
+            const CornerPermReprCubes &ccpReprCubesRev = m_cubesAtDepths[depth].getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubesRev = ccpReprCubesRev.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubesRev.containsCubeEdges(cc1repr.ce) ) {
                 movesRev = !movesRev;
