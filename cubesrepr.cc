@@ -66,7 +66,7 @@ unsigned cubecornerPermRepresentativeIdx(cubecorners_perm ccp)
     return gPermToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
-static cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
+cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
 {
     unsigned permReprIdx = gPermToRepr.at(ccp.getPermIdx()).reprIdx;
     return gReprPerms[permReprIdx].ccp;
