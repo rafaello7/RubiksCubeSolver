@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "setup: depth " << depthMax << (useReverse ? " rev" : "") <<
         ASM_SETUP << std::endl;
-    bgspacePermReprInit(useReverse);
     if( argc >= 4 ) {
         if(isdigit(argv[2][0]))
             cubeTester(atoi(argv[2]), argv[3][0], depthMax, useReverse);

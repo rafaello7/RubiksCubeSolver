@@ -2,10 +2,12 @@
 #define CUBESEARCH_H
 
 #include "cubesadd.h"
+#include "cubesaddbg.h"
 #include "responder.h"
 
 class CubeSearcher {
     CubesReprByDepthAdd m_cubesReprByDepthAdd;
+    BGCubesReprByDepthAdd m_bgcubesReprByDepthAdd;
     const unsigned m_depthMax;
 public:
     CubeSearcher(unsigned depthMax, bool useReverse);

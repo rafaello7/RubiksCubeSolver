@@ -9,67 +9,53 @@
 class AddBGcubesProgress : public ProgressBase {
     unsigned long m_cubeCount;
     const unsigned m_depth;
+    const unsigned m_reprPermCount;
     unsigned m_nextPermReprIdx;
     unsigned m_runningThreadCount;
 public:
-    AddBGcubesProgress(unsigned depth)
-        : m_cubeCount(0), m_depth(depth),
+    AddBGcubesProgress(unsigned depth, unsigned reprPermCount)
+        : m_cubeCount(0), m_depth(depth), m_reprPermCount(reprPermCount),
           m_nextPermReprIdx(0), m_runningThreadCount(THREAD_COUNT)
     {
     }
 
-    bool inc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf);
+    bool inc(Responder &responder, unsigned long cubeCount, unsigned *reprPermIdxBuf);
 };
 
-bool AddBGcubesProgress::inc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf)
+bool AddBGcubesProgress::inc(Responder &responder, unsigned long cubeCount, unsigned *reprPermIdxBuf)
 {
-    const unsigned permReprCount = BGSpaceCubesReprAtDepth::size();
-    unsigned permReprIdx = 0;
+    unsigned reprPermIdx = 0;
     bool isFinish;
     mutexLock();
     m_cubeCount += cubeCount;
-    isFinish = m_nextPermReprIdx >= permReprCount || isStopRequestedNoLock();
+    isFinish = m_nextPermReprIdx >= m_reprPermCount || isStopRequestedNoLock();
     if( isFinish )
         --m_runningThreadCount;
     else
-        permReprIdx = m_nextPermReprIdx++;
+        reprPermIdx = m_nextPermReprIdx++;
     mutexUnlock();
-    *permReprIdxBuf = permReprIdx;
+    *reprPermIdxBuf = reprPermIdx;
     return isFinish;
 }
 
 static void addInSpaceCubesT(unsigned threadNo,
-        BGSpaceCubesReprByDepth *cubesReprByDepth, int depth,
+        BGCubesReprByDepth *cubesReprByDepth, int depth,
         Responder *responder, AddBGcubesProgress *addCubesProgress)
 {
     unsigned long cubeCount = 0;
-    unsigned permReprIdx;
+    unsigned reprPermIdx;
 
-    while( !addCubesProgress->inc(*responder, cubeCount, &permReprIdx) ) {
-        cubeCount = addInSpaceCubesForReprPerm(cubesReprByDepth, permReprIdx, depth);
+    while( !addCubesProgress->inc(*responder, cubeCount, &reprPermIdx) ) {
+        cubeCount = cubesReprByDepth->addCubesForReprPerm(reprPermIdx, depth);
     }
 }
 
-static bool addInSpaceCubes(BGSpaceCubesReprByDepth &cubesReprByDepth, unsigned requestedDepth,
+static bool addInSpaceCubes(BGCubesReprByDepth &cubesReprByDepth, unsigned requestedDepth,
         Responder &responder)
 {
-    if( requestedDepth >= cubesReprByDepth.availMaxCount() ) {
-        std::cout << "fatal: addInSpaceCubes: requested depth=" << requestedDepth <<
-            ", max=" << cubesReprByDepth.availMaxCount()-1 << std::endl;
-        exit(1);
-    }
-    if( cubesReprByDepth.availCount() == 0 ) {
-        // insert the solved cube
-        unsigned cornerPermReprIdx = inbgspaceCubecornerPermRepresentativeIdx(csolved.ccp);
-        BGSpaceCornerPermReprCubes &ccpCubes = cubesReprByDepth[0].add(cornerPermReprIdx);
-        cubeedges ceRepr = inbgspaceCubeedgesRepresentative(csolved.ccp, csolved.ce);
-        std::vector<cubeedges> ceReprArr = { ceRepr };
-        ccpCubes.addCubes(ceReprArr);
-        cubesReprByDepth.incAvailCount();
-    }
     while( cubesReprByDepth.availCount() <= requestedDepth ) {
         unsigned depth = cubesReprByDepth.availCount();
-        AddBGcubesProgress addCubesProgress(depth);
+        AddBGcubesProgress addCubesProgress(depth, cubesReprByDepth[depth].size());
         runInThreadPool(addInSpaceCubesT, &cubesReprByDepth,
                     depth, &responder, &addCubesProgress);
         if( ProgressBase::isStopRequested() ) {
@@ -83,15 +69,16 @@ static bool addInSpaceCubes(BGSpaceCubesReprByDepth &cubesReprByDepth, unsigned 
     return false;
 }
 
-const BGSpaceCubesReprByDepth *getCubesInSpace(unsigned depth, Responder &responder)
+BGCubesReprByDepthAdd::BGCubesReprByDepthAdd(bool useReverse)
+    : m_cubesReprByDepth(useReverse)
 {
-    static BGSpaceCubesReprByDepth cubesReprByDepthInSpace(TWOPHASE_DEPTH2_MAX+1);
-    static std::mutex mtx;
-    bool isCanceled;
+}
 
-    mtx.lock();
-    isCanceled = addInSpaceCubes(cubesReprByDepthInSpace, depth, responder);
-    mtx.unlock();
-    return isCanceled ? NULL : &cubesReprByDepthInSpace;
+const BGCubesReprByDepth *BGCubesReprByDepthAdd::getReprCubes(unsigned depth, Responder &responder)
+{
+    m_mtx.lock();
+    bool isCanceled = addInSpaceCubes(m_cubesReprByDepth, depth, responder);
+    m_mtx.unlock();
+    return isCanceled ? NULL : &m_cubesReprByDepth;
 }
 

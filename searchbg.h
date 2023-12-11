@@ -1,7 +1,7 @@
 #ifndef SEARCHBG_H
 #define SEARCHBG_H
 
-#include "cubedefs.h"
+#include "cubesaddbg.h"
 #include "responder.h"
 
 /* The cSpace cube shall be in BG space. The function searches for a shortest
@@ -16,7 +16,8 @@
  * yellow-white or orange-red space into the blue-green space by the rotation.
  * The found moves are translated into moves in appropriate space.
  */
-int searchInSpaceMoves(const cube &cSpace, bool searchRev, unsigned searchTd,
+int searchInSpaceMoves(BGCubesReprByDepthAdd &cubesReprByDepthAdd,
+        const cube &cSpace, bool searchRev, unsigned searchTd,
         unsigned movesMax, Responder&, std::string &moves);
 
 #endif // SEARCHBG_H
