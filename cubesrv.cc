@@ -39,22 +39,21 @@ int main(int argc, char *argv[]) {
         const char *s = argv[1];
         useReverse = strchr(s, 'r') != NULL;
         depthMax = atoi(s);
-        if( depthMax <= 0 || depthMax > DEPTH_MAX_AVAIL ) {
-            printf("DEPTH_MAX invalid: must be in range 1..%d\n", DEPTH_MAX_AVAIL);
+        if( depthMax <= 0 || depthMax > 99 ) {
+            printf("DEPTH_MAX invalid: must be in range 1..99\n");
             return 1;
         }
     }
     std::cout << "setup: depth " << depthMax << (useReverse ? " rev" : "") <<
         ASM_SETUP << std::endl;
-    permReprInit(useReverse);
     bgspacePermReprInit(useReverse);
     if( argc >= 4 ) {
         if(isdigit(argv[2][0]))
-            cubeTester(atoi(argv[2]), argv[3][0], depthMax);
+            cubeTester(atoi(argv[2]), argv[3][0], depthMax, useReverse);
         else
-            solveCubes(argv[2], argv[3][0], depthMax);
+            solveCubes(argv[2], argv[3][0], depthMax, useReverse);
     }else
-        runServer(depthMax);
+        runServer(depthMax, useReverse);
     return 0;
 }
 

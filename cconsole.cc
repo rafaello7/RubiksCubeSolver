@@ -112,11 +112,13 @@ void ConsoleResponder::handleMessage(MessageType mt, const char *msg) {
     }
 }
 
-static void solveCubes(const std::vector<cube> &cubes, char mode, unsigned depthMax)
+static void solveCubes(const std::vector<cube> &cubes, char mode,
+        unsigned depthMax, bool useReverse)
 {
+    CubeSearcher cubeSearcher(depthMax, useReverse);
     if( mode == 'O' ) {
         ConsoleResponder responder(2);
-        getReprCubes(depthMax, responder);
+        cubeSearcher.fillCubes(responder);
         std::cout << std::endl;
     }
     std::map<std::string, std::pair<unsigned, unsigned>> moveCounters;
@@ -126,7 +128,7 @@ static void solveCubes(const std::vector<cube> &cubes, char mode, unsigned depth
         std::cout << std::endl;
         cubePrint(c);
         ConsoleResponder responder(mode == 'q' ? 0 : mode == 'm' ? 1 : 2);
-        searchMoves(c, mode, depthMax, responder);
+        cubeSearcher.searchMoves(c, mode, responder);
         std::cout << std::endl;
         const char *s = responder.getSolution();
         while( s ) {
@@ -164,7 +166,7 @@ static void solveCubes(const std::vector<cube> &cubes, char mode, unsigned depth
     std::cout << std::endl;
 }
 
-void solveCubes(const char *fnameOrCubeStr, char mode, unsigned depthMax)
+void solveCubes(const char *fnameOrCubeStr, char mode, unsigned depthMax, bool useReverse)
 {
     std::vector<cube> cubes;
 
@@ -193,15 +195,15 @@ void solveCubes(const char *fnameOrCubeStr, char mode, unsigned depthMax)
             return;
         cubes.push_back(c);
     }
-    solveCubes(cubes, mode, depthMax);
+    solveCubes(cubes, mode, depthMax, useReverse);
 }
 
-void cubeTester(unsigned cubeCount, char mode, unsigned depthMax)
+void cubeTester(unsigned cubeCount, char mode, unsigned depthMax, bool useReverse)
 {
     std::vector<cube> cubes;
 
     for(unsigned i = 0; i < cubeCount; ++i)
         cubes.push_back(generateCube());
-    solveCubes(cubes, mode, depthMax);
+    solveCubes(cubes, mode, depthMax, useReverse);
 }
 

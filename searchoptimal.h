@@ -1,9 +1,9 @@
 #ifndef SEARCHOPTIMAL_H
 #define SEARCHOPTIMAL_H
 
-#include "cubedefs.h"
+#include "cubesadd.h"
 #include "responder.h"
 
-void searchMovesOptimal(const cube &csearch, unsigned depthMax, Responder &responder);
+void searchMovesOptimal(CubesReprByDepthAdd&, const cube &csearch, unsigned depthMax, Responder&);
 
 #endif // SEARCHOPTIMAL_H

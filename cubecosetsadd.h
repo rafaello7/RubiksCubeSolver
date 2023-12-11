@@ -2,6 +2,7 @@
 #define CUBECOSETSADD_H
 
 #include "cubecosets.h"
+#include "cubesadd.h"
 #include "responder.h"
 
 enum {
@@ -9,6 +10,7 @@ enum {
     TWOPHASE_DEPTH1_MULTI_MAX = 6u,
 };
 
-const SpaceReprCubes *getBGSpaceReprCubes(unsigned depth, Responder&);
+const SpaceReprCubes *getBGSpaceReprCubes(CubesReprByDepthAdd&,
+        unsigned depth, Responder &responder);
 
 #endif // CUBECOSETSADD_H

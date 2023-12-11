@@ -1,8 +1,9 @@
 O = -O3
 
-OBJS = cubedefs.o cubesrepr.o cubesreprbg.o cubecosets.o responder.o cuberead.o \
-	   progressbase.o threadpoolhelper.o cubesadd.o cubesaddbg.o cubecosetsadd.o \
-	   searchoptimal.o searchbg.o searchquick.o cubesearch.o cserver.o cconsole.o \
+OBJS = cubedefs.o cpermrepr.o cubesrepr.o cubesreprbg.o cubecosets.o \
+	   responder.o cuberead.o progressbase.o threadpoolhelper.o \
+	   cubesadd.o cubesaddbg.o cubecosetsadd.o searchoptimal.o \
+	   searchbg.o searchquick.o cubesearch.o cserver.o cconsole.o \
 	   cubesrv.o
 
 cubesrv: $(OBJS)

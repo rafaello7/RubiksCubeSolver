@@ -3,18 +3,29 @@
 #include "searchquick.h"
 #include <sstream>
 
-void searchMoves(const cube &csearch, char mode, unsigned depthMax, Responder &responder)
+CubeSearcher::CubeSearcher(unsigned depthMax, bool useReverse)
+    : m_cubesReprByDepthAdd(useReverse), m_depthMax(depthMax)
 {
-    responder.message("setup: depth %d", depthMax);
+}
+
+void CubeSearcher::fillCubes(Responder &responder)
+{
+    m_cubesReprByDepthAdd.getReprCubes(m_depthMax, responder);
+}
+
+void CubeSearcher::searchMoves(
+        const cube &csearch, char mode, Responder &responder)
+{
+    responder.message("setup: depth %d", m_depthMax);
     switch( mode ) {
     case 'q':
-        searchMovesQuickCatchFirst(csearch, responder);
+        searchMovesQuickCatchFirst(m_cubesReprByDepthAdd, csearch, responder);
         break;
     case 'm':
-        searchMovesQuickMulti(csearch, responder);
+        searchMovesQuickMulti(m_cubesReprByDepthAdd, csearch, responder);
         break;
     default:
-        searchMovesOptimal(csearch, depthMax, responder);
+        searchMovesOptimal(m_cubesReprByDepthAdd, csearch, m_depthMax, responder);
         break;
     }
 }

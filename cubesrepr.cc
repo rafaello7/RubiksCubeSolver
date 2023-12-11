@@ -2,407 +2,6 @@
 #include <iostream>
 #include <algorithm>
 
-struct ReprCandidateTransform {
-    bool reversed;
-    bool symmetric;
-    unsigned short transformIdx;
-};
-
-struct CubecornerPermRepr {
-    cubecorners_perm ccp;
-    std::vector<unsigned short> represented;
-};
-
-struct CubecornerPermToRepr {
-    int reprIdx = -1;       // index in gReprPerms
-    std::vector<ReprCandidateTransform> transform;
-};
-
-static bool USEREVERSE;
-static std::vector<CubecornerPermRepr> gReprPerms;
-static std::vector<CubecornerPermToRepr> gPermToRepr(40320);
-
-void permReprInit(bool useReverse)
-{
-    USEREVERSE = useReverse;
-    gReprPerms.reserve(USEREVERSE ? 654 : 984);
-    for(unsigned pidx = 0; pidx < 40320; ++pidx) {
-        cubecorners_perm perm = cubecorners_perm::fromPermIdx(pidx);
-        cubecorners_perm permRepr;
-        std::vector<ReprCandidateTransform> transform;
-        for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
-            cubecorners_perm permr = reversed ? perm.reverse() : perm;
-            for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                cubecorners_perm permchk = symmetric ? permr.symmetric() : permr;
-                for(unsigned short td = 0; td < TCOUNT; ++td) {
-                    cubecorners_perm cand = permchk.transform(td);
-                    if( td+reversed+symmetric == 0 || cand < permRepr ) {
-                        permRepr = cand;
-                        transform.clear();
-                        transform.push_back({ .reversed = (bool)reversed,
-                                .symmetric = (bool)symmetric, .transformIdx = td });
-                    }else if( cand == permRepr ) {
-                        transform.push_back({ .reversed = (bool)reversed,
-                                .symmetric = (bool)symmetric, .transformIdx = td });
-                    }
-                }
-            }
-        }
-        CubecornerPermToRepr &permToReprRepr = gPermToRepr[permRepr.getPermIdx()];
-        if( permToReprRepr.reprIdx < 0 ) {
-            permToReprRepr.reprIdx = gReprPerms.size();
-            gReprPerms.push_back({ .ccp = permRepr });
-        }
-        gReprPerms[permToReprRepr.reprIdx].represented.push_back(pidx);
-        CubecornerPermToRepr &permToRepr = gPermToRepr[perm.getPermIdx()];
-        permToRepr.reprIdx = permToReprRepr.reprIdx;
-        permToRepr.transform.swap(transform);
-    }
-    std::cout << "repr size=" << gReprPerms.size() << std::endl;
-}
-
-unsigned cubecornerPermRepresentativeIdx(cubecorners_perm ccp)
-{
-    return gPermToRepr.at(ccp.getPermIdx()).reprIdx;
-}
-
-cubecorners_perm cubecornerPermForIdx(unsigned permReprIdx)
-{
-    return gReprPerms[permReprIdx].ccp;
-}
-
-cubecorners_perm cubecornerPermsRepresentative(cubecorners_perm ccp)
-{
-    unsigned permReprIdx = gPermToRepr.at(ccp.getPermIdx()).reprIdx;
-    return gReprPerms[permReprIdx].ccp;
-}
-
-cubecorner_orients cubecornerOrientsRepresentative(cubecorners_perm ccp, cubecorner_orients cco,
-         std::vector<EdgeReprCandidateTransform> &transform)
-{
-    CubecornerPermToRepr permToRepr = gPermToRepr.at(ccp.getPermIdx());
-    cubecorners_perm ccpsymm, ccprev, ccprevsymm;
-    cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
-    bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
-	transform.clear();
-    for(const ReprCandidateTransform &rct : permToRepr.transform) {
-        cubecorner_orients ocand;
-        if( rct.reversed ) {
-            if( !isRevInit ) {
-                ccprev = ccp.reverse();
-                ccorev = cco.reverse(ccp);
-                isRevInit = true;
-            }
-            if( rct.symmetric ) {
-                if( !isRevSymmInit ) {
-                    ccprevsymm = ccprev.symmetric();
-                    ccorevsymm = ccorev.symmetric();
-                    isRevSymmInit = true;
-                }
-                ocand = ccorevsymm.transform(ccprevsymm, rct.transformIdx);
-            }else{
-                ocand = ccorev.transform(ccprev, rct.transformIdx);
-            }
-        }else{
-            if( rct.symmetric ) {
-                if( !isSymmInit ) {
-                    ccpsymm = ccp.symmetric();
-                    ccosymm = cco.symmetric();
-                    isSymmInit = true;
-                }
-                ocand = ccosymm.transform(ccpsymm, rct.transformIdx);
-            }else{
-                ocand = cco.transform(ccp, rct.transformIdx);
-            }
-        }
-        if( !isInit || ocand < orepr ) {
-            orepr = ocand;
-            transform.clear();
-            transform.push_back({ .transformedIdx = rct.transformIdx,
-                    .reversed = rct.reversed, .symmetric = rct.symmetric, .ceTrans = csolved.ce });
-            isInit = true;
-        }else if( isInit && ocand == orepr )
-            transform.push_back({ .transformedIdx = rct.transformIdx,
-                    .reversed = rct.reversed, .symmetric = rct.symmetric, .ceTrans = csolved.ce });
-    }
-    return orepr;
-}
-
-cubeedges cubeedgesRepresentative(cubeedges ce,
-        const std::vector<EdgeReprCandidateTransform> &transform)
-{
-    cubeedges cerepr;
-
-    if( transform.size() == 1 ) {
-        const EdgeReprCandidateTransform &erct = transform.front();
-        cubeedges cechk = erct.reversed ? ce.reverse() : ce;
-        if( erct.symmetric )
-            cechk = cechk.symmetric();
-        cerepr = cechk.transform(erct.transformedIdx);
-    }else{
-        cubeedges cesymm, cerev, cerevsymm;
-        bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
-        for(const EdgeReprCandidateTransform &erct : transform) {
-            cubeedges cand;
-            if( erct.reversed ) {
-                if( ! isRevInit ) {
-                    cerev = ce.reverse();
-                    isRevInit = true;
-                }
-                if( erct.symmetric ) {
-                    if( ! isRevSymmInit ) {
-                        cerevsymm = cerev.symmetric();
-                        isRevSymmInit = true;
-                    }
-                    cand = cerevsymm.transform(erct.transformedIdx);
-                }else{
-                    cand = cerev.transform(erct.transformedIdx);
-                }
-            }else{
-                if( erct.symmetric ) {
-                    if( ! isSymmInit ) {
-                        cesymm = ce.symmetric();
-                        isSymmInit = true;
-                    }
-                    cand = cesymm.transform(erct.transformedIdx);
-                }else{
-                    cand = ce.transform(erct.transformedIdx);
-                }
-            }
-            if( !isInit || cand < cerepr )
-                cerepr = cand;
-            isInit = true;
-        }
-    }
-    return cerepr;
-}
-
-/* Gets the representative orients of cco.
- * Assumes the ccp,cco are cubecorners of a cube compose of two cubes, c1 ⊙  c2
- *
- * Parameters:
- *    ccp, cco      - cubecorners of the c1.cc composed with c2.cc
- *    reverse       - whether the ccp,cco is reversed
- *    ce2           - c2.ce
- *    transform     - output list to pass later to cubeedgesComposedRepresentative()
- *                    along with c1.ce, to get representative cubeedges of
- *                    c1.ce ⊙  ce2
- */
-cubecorner_orients cubecornerOrientsComposedRepresentative(
-        cubecorners_perm ccp, cubecorner_orients cco, bool reverse,
-        cubeedges ce2, std::vector<EdgeReprCandidateTransform> &transform)
-{
-    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccp.getPermIdx());
-    cubecorners_perm ccpsymm, ccprev, ccprevsymm;
-    cubecorner_orients orepr, ccosymm, ccorev, ccorevsymm;
-    bool isInit = false, isSymmInit = false, isRevInit = false, isRevSymmInit = false;
-	transform.clear();
-    for(const ReprCandidateTransform &rct : permToRepr.transform) {
-        cubecorner_orients ocand;
-        if( rct.reversed ) {
-            if( !isRevInit ) {
-                ccprev = ccp.reverse();
-                ccorev = cco.reverse(ccp);
-                isRevInit = true;
-            }
-            if( rct.symmetric ) {
-                if( !isRevSymmInit ) {
-                    ccprevsymm = ccprev.symmetric();
-                    ccorevsymm = ccorev.symmetric();
-                    isRevSymmInit = true;
-                }
-                ocand = ccorevsymm.transform(ccprevsymm, rct.transformIdx);
-            }else{
-                ocand = ccorev.transform(ccprev, rct.transformIdx);
-            }
-        }else{
-            if( rct.symmetric ) {
-                if( !isSymmInit ) {
-                    ccpsymm = ccp.symmetric();
-                    ccosymm = cco.symmetric();
-                    isSymmInit = true;
-                }
-                ocand = ccosymm.transform(ccpsymm, rct.transformIdx);
-            }else{
-                ocand = cco.transform(ccp, rct.transformIdx);
-            }
-        }
-        if( !isInit || ocand < orepr ) {
-            orepr = ocand;
-            transform.clear();
-            transform.push_back({ .transformedIdx = rct.transformIdx,
-                    .reversed = rct.reversed, .symmetric = rct.symmetric });
-            isInit = true;
-        }else if( isInit && ocand == orepr )
-            transform.push_back({ .transformedIdx = rct.transformIdx,
-                    .reversed = rct.reversed, .symmetric = rct.symmetric });
-    }
-    for(EdgeReprCandidateTransform &erct : transform) {
-        cubeedges ce2symm = erct.symmetric ? ce2.symmetric() : ce2;
-        if( reverse ) {
-            if( erct.reversed ) {
-                // transform((ce1 rev) ⊙  (ce2 rev)) = cetrans ⊙  (ce1 rev) ⊙  (ce2 rev) ⊙  cetransRev
-                // ceTrans = (ce2 rev) ⊙  cetransRev
-                erct.ceTrans = cubeedges::compose(ce2symm.reverse(),
-                        ctransformed[transformReverse(erct.transformedIdx)].ce);
-            }else{
-                // transform(ce2 ⊙  ce1) = cetrans ⊙  ce2 ⊙  ce1 ⊙  cetransRev
-                // ceTrans = cetrans ⊙  ce2
-                erct.ceTrans = cubeedges::compose(
-                        ctransformed[erct.transformedIdx].ce, ce2symm);
-            }
-        }else{
-            if( erct.reversed ) {
-                // transform((ce2 rev) ⊙  (ce1 rev)) = cetrans ⊙  (ce2 rev) ⊙  (ce1 rev) ⊙  cetransRev
-                // ceTrans = cetrans ⊙  (ce2 rev)
-                erct.ceTrans = cubeedges::compose(
-                        ctransformed[erct.transformedIdx].ce, ce2symm.reverse());
-            }else{
-                // transform(ce1 ⊙  ce2) = cetrans ⊙  ce1 ⊙  ce2 ⊙  cetransRev
-                // ceTrans = ce2 ⊙  cetransRev
-                erct.ceTrans = cubeedges::compose(ce2symm,
-                        ctransformed[transformReverse(erct.transformedIdx)].ce);
-            }
-        }
-    }
-    return orepr;
-}
-
-bool isSingleTransform(cubecorners_perm ccp) {
-    return gPermToRepr[ccp.getPermIdx()].transform.size() == 1;
-}
-
-cubecorner_orients cubecornerOrientsForComposedRepresentative(cubecorners_perm ccpSearch,
-        cubecorner_orients ccoSearchRepr, bool reversed, const cube &cSearchT,
-        std::vector<EdgeReprCandidateTransform> &transform)
-{
-    const CubecornerPermToRepr &permToRepr = gPermToRepr.at(ccpSearch.getPermIdx());
-    cubecorners_perm ccpSearchRepr = gReprPerms[permToRepr.reprIdx].ccp;
-    cube cSearchTrev = cSearchT.reverse();
-
-	transform.clear();
-    const ReprCandidateTransform &rct = permToRepr.transform.front();
-    // sequence was: ccpSearch reverse, then symmetric, then transform
-    unsigned transformIdxRev = transformReverse(rct.transformIdx);
-    //cubecorners_perm ccpSearchRevSymm = ccpSearchRepr.transform(transformIdxRev);
-    cubecorner_orients ccoSearchRevSymm = ccoSearchRepr.transform(ccpSearchRepr, transformIdxRev);
-    //cubecorners_perm ccpSearchRev = rct.symmetric ? ccpSearchRevSymm.symmetric() : ccpSearchRevSymm;
-    cubecorner_orients ccoSearchRev = rct.symmetric ? ccoSearchRevSymm.symmetric() : ccoSearchRevSymm;
-    //cubecorners_perm ccpSearch = rct.reversed ? ccpSearchRev.reverse() : ccpSearchRev;
-    cubecorner_orients ccoSearch = rct.reversed ? ccoSearchRev.reverse(ccpSearch.reverse()) : ccoSearchRev;
-    // ccpSearch is: ccpSearch = reversed ? (cSearchT.ccp ⊙  ccp) : (ccp ⊙  cSearchT.ccp)
-    cubecorner_orients cco = reversed ?
-        cubecorner_orients::compose(cSearchTrev.cco, ccpSearch, ccoSearch) :
-        cubecorner_orients::compose(ccoSearch, cSearchTrev.ccp, cSearchTrev.cco);
-    transform.push_back({ .transformedIdx = rct.transformIdx,
-                .reversed = rct.reversed, .symmetric = rct.symmetric });
-    EdgeReprCandidateTransform &erct = transform.front();
-    cubeedges ce2symm = erct.symmetric ? cSearchT.ce.symmetric() : cSearchT.ce;
-    if( reversed ) {
-        if( erct.reversed ) {
-            // transform((ce1 rev) ⊙  (ce2 rev)) = cetrans ⊙  (ce1 rev) ⊙  (ce2 rev) ⊙  cetransRev
-            // ceTrans = (ce2 rev) ⊙  cetransRev
-            erct.ceTrans = cubeedges::compose(ce2symm.reverse(),
-                    ctransformed[transformReverse(erct.transformedIdx)].ce);
-        }else{
-            // transform(ce2 ⊙  ce1) = cetrans ⊙  ce2 ⊙  ce1 ⊙  cetransRev
-            // ceTrans = ctrans ⊙  ce2
-            erct.ceTrans = cubeedges::compose(
-                    ctransformed[erct.transformedIdx].ce, ce2symm);
-        }
-    }else{
-        if( erct.reversed ) {
-            // transform((ce2 rev) ⊙  (ce1 rev)) = cetrans ⊙  (ce2 rev) ⊙  (ce1 rev) ⊙  cetransRev
-            // ceTrans = cetrans ⊙  (ce2 rev)
-            erct.ceTrans = cubeedges::compose(
-                    ctransformed[erct.transformedIdx].ce, ce2symm.reverse());
-        }else{
-            // transform(ce1 ⊙  ce2) = cetrans ⊙  ce1 ⊙  ce2 ⊙  cetransRev
-            // ceTrans = ce2 ⊙  cetransRev
-            erct.ceTrans = cubeedges::compose(ce2symm,
-                    ctransformed[transformReverse(erct.transformedIdx)].ce);
-        }
-    }
-    return cco;
-}
-
-cubeedges cubeedgesComposedRepresentative(cubeedges ce, bool reverse,
-        const std::vector<EdgeReprCandidateTransform> &transform)
-{
-    cubeedges cerepr;
-    if( transform.size() == 1 ) {
-        const EdgeReprCandidateTransform &erct = transform.front();
-        cubeedges cesymm = erct.symmetric ? ce.symmetric() : ce;
-        if( reverse ) {
-            if( erct.reversed ) {
-                // erct.ceTrans = (ce2 rev) ⊙  cetransRev
-                // transform((ce1 rev) ⊙  (ce2 rev)) = cetrans ⊙  (ce1 rev) ⊙  (ce2 rev) ⊙  cetransRev
-                //      = cetrans ⊙  (ce1 rev) ⊙  erct.ceTrans
-                cerepr = cubeedges::compose3revmid(ctransformed[erct.transformedIdx].ce,
-                        cesymm, erct.ceTrans);
-            }else{
-                // erct.ceTrans = ctrans ⊙  ce2
-                // transform(ce2 ⊙  ce1) = cetrans ⊙  ce2 ⊙  ce1 ⊙  cetransRev
-                //      = erct.ceTrans ⊙  ce1 ⊙  cetransRev
-                cerepr = cubeedges::compose3(erct.ceTrans, cesymm,
-                        ctransformed[transformReverse(erct.transformedIdx)].ce);
-            }
-        }else{
-            if( erct.reversed ) {
-                // erct.ceTrans = cetrans ⊙  (ce2 rev)
-                // transform((ce2 rev) ⊙  (ce1 rev)) = cetrans ⊙  (ce2 rev) ⊙  (ce1 rev) ⊙  cetransRev
-                //      = erct.ceTrans ⊙  (ce1 rev) ⊙  cetransRev
-                cerepr = cubeedges::compose3revmid(erct.ceTrans, cesymm,
-                        ctransformed[transformReverse(erct.transformedIdx)].ce);
-            }else{
-                // erct.ceTrans = ce2 ⊙  cetransRev
-                // transform(ce1 ⊙  ce2) = cetrans ⊙  ce1 ⊙  ce2 ⊙  cetransRev
-                //      = cetrans ⊙  ce1 ⊙  erct.ceTrans
-                cerepr = cubeedges::compose3(ctransformed[erct.transformedIdx].ce,
-                        cesymm, erct.ceTrans);
-            }
-        }
-    }else{
-        bool isInit = false;
-        for(const EdgeReprCandidateTransform &erct : transform) {
-            cubeedges cand;
-            cubeedges cesymm = erct.symmetric ? ce.symmetric() : ce;
-            if( reverse ) {
-                if( erct.reversed ) {
-                    cand = cubeedges::compose3revmid(ctransformed[erct.transformedIdx].ce,
-                            cesymm, erct.ceTrans);
-                }else{
-                    cand = cubeedges::compose3(erct.ceTrans, cesymm,
-                            ctransformed[transformReverse(erct.transformedIdx)].ce);
-                }
-            }else{
-                if( erct.reversed ) {
-                    cand = cubeedges::compose3revmid(erct.ceTrans, cesymm,
-                            ctransformed[transformReverse(erct.transformedIdx)].ce);
-                }else{
-                    cand = cubeedges::compose3(ctransformed[erct.transformedIdx].ce,
-                            cesymm, erct.ceTrans);
-                }
-            }
-
-            if( !isInit || cand < cerepr )
-                cerepr = cand;
-            isInit = true;
-        }
-    }
-    return cerepr;
-}
-
-cube cubeRepresentative(const cube &c) {
-    std::vector<EdgeReprCandidateTransform> transform;
-
-    cubecorners_perm ccpRepr = cubecornerPermsRepresentative(c.ccp);
-    cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(c.ccp,
-            c.cco, transform);
-    cubeedges ceRepr = cubeedgesRepresentative(c.ce, transform);
-    return { .ccp = ccpRepr, .cco = ccoRepr, .ce = ceRepr };
-}
-
 unsigned CornerOrientReprCubes::addCubes(const std::vector<cubeedges> &cearr)
 {
     if( cearr.empty() )
@@ -468,7 +67,8 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
             edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
     {
         const cubeedges ce = *edgeIt;
-        cubeedges ceSearchRepr = cubeedgesComposedRepresentative(ce, reversed, otransform);
+        cubeedges ceSearchRepr = CubecornerReprPerms::getComposedReprCubeedges(
+                ce, reversed, otransform);
         if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
             return ce;
     }
@@ -598,12 +198,8 @@ CornerOrientReprCubes &CornerPermReprCubes::cornerOrientCubesAdd(cubecorner_orie
     return *ccoIt;
 }
 
-unsigned CubesReprAtDepth::size() {
-    return USEREVERSE ? 654 : 984;
-}
-
-CubesReprAtDepth::CubesReprAtDepth()
-    : m_cornerPermReprCubes(size())
+CubesReprAtDepth::CubesReprAtDepth(const CubecornerReprPerms &reprPerms)
+    : m_reprPerms(reprPerms), m_cornerPermReprCubes(reprPerms.reprPermCount())
 {
 }
 
@@ -628,23 +224,46 @@ CornerPermReprCubes &CubesReprAtDepth::add(unsigned idx) {
 
 cubecorners_perm CubesReprAtDepth::getPermAt(ccpcubes_iter it) const
 {
-    unsigned permReprIdx = std::distance(m_cornerPermReprCubes.begin(), it);
-    return gReprPerms[permReprIdx].ccp;
+    unsigned reprPermIdx = std::distance(m_cornerPermReprCubes.begin(), it);
+    return m_reprPerms.getPermForIdx(reprPermIdx);
 }
 
-bool CubesReprByDepth::isUseReverse() {
-    return USEREVERSE;
+CubesReprByDepth::CubesReprByDepth(bool useReverse)
+    : m_reprPerms(useReverse), m_availCount(1)
+{
+    // insert the solved cube at depth 0
+    m_cubesAtDepths.emplace_back(new CubesReprAtDepth(m_reprPerms));
+    unsigned cornerPermReprIdx = m_reprPerms.getReprPermIdx(csolved.ccp);
+    CornerPermReprCubes &ccpCubes = m_cubesAtDepths[0]->add(cornerPermReprIdx);
+    std::vector<EdgeReprCandidateTransform> otransform;
+    cubecorner_orients ccoRepr = m_reprPerms.getReprOrients(csolved.ccp,
+            csolved.cco, otransform);
+    CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoRepr);
+    cubeedges ceRepr = m_reprPerms.getReprCubeedges(csolved.ce, otransform);
+    std::vector<cubeedges> ceReprArr = { ceRepr };
+    ccoCubes.addCubes(ceReprArr);
+}
+
+bool CubesReprByDepth::isUseReverse() const {
+    return m_reprPerms.isUseReverse();
+}
+
+CubesReprAtDepth &CubesReprByDepth::operator[](unsigned idx)
+{
+    while( idx >= m_cubesAtDepths.size() )
+        m_cubesAtDepths.emplace_back(new CubesReprAtDepth(m_reprPerms));
+    return *m_cubesAtDepths[idx];
 }
 
 std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
 {
 	std::vector<int> rotateDirs;
     std::vector<int>::iterator insertPos = rotateDirs.end();
-    cube crepr = cubeRepresentative(c);
-    unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(crepr.ccp);
+    cube crepr = m_reprPerms.cubeRepresentative(c);
+    unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(crepr.ccp);
 	unsigned depth = 0;
 	while( true ) {
-        const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth].getAt(ccpReprIdx);
+        const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth]->getAt(ccpReprIdx);
         const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(crepr.cco);
 		if( ccoReprCubes.containsCubeEdges(crepr.ce) )
 			break;
@@ -661,16 +280,16 @@ std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
 		cube cc1;
 		while( cm < RCOUNT ) {
 			cc1 = cube::compose(cc, crotated[cm]);
-            cube cc1repr = cubeRepresentative(cc1);
-            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth].getAt(ccpReprIdx);
+            cube cc1repr = m_reprPerms.cubeRepresentative(cc1);
+            ccpReprIdx = m_reprPerms.getReprPermIdx(cc1repr.ccp);
+            const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth]->getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubes.containsCubeEdges(cc1repr.ce) )
                 break;
 			cc1 = cube::compose(ccRev, crotated[cm]);
-            cc1repr = cubeRepresentative(cc1);
-            ccpReprIdx = cubecornerPermRepresentativeIdx(cc1repr.ccp);
-            const CornerPermReprCubes &ccpReprCubesRev = m_cubesAtDepths[depth].getAt(ccpReprIdx);
+            cc1repr = m_reprPerms.cubeRepresentative(cc1);
+            ccpReprIdx = m_reprPerms.getReprPermIdx(cc1repr.ccp);
+            const CornerPermReprCubes &ccpReprCubesRev = m_cubesAtDepths[depth]->getAt(ccpReprIdx);
             const CornerOrientReprCubes &ccoReprCubesRev = ccpReprCubesRev.cornerOrientCubesAt(cc1repr.cco);
             if( ccoReprCubesRev.containsCubeEdges(cc1repr.ce) ) {
                 movesRev = !movesRev;
@@ -695,26 +314,28 @@ std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
     return res;
 }
 
-unsigned long addCubesForReprPerm(CubesReprByDepth *cubesReprByDepth, unsigned permReprIdx, int depth)
+unsigned long CubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int depth)
 {
     std::vector<EdgeReprCandidateTransform> otransformNew;
     unsigned long cubeCount = 0;
 
-    const CubesReprAtDepth &ccpReprCubesC = (*cubesReprByDepth)[depth-1];
+    const CubesReprAtDepth &ccpReprCubesC = *m_cubesAtDepths[depth-1];
     const CornerPermReprCubes *ccpReprCubesNewP = depth == 1 ? nullptr :
-        &(*cubesReprByDepth)[depth-2].getAt(permReprIdx);
-    const CornerPermReprCubes &ccpReprCubesNewC = ccpReprCubesC.getAt(permReprIdx);
-    CornerPermReprCubes &ccpReprCubesNewN = (*cubesReprByDepth)[depth].add(permReprIdx);
-    for(unsigned permIdx : gReprPerms[permReprIdx].represented) {
+        &m_cubesAtDepths[depth-2]->getAt(reprPermIdx);
+    const CornerPermReprCubes &ccpReprCubesNewC = ccpReprCubesC.getAt(reprPermIdx);
+    CornerPermReprCubes &ccpReprCubesNewN = m_cubesAtDepths[depth]->add(reprPermIdx);
+    for(unsigned permIdx : m_reprPerms.getRepresentedByIdx(reprPermIdx) ) {
         cubecorners_perm ccpNew = cubecorners_perm::fromPermIdx(permIdx);
         for(unsigned rd = 0; rd < RCOUNT; ++rd) {
             unsigned rdRev = rotateDirReverse(rd);
-            for(unsigned reversed = 0; reversed < (USEREVERSE ? 2 : 1); ++reversed) {
+            for(unsigned reversed = 0;
+                    reversed < (m_reprPerms.isUseReverse() ? 2 : 1); ++reversed)
+            {
                 cubecorners_perm ccp = reversed ?
                     cubecorners_perm::compose(crotated[rdRev].ccp, ccpNew) :
                     cubecorners_perm::compose(ccpNew, crotated[rdRev].ccp);
-                unsigned ccpReprIdx = cubecornerPermRepresentativeIdx(ccp);
-                if( gReprPerms[ccpReprIdx].ccp == ccp ) {
+                unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
+                if( m_reprPerms.getPermForIdx(ccpReprIdx) == ccp ) {
                     const CornerPermReprCubes &cpermReprCubesC = ccpReprCubesC.getAt(ccpReprIdx);
                     for(CornerPermReprCubes::ccocubes_iter ccoCubesItC =
                             cpermReprCubesC.ccoCubesBegin();
@@ -725,7 +346,7 @@ unsigned long addCubesForReprPerm(CubesReprByDepth *cubesReprByDepth, unsigned p
                         cubecorner_orients ccoNew = reversed ?
                             cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
                             cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
-                        cubecorner_orients ccoReprNew = cubecornerOrientsComposedRepresentative(
+                        cubecorner_orients ccoReprNew = m_reprPerms.getComposedReprOrients(
                                 ccpNew, ccoNew, reversed, crotated[rd].ce, otransformNew);
                         const CornerOrientReprCubes *corientReprCubesNewP =
                             ccpReprCubesNewP == NULL ? NULL :
@@ -737,7 +358,7 @@ unsigned long addCubesForReprPerm(CubesReprByDepth *cubesReprByDepth, unsigned p
                                 edgeIt != corientReprCubesC.edgeEnd(); ++edgeIt)
                         {
                             const cubeedges ce = *edgeIt;
-                            cubeedges cenewRepr = cubeedgesComposedRepresentative(
+                            cubeedges cenewRepr = CubecornerReprPerms::getComposedReprCubeedges(
                                     ce, reversed, otransformNew);
                             if( corientReprCubesNewP != NULL &&
                                     corientReprCubesNewP->containsCubeEdges(cenewRepr) )
@@ -757,5 +378,75 @@ unsigned long addCubesForReprPerm(CubesReprByDepth *cubesReprByDepth, unsigned p
         }
     }
     return cubeCount;
+}
+
+bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
+        unsigned depth, unsigned depthMax, const cube &cSearchT,
+        bool reversed, cube &c, cube &cSearch) const
+{
+    std::vector<EdgeReprCandidateTransform> otransform;
+    const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth]->getAt(reprPermIdx);
+    cubecorners_perm ccp = m_reprPerms.getPermForIdx(reprPermIdx);
+    if( !ccpReprCubes.empty() ) {
+        cubecorners_perm ccpSearch = reversed ?
+            cubecorners_perm::compose(cSearchT.ccp, ccp) :
+            cubecorners_perm::compose(ccp, cSearchT.ccp);
+        const CornerPermReprCubes &ccpReprSearchCubes = m_cubesAtDepths[depthMax]->getFor(ccpSearch);
+        if( ccpReprCubes.size() <= ccpReprSearchCubes.size() ||
+                !m_reprPerms.isSingleTransform(ccpSearch) )
+        {
+            for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprCubes.ccoCubesBegin();
+                    ccoCubesIt != ccpReprCubes.ccoCubesEnd(); ++ccoCubesIt)
+            {
+                const CornerOrientReprCubes &ccoReprCubes = *ccoCubesIt;
+                cubecorner_orients cco = ccoReprCubes.getOrients();
+                cubecorner_orients ccoSearch = reversed ?
+                    cubecorner_orients::compose(cSearchT.cco, ccp, cco) :
+                    cubecorner_orients::compose(cco, cSearchT.ccp, cSearchT.cco);
+                cubecorner_orients ccoSearchRepr = m_reprPerms.getComposedReprOrients(
+                        ccpSearch, ccoSearch, reversed, cSearchT.ce, otransform);
+                const CornerOrientReprCubes &ccoReprSearchCubes =
+                    ccpReprSearchCubes.cornerOrientCubesAt(ccoSearchRepr);
+                if( ccoReprSearchCubes.empty() )
+                    continue;
+                cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
+                        ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
+                if( !ce.isNil() ) {
+                    cubeedges ceSearch = reversed ?
+                        cubeedges::compose(cSearchT.ce, ce) :
+                        cubeedges::compose(ce, cSearchT.ce);
+                    cSearch = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
+                    c = { .ccp = ccp, .cco = cco, .ce = ce };
+                    return true;
+                }
+            }
+        }else{
+            for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprSearchCubes.ccoCubesBegin();
+                    ccoCubesIt != ccpReprSearchCubes.ccoCubesEnd(); ++ccoCubesIt)
+            {
+                const CornerOrientReprCubes &ccoReprSearchCubes = *ccoCubesIt;
+                cubecorner_orients ccoSearchRepr = ccoReprSearchCubes.getOrients();
+                cubecorner_orients cco = m_reprPerms.getOrientsForComposedRepr(
+                        ccpSearch, ccoSearchRepr, reversed, cSearchT, otransform);
+                const CornerOrientReprCubes &ccoReprCubes = ccpReprCubes.cornerOrientCubesAt(cco);
+                if( ccoReprCubes.empty() )
+                    continue;
+                cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
+                        ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
+                if( !ce.isNil() ) {
+                    cubecorner_orients ccoSearch = reversed ?
+                        cubecorner_orients::compose(cSearchT.cco, ccp, cco) :
+                        cubecorner_orients::compose(cco, cSearchT.ccp, cSearchT.cco);
+                    cubeedges ceSearch = reversed ?
+                        cubeedges::compose(cSearchT.ce, ce) :
+                        cubeedges::compose(ce, cSearchT.ce);
+                    cSearch = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
+                    c = { .ccp = ccp, .cco = cco, .ce = ce };
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 

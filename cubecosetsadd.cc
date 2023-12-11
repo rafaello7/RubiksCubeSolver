@@ -22,7 +22,7 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
             cubecorner_orients cco = ccoCubes.getOrients();
 
             for(unsigned reversed = 0;
-                    reversed < (CubesReprByDepth::isUseReverse() ? 2 : 1); ++reversed)
+                    reversed < (cubesReprByDepth->isUseReverse() ? 2 : 1); ++reversed)
             {
                 cubecorners_perm ccprev = reversed ? ccp.reverse() : ccp;
                 cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
@@ -70,13 +70,14 @@ void addBGSpaceReprCubes(const CubesReprByDepth &cubesReprByDepth,
     }
 }
 
-const SpaceReprCubes *getBGSpaceReprCubes(unsigned depth, Responder &responder)
+const SpaceReprCubes *getBGSpaceReprCubes(CubesReprByDepthAdd &cubesReprByDepthAdd,
+        unsigned depth, Responder &responder)
 {
     static SpaceReprCubes bgSpaceCubes(
             std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1);
 
     if( bgSpaceCubes.availCount() <= depth ) {
-        const CubesReprByDepth *cubesReprByDepth = getReprCubes(depth, responder);
+        const CubesReprByDepth *cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return NULL;
         addBGSpaceReprCubes(*cubesReprByDepth, bgSpaceCubes, depth, responder);

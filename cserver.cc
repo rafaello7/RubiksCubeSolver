@@ -45,7 +45,7 @@ void SocketChunkedResponder::handleMessage(MessageType mt, const char *msg) {
     write(m_fdReq, respBuf, strlen(respBuf));
 }
 
-static void processCubeReq(int fdReq, const char *reqParam, unsigned depthMax)
+static void processCubeReq(int fdReq, const char *reqParam, CubeSearcher &cubeSearcher)
 {
     static std::mutex solverMutex;
 
@@ -77,7 +77,7 @@ static void processCubeReq(int fdReq, const char *reqParam, unsigned depthMax)
                 if( c == csolved )
                     responder.message("already solved");
                 else
-                    searchMoves(c, mode, depthMax, responder);
+                    cubeSearcher.searchMoves(c, mode, responder);
             }
         }else{
             responder.message("invalid parameter");
@@ -164,7 +164,7 @@ static void getFile(int fdReq, const char *fnameBeg) {
     write(fdReq, respHeader, strlen(respHeader));
 }
 
-static void processRequest(int fdReq, const char *reqHeader, unsigned depthMax) {
+static void processRequest(int fdReq, const char *reqHeader, CubeSearcher &cubeSearcher) {
     if( strncasecmp(reqHeader, "get ", 4) ) {
         char respHeader[] =
             "HTTP/1.1 405 Method Not Allowed\r\n"
@@ -177,7 +177,7 @@ static void processRequest(int fdReq, const char *reqHeader, unsigned depthMax) 
     }
     if( reqHeader[4] == '/' ) {
         if( reqHeader[5] == '?' )
-            processCubeReq(fdReq, reqHeader+6, depthMax);
+            processCubeReq(fdReq, reqHeader+6, cubeSearcher);
         else
             getFile(fdReq, reqHeader+5);
     }else{
@@ -190,7 +190,7 @@ static void processRequest(int fdReq, const char *reqHeader, unsigned depthMax) 
     }
 }
 
-static void processConnection(int fdConn, unsigned depthMax) {
+static void processConnection(int fdConn, CubeSearcher *cubeSearcher) {
     char reqHeaderBuf[16385], *reqHeaderEnd;
     int rdTot = 0;
     while( true ) {
@@ -210,7 +210,7 @@ static void processConnection(int fdConn, unsigned depthMax) {
             printf("%d %.*s\n", fdConn,
                     (unsigned)(strchr(reqHeaderBuf, '\n') - reqHeaderBuf), reqHeaderBuf);
             reqHeaderEnd[2] = '\0';
-            processRequest(fdConn, reqHeaderBuf, depthMax);
+            processRequest(fdConn, reqHeaderBuf, *cubeSearcher);
             unsigned reqHeaderSize = reqHeaderEnd - reqHeaderBuf + 4;
             memmove(reqHeaderBuf, reqHeaderEnd+4, rdTot - reqHeaderSize);
             rdTot -= reqHeaderSize;
@@ -223,8 +223,9 @@ static void processConnection(int fdConn, unsigned depthMax) {
     close(fdConn);
 }
 
-void runServer(unsigned depthMax)
+void runServer(unsigned depthMax, bool useReverse)
 {
+    CubeSearcher cubeSearcher(depthMax, useReverse);
     int listenfd, acceptfd, opton = 1;
     struct sockaddr_in addr;
 
@@ -246,7 +247,7 @@ void runServer(unsigned depthMax)
     }
     while( (acceptfd = accept(listenfd, NULL, NULL)) >= 0 ) {
         //setsockopt(acceptfd, IPPROTO_TCP, TCP_NODELAY, &opton, sizeof(opton));
-        std::thread t = std::thread(processConnection, acceptfd, depthMax);
+        std::thread t = std::thread(processConnection, acceptfd, &cubeSearcher);
         t.detach();
     }
     perror("accept");

@@ -7,11 +7,12 @@
 class AddCubesProgress : public ProgressBase {
     unsigned long m_cubeCount;
     const unsigned m_depth;
+    const unsigned m_reprPermCount;
     unsigned m_nextPermReprIdx;
     unsigned m_runningThreadCount;
 public:
-    AddCubesProgress(unsigned depth)
-        : m_cubeCount(0), m_depth(depth),
+    AddCubesProgress(unsigned depth, unsigned reprPermCount)
+        : m_cubeCount(0), m_depth(depth), m_reprPermCount(reprPermCount),
           m_nextPermReprIdx(0), m_runningThreadCount(THREAD_COUNT)
     {
     }
@@ -21,14 +22,13 @@ public:
 
 bool AddCubesProgress::inc(Responder &responder, unsigned long cubeCount, unsigned *permReprIdxBuf)
 {
-    const unsigned permReprCount = CubesReprAtDepth::size();
     unsigned long cubeCountTot;
     unsigned permReprIdx = 0;
     unsigned runningThreadCount;
     bool isFinish;
     mutexLock();
     cubeCountTot = m_cubeCount += cubeCount;
-    isFinish = m_nextPermReprIdx >= permReprCount || isStopRequestedNoLock();
+    isFinish = m_nextPermReprIdx >= m_reprPermCount || isStopRequestedNoLock();
     if( isFinish )
         runningThreadCount = --m_runningThreadCount;
     else
@@ -40,11 +40,11 @@ bool AddCubesProgress::inc(Responder &responder, unsigned long cubeCount, unsign
             responder.progress("depth %d cubes %d threads still running",
                     m_depth, runningThreadCount);
         }else{
-            unsigned procCountNext = 100 * (permReprIdx+1) / permReprCount;
-            unsigned procCountCur = 100 * permReprIdx / permReprCount;
+            unsigned procCountNext = 100 * (permReprIdx+1) / m_reprPermCount;
+            unsigned procCountCur = 100 * permReprIdx / m_reprPermCount;
             if( procCountNext != procCountCur && (m_depth >= 10 || procCountCur % 10 == 0) )
                 responder.progress("depth %u cubes %llu, %u%%",
-                        m_depth, cubeCountTot, 100 * permReprIdx / permReprCount);
+                        m_depth, cubeCountTot, 100 * permReprIdx / m_reprPermCount);
         }
     }
     return isFinish;
@@ -58,7 +58,7 @@ static void addCubesT(unsigned threadNo,
     unsigned permReprIdx;
 
     while( !addCubesProgress->inc(*responder, cubeCount, &permReprIdx) ) {
-        cubeCount = addCubesForReprPerm(cubesReprByDepth, permReprIdx, depth);
+        cubeCount = cubesReprByDepth->addCubesForReprPerm(permReprIdx, depth);
     }
 }
 
@@ -71,27 +71,9 @@ static void initOccurT(unsigned threadNo, CubesReprAtDepth *cubesReprAtDepth)
 static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth,
         Responder &responder)
 {
-    if( requestedDepth > DEPTH_MAX_AVAIL ) {
-        std::cout << "fatal: addCubes: requested depth=" << requestedDepth << ", max=" <<
-            DEPTH_MAX_AVAIL << std::endl;
-        exit(1);
-    }
-    if( cubesReprByDepth.availCount() == 0 ) {
-        // insert the solved cube
-        unsigned cornerPermReprIdx = cubecornerPermRepresentativeIdx(csolved.ccp);
-        CornerPermReprCubes &ccpCubes = cubesReprByDepth[0].add(cornerPermReprIdx);
-        std::vector<EdgeReprCandidateTransform> otransform;
-        cubecorner_orients ccoRepr = cubecornerOrientsRepresentative(csolved.ccp,
-                csolved.cco, otransform);
-        CornerOrientReprCubes &ccoCubes = ccpCubes.cornerOrientCubesAdd(ccoRepr);
-        cubeedges ceRepr = cubeedgesRepresentative(csolved.ce, otransform);
-        std::vector<cubeedges> ceReprArr = { ceRepr };
-        ccoCubes.addCubes(ceReprArr);
-        cubesReprByDepth.incAvailCount();
-    }
     while( cubesReprByDepth.availCount() <= requestedDepth ) {
         unsigned depth = cubesReprByDepth.availCount();
-        AddCubesProgress addCubesProgress(depth);
+        AddCubesProgress addCubesProgress(depth, cubesReprByDepth[depth].size());
         runInThreadPool(addCubesT, &cubesReprByDepth,
                     depth, &responder, &addCubesProgress);
         if( ProgressBase::isStopRequested() ) {
@@ -109,10 +91,14 @@ static bool addCubes(CubesReprByDepth &cubesReprByDepth, unsigned requestedDepth
     return false;
 }
 
-const CubesReprByDepth *getReprCubes(unsigned depth, Responder &responder)
+CubesReprByDepthAdd::CubesReprByDepthAdd(bool useReverse)
+    : m_cubesReprByDepth(useReverse)
 {
-    static CubesReprByDepth cubesReprByDepth(DEPTH_MAX_AVAIL+1);
-    bool isCanceled = addCubes(cubesReprByDepth, depth, responder);
-    return isCanceled ? NULL : &cubesReprByDepth;
+}
+
+const CubesReprByDepth *CubesReprByDepthAdd::getReprCubes(unsigned depth, Responder &responder)
+{
+    bool isCanceled = addCubes(m_cubesReprByDepth, depth, responder);
+    return isCanceled ? NULL : &m_cubesReprByDepth;
 }
 
