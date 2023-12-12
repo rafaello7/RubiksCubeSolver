@@ -44,9 +44,8 @@ BGCubecornerReprPerms::BGCubecornerReprPerms(bool useReverse)
         CubecornerPermToRepr &permToReprRepr = m_permToRepr[permRepr.getPermIdx()];
         if( permToReprRepr.reprIdx < 0 ) {
             permToReprRepr.reprIdx = m_reprPerms.size();
-            m_reprPerms.push_back({ .ccp = permRepr });
+            m_reprPerms.push_back(permRepr);
         }
-        m_reprPerms[permToReprRepr.reprIdx].represented.push_back(pidx);
         CubecornerPermToRepr &permToRepr = m_permToRepr[perm.getPermIdx()];
         permToRepr.reprIdx = permToReprRepr.reprIdx;
         permToRepr.transform.swap(transform);
@@ -61,7 +60,7 @@ BGCubecornerReprPerms::~BGCubecornerReprPerms()
 cubecorners_perm BGCubecornerReprPerms::getReprPerm(cubecorners_perm ccp) const
 {
     unsigned permReprIdx = m_permToRepr.at(ccp.getPermIdx()).reprIdx;
-    return m_reprPerms[permReprIdx].ccp;
+    return m_reprPerms[permReprIdx];
 }
 
 unsigned BGCubecornerReprPerms::getReprPermIdx(cubecorners_perm ccp) const
@@ -71,13 +70,7 @@ unsigned BGCubecornerReprPerms::getReprPermIdx(cubecorners_perm ccp) const
 
 cubecorners_perm BGCubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
 {
-    return m_reprPerms[reprPermIdx].ccp;
-}
-
-const std::vector<unsigned short> &BGCubecornerReprPerms::getRepresentedByIdx(
-        unsigned reprPermIdx) const
-{
-    return m_reprPerms[reprPermIdx].represented;
+    return m_reprPerms[reprPermIdx];
 }
 
 bool BGCubecornerReprPerms::isSingleTransform(cubecorners_perm ccp) const {

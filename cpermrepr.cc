@@ -31,9 +31,8 @@ CubecornerReprPerms::CubecornerReprPerms(bool useReverse)
         CubecornerPermToRepr &permToReprRepr = m_permToRepr[permRepr.getPermIdx()];
         if( permToReprRepr.reprIdx < 0 ) {
             permToReprRepr.reprIdx = m_reprPerms.size();
-            m_reprPerms.push_back({ .ccp = permRepr });
+            m_reprPerms.push_back(permRepr);
         }
-        m_reprPerms[permToReprRepr.reprIdx].represented.push_back(pidx);
         CubecornerPermToRepr &permToRepr = m_permToRepr[perm.getPermIdx()];
         permToRepr.reprIdx = permToReprRepr.reprIdx;
         permToRepr.transform.swap(transform);
@@ -48,7 +47,7 @@ CubecornerReprPerms::~CubecornerReprPerms()
 cubecorners_perm CubecornerReprPerms::getReprPerm(cubecorners_perm ccp) const
 {
     unsigned reprPermIdx = m_permToRepr.at(ccp.getPermIdx()).reprIdx;
-    return m_reprPerms[reprPermIdx].ccp;
+    return m_reprPerms[reprPermIdx];
 }
 
 unsigned CubecornerReprPerms::getReprPermIdx(cubecorners_perm ccp) const
@@ -58,12 +57,7 @@ unsigned CubecornerReprPerms::getReprPermIdx(cubecorners_perm ccp) const
 
 cubecorners_perm CubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
 {
-    return m_reprPerms[reprPermIdx].ccp;
-}
-
-const std::vector<unsigned short> &CubecornerReprPerms::getRepresentedByIdx(unsigned reprPermIdx) const
-{
-    return m_reprPerms[reprPermIdx].represented;
+    return m_reprPerms[reprPermIdx];
 }
 
 bool CubecornerReprPerms::isSingleTransform(cubecorners_perm ccp) const {
@@ -219,7 +213,7 @@ cubecorner_orients CubecornerReprPerms::getOrientsForComposedRepr(
         std::vector<EdgeReprCandidateTransform> &transform) const
 {
     const CubecornerPermToRepr &permToRepr = m_permToRepr.at(ccpSearch.getPermIdx());
-    cubecorners_perm ccpSearchRepr = m_reprPerms[permToRepr.reprIdx].ccp;
+    cubecorners_perm ccpSearchRepr = m_reprPerms[permToRepr.reprIdx];
     cube cSearchTrev = cSearchT.reverse();
 
     transform.clear();

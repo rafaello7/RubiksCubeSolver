@@ -1,6 +1,7 @@
 #include "cubesrepr.h"
 #include <iostream>
 #include <algorithm>
+#include <set>
 
 unsigned CornerOrientReprCubes::addCubes(const std::vector<cubeedges> &cearr)
 {
@@ -324,53 +325,64 @@ unsigned long CubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int de
         &m_cubesAtDepths[depth-2]->getAt(reprPermIdx);
     const CornerPermReprCubes &ccpReprCubesNewC = ccpReprCubesC.getAt(reprPermIdx);
     CornerPermReprCubes &ccpReprCubesNewN = m_cubesAtDepths[depth]->add(reprPermIdx);
-    for(unsigned permIdx : m_reprPerms.getRepresentedByIdx(reprPermIdx) ) {
-        cubecorners_perm ccpNew = cubecorners_perm::fromPermIdx(permIdx);
-        for(unsigned rd = 0; rd < RCOUNT; ++rd) {
-            unsigned rdRev = rotateDirReverse(rd);
-            for(unsigned reversed = 0;
-                    reversed < (m_reprPerms.isUseReverse() ? 2 : 1); ++reversed)
-            {
-                cubecorners_perm ccp = reversed ?
-                    cubecorners_perm::compose(crotated[rdRev].ccp, ccpNew) :
-                    cubecorners_perm::compose(ccpNew, crotated[rdRev].ccp);
-                unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
-                if( m_reprPerms.getPermForIdx(ccpReprIdx) == ccp ) {
-                    const CornerPermReprCubes &cpermReprCubesC = ccpReprCubesC.getAt(ccpReprIdx);
-                    for(CornerPermReprCubes::ccocubes_iter ccoCubesItC =
-                            cpermReprCubesC.ccoCubesBegin();
-                            ccoCubesItC != cpermReprCubesC.ccoCubesEnd(); ++ccoCubesItC)
-                    {
-                        const CornerOrientReprCubes &corientReprCubesC = *ccoCubesItC;
-                        cubecorner_orients cco = corientReprCubesC.getOrients();
-                        cubecorner_orients ccoNew = reversed ?
-                            cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
-                            cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
-                        cubecorner_orients ccoReprNew = m_reprPerms.getComposedReprOrients(
-                                ccpNew, ccoNew, reversed, crotated[rd].ce, otransformNew);
-                        const CornerOrientReprCubes *corientReprCubesNewP =
-                            ccpReprCubesNewP == NULL ? NULL :
-                            &ccpReprCubesNewP->cornerOrientCubesAt(ccoReprNew);
-                        const CornerOrientReprCubes &corientReprCubesNewC =
-                            ccpReprCubesNewC.cornerOrientCubesAt(ccoReprNew);
-                        std::vector<cubeedges> ceNewArr;
-                        for(CornerOrientReprCubes::edges_iter edgeIt = corientReprCubesC.edgeBegin();
-                                edgeIt != corientReprCubesC.edgeEnd(); ++edgeIt)
+    cubecorners_perm ccpNewRepr = m_reprPerms.getPermForIdx(reprPermIdx);
+    std::set<cubecorners_perm> ccpChecked;
+    for(unsigned trrev = 0; trrev < (m_reprPerms.isUseReverse() ? 2 : 1); ++trrev) {
+        cubecorners_perm ccpNewReprRev = trrev ? ccpNewRepr.reverse() : ccpNewRepr;
+        for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
+            cubecorners_perm ccpNewS = symmetric ? ccpNewReprRev.symmetric() : ccpNewReprRev;
+            for(unsigned td = 0; td < TCOUNT; ++td) {
+                cubecorners_perm ccpNew = ccpNewS.transform(td);
+                if( ccpChecked.find(ccpNew) == ccpChecked.end() ) {
+                    ccpChecked.insert(ccpNew);
+                    for(unsigned rd = 0; rd < RCOUNT; ++rd) {
+                        unsigned rdRev = rotateDirReverse(rd);
+                        for(unsigned reversed = 0;
+                                reversed < (m_reprPerms.isUseReverse() ? 2 : 1); ++reversed)
                         {
-                            const cubeedges ce = *edgeIt;
-                            cubeedges cenewRepr = CubecornerReprPerms::getComposedReprCubeedges(
-                                    ce, reversed, otransformNew);
-                            if( corientReprCubesNewP != NULL &&
-                                    corientReprCubesNewP->containsCubeEdges(cenewRepr) )
-                                continue;
-                            if( corientReprCubesNewC.containsCubeEdges(cenewRepr) )
-                                continue;
-                            ceNewArr.push_back(cenewRepr);
-                        }
-                        if( !ceNewArr.empty() ) {
-                            CornerOrientReprCubes &corientReprCubesNewN =
-                                ccpReprCubesNewN.cornerOrientCubesAdd(ccoReprNew);
-                            cubeCount += corientReprCubesNewN.addCubes(ceNewArr);
+                            cubecorners_perm ccp = reversed ?
+                                cubecorners_perm::compose(crotated[rdRev].ccp, ccpNew) :
+                                cubecorners_perm::compose(ccpNew, crotated[rdRev].ccp);
+                            unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
+                            if( m_reprPerms.getPermForIdx(ccpReprIdx) == ccp ) {
+                                const CornerPermReprCubes &cpermReprCubesC = ccpReprCubesC.getAt(ccpReprIdx);
+                                for(CornerPermReprCubes::ccocubes_iter ccoCubesItC =
+                                        cpermReprCubesC.ccoCubesBegin();
+                                        ccoCubesItC != cpermReprCubesC.ccoCubesEnd(); ++ccoCubesItC)
+                                {
+                                    const CornerOrientReprCubes &corientReprCubesC = *ccoCubesItC;
+                                    cubecorner_orients cco = corientReprCubesC.getOrients();
+                                    cubecorner_orients ccoNew = reversed ?
+                                        cubecorner_orients::compose(crotated[rd].cco, ccp, cco) :
+                                        cubecorner_orients::compose(cco, crotated[rd].ccp, crotated[rd].cco);
+                                    cubecorner_orients ccoReprNew = m_reprPerms.getComposedReprOrients(
+                                            ccpNew, ccoNew, reversed, crotated[rd].ce, otransformNew);
+                                    const CornerOrientReprCubes *corientReprCubesNewP =
+                                        ccpReprCubesNewP == NULL ? NULL :
+                                        &ccpReprCubesNewP->cornerOrientCubesAt(ccoReprNew);
+                                    const CornerOrientReprCubes &corientReprCubesNewC =
+                                        ccpReprCubesNewC.cornerOrientCubesAt(ccoReprNew);
+                                    std::vector<cubeedges> ceNewArr;
+                                    for(CornerOrientReprCubes::edges_iter edgeIt = corientReprCubesC.edgeBegin();
+                                            edgeIt != corientReprCubesC.edgeEnd(); ++edgeIt)
+                                    {
+                                        const cubeedges ce = *edgeIt;
+                                        cubeedges cenewRepr = CubecornerReprPerms::getComposedReprCubeedges(
+                                                ce, reversed, otransformNew);
+                                        if( corientReprCubesNewP != NULL &&
+                                                corientReprCubesNewP->containsCubeEdges(cenewRepr) )
+                                            continue;
+                                        if( corientReprCubesNewC.containsCubeEdges(cenewRepr) )
+                                            continue;
+                                        ceNewArr.push_back(cenewRepr);
+                                    }
+                                    if( !ceNewArr.empty() ) {
+                                        CornerOrientReprCubes &corientReprCubesNewN =
+                                            ccpReprCubesNewN.cornerOrientCubesAdd(ccoReprNew);
+                                        cubeCount += corientReprCubesNewN.addCubes(ceNewArr);
+                                    }
+                                }
+                            }
                         }
                     }
                 }

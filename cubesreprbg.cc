@@ -1,6 +1,7 @@
 #include "cubesreprbg.h"
 #include <algorithm>
 #include <iostream>
+#include <set>
 
 unsigned BGCornerPermReprCubes::addCubes(const std::vector<cubeedges> &cearr)
 {
@@ -174,45 +175,60 @@ std::string BGCubesReprByDepth::printMoves(const cube &c,
     return res;
 }
 
-unsigned long BGCubesReprByDepth::addCubesForReprPerm(unsigned permReprIdx, int depth)
+unsigned long BGCubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int depth)
 {
     unsigned long cubeCount = 0;
 
     const BGCubesReprAtDepth &ccpReprCubesC = *m_cubesAtDepths[depth-1];
     const BGCornerPermReprCubes *ccpReprCubesNewP = depth == 1 ? nullptr :
-        &m_cubesAtDepths[depth-2]->getAt(permReprIdx);
-    const BGCornerPermReprCubes &ccpReprCubesNewC = ccpReprCubesC.getAt(permReprIdx);
-    BGCornerPermReprCubes &ccpReprCubesNewN = m_cubesAtDepths[depth]->add(permReprIdx);
-    for(unsigned permIdx : m_reprPerms.getRepresentedByIdx(permReprIdx)) {
-        cubecorners_perm ccpNew = cubecorners_perm::fromPermIdx(permIdx);
-        for(unsigned rdidx = 0; rdidx < RCOUNTBG; ++rdidx) {
-            unsigned rd = BGSpaceRotations[rdidx];
-            unsigned rdRev = rotateDirReverse(rd);
-            for(unsigned reversed = 0; reversed < (m_reprPerms.isUseReverse() ? 2 : 1); ++reversed) {
-                cubecorners_perm ccp = reversed ?
-                    cubecorners_perm::compose(crotated[rdRev].ccp, ccpNew) :
-                    cubecorners_perm::compose(ccpNew, crotated[rdRev].ccp);
-                unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
-                if( m_reprPerms.getPermForIdx(ccpReprIdx) == ccp ) {
-                    const BGCornerPermReprCubes &cpermReprCubesC = ccpReprCubesC.getAt(ccpReprIdx);
-                    std::vector<cubeedges> ceNewArr;
-                    for(BGCornerPermReprCubes::edges_iter edgeIt = cpermReprCubesC.edgeBegin();
-                            edgeIt != cpermReprCubesC.edgeEnd(); ++edgeIt)
-                    {
-                        const cubeedges ce = *edgeIt;
-                        cubeedges cenew = reversed ?
-                            cubeedges::compose(crotated[rd].ce, ce) :
-                            cubeedges::compose(ce, crotated[rd].ce);
-                        cubeedges cenewRepr = m_reprPerms.getReprCubeedges(ccpNew, cenew);
-                        if( ccpReprCubesNewP != NULL &&
-                                ccpReprCubesNewP->containsCubeEdges(cenewRepr) )
-                            continue;
-                        if( ccpReprCubesNewC.containsCubeEdges(cenewRepr) )
-                            continue;
-                        ceNewArr.push_back(cenewRepr);
+        &m_cubesAtDepths[depth-2]->getAt(reprPermIdx);
+    const BGCornerPermReprCubes &ccpReprCubesNewC = ccpReprCubesC.getAt(reprPermIdx);
+    BGCornerPermReprCubes &ccpReprCubesNewN = m_cubesAtDepths[depth]->add(reprPermIdx);
+    cubecorners_perm ccpNewRepr = m_reprPerms.getPermForIdx(reprPermIdx);
+    std::set<cubecorners_perm> ccpChecked;
+    for(unsigned trrev = 0; trrev < (m_reprPerms.isUseReverse() ? 2 : 1); ++trrev) {
+        cubecorners_perm ccpNewReprRev = trrev ? ccpNewRepr.reverse() : ccpNewRepr;
+        for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
+            cubecorners_perm ccpNewS = symmetric ? ccpNewReprRev.symmetric() : ccpNewReprRev;
+            for(unsigned tdidx = 0; tdidx < TCOUNTBG; ++tdidx) {
+                unsigned short td = BGSpaceTransforms[tdidx];
+                cubecorners_perm ccpNew = ccpNewS.transform(td);
+                if( ccpChecked.find(ccpNew) == ccpChecked.end() ) {
+                    ccpChecked.insert(ccpNew);
+                    for(unsigned rdidx = 0; rdidx < RCOUNTBG; ++rdidx) {
+                        unsigned rd = BGSpaceRotations[rdidx];
+                        unsigned rdRev = rotateDirReverse(rd);
+                        for(unsigned reversed = 0;
+                                reversed < (m_reprPerms.isUseReverse() ? 2 : 1); ++reversed) {
+                            cubecorners_perm ccp = reversed ?
+                                cubecorners_perm::compose(crotated[rdRev].ccp, ccpNew) :
+                                cubecorners_perm::compose(ccpNew, crotated[rdRev].ccp);
+                            unsigned ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
+                            if( m_reprPerms.getPermForIdx(ccpReprIdx) == ccp ) {
+                                const BGCornerPermReprCubes &cpermReprCubesC =
+                                    ccpReprCubesC.getAt(ccpReprIdx);
+                                std::vector<cubeedges> ceNewArr;
+                                for(BGCornerPermReprCubes::edges_iter edgeIt =
+                                        cpermReprCubesC.edgeBegin();
+                                        edgeIt != cpermReprCubesC.edgeEnd(); ++edgeIt)
+                                {
+                                    const cubeedges ce = *edgeIt;
+                                    cubeedges cenew = reversed ?
+                                        cubeedges::compose(crotated[rd].ce, ce) :
+                                        cubeedges::compose(ce, crotated[rd].ce);
+                                    cubeedges cenewRepr = m_reprPerms.getReprCubeedges(ccpNew, cenew);
+                                    if( ccpReprCubesNewP != NULL &&
+                                            ccpReprCubesNewP->containsCubeEdges(cenewRepr) )
+                                        continue;
+                                    if( ccpReprCubesNewC.containsCubeEdges(cenewRepr) )
+                                        continue;
+                                    ceNewArr.push_back(cenewRepr);
+                                }
+                                if( !ceNewArr.empty() )
+                                    cubeCount += ccpReprCubesNewN.addCubes(ceNewArr);
+                            }
+                        }
                     }
-                    if( !ceNewArr.empty() )
-                        cubeCount += ccpReprCubesNewN.addCubes(ceNewArr);
                 }
             }
         }

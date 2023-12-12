@@ -19,17 +19,12 @@ class BGCubecornerReprPerms {
         unsigned short transformIdx;
     };
 
-    struct CubecornerPermRepr {
-        cubecorners_perm ccp;
-        std::vector<unsigned short> represented;
-    };
-
     struct CubecornerPermToRepr {
         int reprIdx = -1;       // index in m_reprPerms
         std::vector<ReprCandidateTransform> transform;
     };
 
-    std::vector<CubecornerPermRepr> m_reprPerms;
+    std::vector<cubecorners_perm> m_reprPerms;
     std::vector<CubecornerPermToRepr> m_permToRepr;
     const bool m_useReverse;
 public:
@@ -50,7 +45,6 @@ public:
     unsigned getReprPermIdx(cubecorners_perm) const;
 
     cubecorners_perm getPermForIdx(unsigned reprPermIdx) const;
-    const std::vector<unsigned short> &getRepresentedByIdx(unsigned reprPermIdx) const;
 
     /* Returns true when the corners permutation determines uniquely
      * the transformation needed to convert a cube having the permutation to
