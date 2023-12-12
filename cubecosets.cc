@@ -1,7 +1,7 @@
 #include "cubecosets.h"
 
 
-bool SpaceReprCubesAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const cube &c)
+bool CubeCosetsAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const cube &c)
 {
     std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
 
@@ -26,7 +26,7 @@ bool SpaceReprCubesAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const
     return res;
 }
 
-const std::vector<cube> *SpaceReprCubesAtDepth::getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const
+const std::vector<cube> *CubeCosetsAtDepth::getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const
 {
     const std::vector<std::pair<cubeedges, unsigned>> &items = m_itemsArr[ccoReprIdx];
     std::vector<std::pair<cubeedges, unsigned>>::const_iterator reprIt = std::lower_bound(

@@ -3,8 +3,8 @@
 #include "threadpoolhelper.h"
 #include <atomic>
 
-static void addBGSpaceReprCubesT(unsigned threadNo,
-        const CubesReprByDepth *cubesReprByDepth, SpaceReprCubes *bgSpaceCubes,
+static void addBGcosetsT(unsigned threadNo,
+        const CubesReprByDepth *cubesReprByDepth, CubeCosets *bgCosets,
         unsigned depth, std::atomic_ulong *reprCubeCount)
 {
     unsigned reprCubeCountT = 0;
@@ -45,7 +45,7 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
                                 cubeedges ceT = cerevsymm.transform(td);
                                 cubeedges ceReprBG = ceT.representativeBG();
                                 cube c = { .ccp = ccpT, .cco = ccoT, .ce = ceT };
-                                if( (*bgSpaceCubes)[depth].addCube(reprCOrientIdx, ceReprBG, c) )
+                                if( (*bgCosets)[depth].addCube(reprCOrientIdx, ceReprBG, c) )
                                     ++reprCubeCountT;
                             }
                         }
@@ -57,32 +57,32 @@ static void addBGSpaceReprCubesT(unsigned threadNo,
     *reprCubeCount += reprCubeCountT;
 }
 
-void addBGSpaceReprCubes(const CubesReprByDepth &cubesReprByDepth,
-        SpaceReprCubes &bgSpaceCubes, unsigned requestedDepth, Responder &responder)
+static void addBGcosets(const CubesReprByDepth &cubesReprByDepth,
+        CubeCosets &bgCosets, unsigned requestedDepth, Responder &responder)
 {
-    while( bgSpaceCubes.availCount() <= requestedDepth ) {
-        unsigned depth = bgSpaceCubes.availCount();
+    while( bgCosets.availCount() <= requestedDepth ) {
+        unsigned depth = bgCosets.availCount();
         std::atomic_ulong reprCubeCount(0);
-        runInThreadPool(addBGSpaceReprCubesT, &cubesReprByDepth, &bgSpaceCubes, depth,
+        runInThreadPool(addBGcosetsT, &cubesReprByDepth, &bgCosets, depth,
                     &reprCubeCount);
         responder.message("depth %d space repr cubes=%lu", depth, reprCubeCount.load());
-        bgSpaceCubes.incAvailCount();
+        bgCosets.incAvailCount();
     }
 }
 
-SpaceReprCubesAdd::SpaceReprCubesAdd()
+CubeCosetsAdd::CubeCosetsAdd()
     : m_spaceReprCubes(std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1)
 {
 }
 
-const SpaceReprCubes *SpaceReprCubesAdd::getBGCosetReprCubes(CubesReprByDepthAdd &cubesReprByDepthAdd,
+const CubeCosets *CubeCosetsAdd::getBGcosets(CubesReprByDepthAdd &cubesReprByDepthAdd,
         unsigned depth, Responder &responder)
 {
     if( m_spaceReprCubes.availCount() <= depth ) {
         const CubesReprByDepth *cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return NULL;
-        addBGSpaceReprCubes(*cubesReprByDepth, m_spaceReprCubes, depth, responder);
+        addBGcosets(*cubesReprByDepth, m_spaceReprCubes, depth, responder);
     }
     return &m_spaceReprCubes;
 }

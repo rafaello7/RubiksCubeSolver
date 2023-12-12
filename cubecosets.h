@@ -6,7 +6,7 @@
 
 /* A set of spaces (cosets of BG space) reachable at specific depth.
  */
-class SpaceReprCubesAtDepth {
+class CubeCosetsAtDepth {
     // std::pair<edges of representative cube, index in m_cubeArr of cubes reachable at depth>
     // the representative cube corners permutation is identity; 2^7 corner orientations
     std::vector<std::pair<cubeedges, unsigned>> m_itemsArr[2187];
@@ -19,13 +19,13 @@ public:
     const std::vector<cube> *getCubesForCE(unsigned ccoReprIdx, cubeedges ceRepr) const;
 };
 
-class SpaceReprCubes {
-    std::vector<SpaceReprCubesAtDepth> m_cubesAtDepths;
+class CubeCosets {
+    std::vector<CubeCosetsAtDepth> m_cubesAtDepths;
     unsigned m_availCount;
-    SpaceReprCubes(const SpaceReprCubes&) = delete;
-    SpaceReprCubes &operator=(const SpaceReprCubes&) = delete;
+    CubeCosets(const CubeCosets&) = delete;
+    CubeCosets &operator=(const CubeCosets&) = delete;
 public:
-    SpaceReprCubes(unsigned size)
+    CubeCosets(unsigned size)
         : m_cubesAtDepths(size), m_availCount(0)
     {
     }
@@ -33,8 +33,8 @@ public:
     unsigned availCount() const { return m_availCount; }
     void incAvailCount() { ++m_availCount; }
     unsigned availMaxCount() const { return m_cubesAtDepths.size(); }
-    const SpaceReprCubesAtDepth &operator[](unsigned idx) const { return m_cubesAtDepths[idx]; }
-    SpaceReprCubesAtDepth &operator[](unsigned idx) { return m_cubesAtDepths[idx]; }
+    const CubeCosetsAtDepth &operator[](unsigned idx) const { return m_cubesAtDepths[idx]; }
+    CubeCosetsAtDepth &operator[](unsigned idx) { return m_cubesAtDepths[idx]; }
 };
 
 #endif // CUBECOSETS_H

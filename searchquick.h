@@ -7,8 +7,8 @@
 #include "responder.h"
 
 void searchMovesQuickCatchFirst(CubesReprByDepthAdd&, BGCubesReprByDepthAdd&,
-        SpaceReprCubesAdd&, const cube &csearch, Responder&);
+        CubeCosetsAdd&, const cube &csearch, Responder&);
 void searchMovesQuickMulti(CubesReprByDepthAdd&, BGCubesReprByDepthAdd&,
-        SpaceReprCubesAdd&, const cube &csearch, Responder&);
+        CubeCosetsAdd&, const cube &csearch, Responder&);
 
 #endif // SEARCHQUICK_H

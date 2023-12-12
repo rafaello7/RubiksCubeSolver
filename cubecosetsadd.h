@@ -10,12 +10,11 @@ enum {
     TWOPHASE_DEPTH1_MULTI_MAX = 6u,
 };
 
-class SpaceReprCubesAdd {
-    SpaceReprCubes m_spaceReprCubes;
+class CubeCosetsAdd {
+    CubeCosets m_spaceReprCubes;
 public:
-    SpaceReprCubesAdd();
-    const SpaceReprCubes *getBGCosetReprCubes(CubesReprByDepthAdd&,
-            unsigned depth, Responder&);
+    CubeCosetsAdd();
+    const CubeCosets *getBGcosets(CubesReprByDepthAdd&, unsigned depth, Responder&);
 };
 
 #endif // CUBECOSETSADD_H
