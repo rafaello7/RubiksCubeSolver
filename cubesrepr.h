@@ -136,6 +136,11 @@ public:
     // the cube passed as parameter shall exist in the set
     // returns the list of moves separated by spaces
     std::string getMoves(const cube&, bool movesRev = false) const;
+
+    /* Auxiliary function to fill the cube set. Adds cubes for
+     * the specified representative index at the specified depth.
+     * Before call the set should be filled up to depth-1.
+     */
     unsigned long addCubesForReprPerm(unsigned reprPermIdx, int depth);
     bool searchMovesForReprPerm(unsigned reprPermIdx,
             unsigned depth, unsigned depthMax, const cube &cSearchT,

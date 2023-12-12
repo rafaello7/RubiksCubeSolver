@@ -14,6 +14,11 @@ class CubeCosetsAdd {
     CubeCosets m_cubeCosets;
 public:
     CubeCosetsAdd();
+
+    /* Returns set of cosets filled up to at least the specified depth (inclusive).
+     * The function triggers filling procedure when the depth is requested first time.
+     * When the filling procedure is canceled, NULL is returned.
+     */
     const CubeCosets *getBGcosets(CubesReprByDepthAdd&, unsigned depth, Responder&);
 };
 
