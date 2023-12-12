@@ -71,19 +71,19 @@ static void addBGcosets(const CubesReprByDepth &cubesReprByDepth,
 }
 
 CubeCosetsAdd::CubeCosetsAdd()
-    : m_spaceReprCubes(std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1)
+    : m_cubeCosets(std::max(TWOPHASE_DEPTH1_CATCHFIRST_MAX, TWOPHASE_DEPTH1_MULTI_MAX)+1)
 {
 }
 
 const CubeCosets *CubeCosetsAdd::getBGcosets(CubesReprByDepthAdd &cubesReprByDepthAdd,
         unsigned depth, Responder &responder)
 {
-    if( m_spaceReprCubes.availCount() <= depth ) {
+    if( m_cubeCosets.availCount() <= depth ) {
         const CubesReprByDepth *cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(depth, responder);
         if( cubesReprByDepth == NULL )
             return NULL;
-        addBGcosets(*cubesReprByDepth, m_spaceReprCubes, depth, responder);
+        addBGcosets(*cubesReprByDepth, m_cubeCosets, depth, responder);
     }
-    return &m_spaceReprCubes;
+    return &m_cubeCosets;
 }
 

@@ -11,7 +11,7 @@ enum {
 };
 
 class CubeCosetsAdd {
-    CubeCosets m_spaceReprCubes;
+    CubeCosets m_cubeCosets;
 public:
     CubeCosetsAdd();
     const CubeCosets *getBGcosets(CubesReprByDepthAdd&, unsigned depth, Responder&);
