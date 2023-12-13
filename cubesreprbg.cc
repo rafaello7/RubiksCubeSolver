@@ -101,7 +101,7 @@ BGCubesReprAtDepth &BGCubesReprByDepth::operator[](unsigned idx)
     return *m_cubesAtDepths[idx];
 }
 
-std::string BGCubesReprByDepth::printMoves(const cube &c,
+std::string BGCubesReprByDepth::getMoves(const cube &c,
         unsigned searchTd, bool movesRev) const
 {
     static const unsigned reverseMoveIdxs[RCOUNTBG] = {
@@ -127,7 +127,7 @@ std::string BGCubesReprByDepth::printMoves(const cube &c,
             break;
         ++depth;
         if( depth >= m_availCount ) {
-            std::cout << "printInSpaceMoves: depth reached maximum, cube NOT FOUND" << std::endl;
+            std::cout << "bg getMoves: depth reached maximum, cube NOT FOUND" << std::endl;
             exit(1);
         }
     }
@@ -156,7 +156,7 @@ std::string BGCubesReprByDepth::printMoves(const cube &c,
             ++cmidx;
         }
         if( cmidx == RCOUNTBG ) {
-            std::cout << "printInSpaceMoves: cube at depth " << depth << " NOT FOUND" << std::endl;
+            std::cout << "bg getMoves: cube at depth " << depth << " NOT FOUND" << std::endl;
             exit(1);
         }
         insertPos = rotateIdxs.insert(insertPos, movesRev ? cmidx : reverseMoveIdxs[cmidx]);

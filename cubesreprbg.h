@@ -67,7 +67,7 @@ public:
     void incAvailCount() { ++m_availCount; }
     const BGCubesReprAtDepth &operator[](unsigned idx) const { return *m_cubesAtDepths[idx]; }
     BGCubesReprAtDepth &operator[](unsigned idx);
-    std::string printMoves(const cube&, unsigned searchTd, bool movesRev = false) const;
+    std::string getMoves(const cube&, unsigned searchTd, bool movesRev = false) const;
     unsigned long addCubesForReprPerm(unsigned permReprIdx, int depth);
     bool searchMovesForReprPerm(unsigned reprPermIdx,
             unsigned depth, unsigned depthMax, const cube &cSearchT,

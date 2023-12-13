@@ -41,11 +41,11 @@ static std::string getInSpaceMovesForMatch(const BGCubesReprByDepth &cubesReprBy
     cube cTsymm = symmetric ? cT.symmetric() : cT;
     std::string moves;
     if( searchRev ) {
-        moves = cubesReprByDepth.printMoves(cTsymm, searchTd, !reversed);
-        moves += cubesReprByDepth.printMoves(cSearchTsymm, searchTd, reversed);
+        moves = cubesReprByDepth.getMoves(cTsymm, searchTd, !reversed);
+        moves += cubesReprByDepth.getMoves(cSearchTsymm, searchTd, reversed);
     }else{
-        moves = cubesReprByDepth.printMoves(cSearchTsymm, searchTd, !reversed);
-        moves += cubesReprByDepth.printMoves(cTsymm, searchTd, reversed);
+        moves = cubesReprByDepth.getMoves(cSearchTsymm, searchTd, !reversed);
+        moves += cubesReprByDepth.getMoves(cTsymm, searchTd, reversed);
     }
     return moves;
 }
@@ -137,10 +137,10 @@ static bool searchInSpaceMovesB(const BGCubesReprByDepth &cubesReprByDepthBG,
                                     searchTd, depthMax, depthMax, moves2) )
                         {
                             if( searchRev ) {
-                                moves = cubesReprByDepthBG.printMoves(
+                                moves = cubesReprByDepthBG.getMoves(
                                         c1T, searchTd, true) + moves2;
                             }else{
-                                moves = moves2 + cubesReprByDepthBG.printMoves(c1T, searchTd);
+                                moves = moves2 + cubesReprByDepthBG.getMoves(c1T, searchTd);
                             }
                             return true;
                         }
@@ -163,7 +163,7 @@ int searchInSpaceMoves(BGCubesReprByDepthAdd &cubesReprByDepthAdd,
             depthSearch < cubesReprByDepthBG->availCount(); ++depthSearch)
     {
         if( (*cubesReprByDepthBG)[depthSearch].containsCube(cSpace) ) {
-            moves = cubesReprByDepthBG->printMoves(cSpace, searchTd, !searchRev);
+            moves = cubesReprByDepthBG->getMoves(cSpace, searchTd, !searchRev);
             return depthSearch;
         }
     }

@@ -270,7 +270,7 @@ std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
 			break;
 		++depth;
         if( depth >= m_availCount ) {
-            std::cout << "printMoves: depth reached maximum, cube NOT FOUND" << std::endl;
+            std::cout << "getMoves: depth reached maximum, cube NOT FOUND" << std::endl;
             exit(1);
         }
 	}
@@ -299,7 +299,7 @@ std::string CubesReprByDepth::getMoves(const cube &c, bool movesRev) const
 			++cm;
 		}
         if( cm == RCOUNT ) {
-            std::cout << "printMoves: cube at depth " << depth << " NOT FOUND" << std::endl;
+            std::cout << "getMoves: cube at depth " << depth << " NOT FOUND" << std::endl;
             exit(1);
         }
 		insertPos = rotateDirs.insert(insertPos, movesRev ? cm : rotateDirReverse(cm));
