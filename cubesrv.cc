@@ -30,12 +30,33 @@ static unsigned depthMaxSelFn() {
     return model;
 }
 
+static void printUsage()
+{
+    std::cout << "usage:" << std::endl
+        << "    cubesrv\t\t\t\t     start web server at port 8080" << std::endl
+        << "    cubesrv <maxdepth>\t\t\t     ditto" << std::endl
+        << "    cubesrv <maxdepth> <cubecount>  <mode>   solve random cubes" << std::endl
+        << "    cubesrv <maxdepth> fname.txt    <mode>   solve cubes from file" << std::endl
+        << "    cubesrv <maxdepth> <cubestring> <mode>   solve the cube" << std::endl
+        << std::endl
+        << "parameters:" << std::endl
+        << "    <maxdepth>\t\t1..10 or 1r..10r" << std::endl
+        << "    <cubecount>\t\ta number" << std::endl
+        << "    <mode>\t\to - optimal, q - quick, m - quick multi," << std::endl
+        << "\t\t\tO - optimal with preload" << std::endl
+        << std::endl;
+}
+
 int main(int argc, char *argv[]) {
     unsigned memModel = depthMaxSelFn();
     unsigned depthMax = depthMaxByMem[memModel].depthMax;
     bool useReverse = depthMaxByMem[memModel].useReverse;
 
     if( argc >= 2 ) {
+        if( !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") ) {
+            printUsage();
+            return 0;
+        }
         const char *s = argv[1];
         useReverse = strchr(s, 'r') != NULL;
         depthMax = atoi(s);
