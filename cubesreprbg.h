@@ -5,6 +5,10 @@
 #include <vector>
 #include <memory>
 
+enum {
+    TWOPHASE_DEPTH2_MAX = 8u
+};
+
 class BGCornerPermReprCubes {
     std::vector<cubeedges> m_items;
     BGCornerPermReprCubes(const BGCornerPermReprCubes&) = delete;

@@ -81,6 +81,8 @@ bool BGCubesReprAtDepth::containsCube(const cube &c) const {
 BGCubesReprByDepth::BGCubesReprByDepth(bool useReverse)
     : m_reprPerms(useReverse), m_availCount(1)
 {
+    // prevent reallocation
+    m_cubesAtDepths.reserve(TWOPHASE_DEPTH2_MAX+1);
     // insert the solved cube at depth 0
     m_cubesAtDepths.emplace_back(new BGCubesReprAtDepth(m_reprPerms));
     unsigned cornerPermReprIdx = m_reprPerms.getReprPermIdx(csolved.ccp);
@@ -96,6 +98,13 @@ bool BGCubesReprByDepth::isUseReverse() const {
 
 BGCubesReprAtDepth &BGCubesReprByDepth::operator[](unsigned idx)
 {
+    if( idx > TWOPHASE_DEPTH2_MAX ) {
+        // about to reallocate m_cubesAtDepths; can be fatal in other threads
+        flockfile(stdout);
+        std::cout << "BGCubesReprByDepth::operator[] fatal: idx=" <<
+            idx << " exceeds TWOPHASE_DEPTH2_MAX=" << TWOPHASE_DEPTH2_MAX << std::endl;
+        funlockfile(stdout);
+    }
     while( idx >= m_cubesAtDepths.size() )
         m_cubesAtDepths.emplace_back(new BGCubesReprAtDepth(m_reprPerms));
     return *m_cubesAtDepths[idx];

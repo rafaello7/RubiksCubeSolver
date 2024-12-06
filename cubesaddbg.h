@@ -5,10 +5,6 @@
 #include "responder.h"
 #include <mutex>
 
-enum {
-    TWOPHASE_DEPTH2_MAX = 8u
-};
-
 class BGCubesReprByDepthAdd {
     std::mutex m_mtx;
     BGCubesReprByDepth m_cubesReprByDepth;
