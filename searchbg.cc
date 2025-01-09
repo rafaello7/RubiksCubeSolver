@@ -189,7 +189,6 @@ int searchInSpaceMoves(BGCubesReprByDepthAdd &cubesReprByDepthAdd,
                 if( searchInSpaceMovesA(*cubesReprByDepthBG, cSpaceTarr, searchRev, searchTd,
                             depth, depthMax, moves) )
                     return depthSearch;
-                ++depthSearch;
             }else{
                 cubesReprByDepthBG = cubesReprByDepthAdd.getReprCubes(TWOPHASE_DEPTH2_MAX, responder);
                 if( cubesReprByDepthBG == NULL )
