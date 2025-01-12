@@ -1,0 +1,1 @@
+exec java -Xmx4G -jar target/CubeSrv-1.0.jar "$@"

@@ -1,4 +1,4 @@
-# Rubik's Cube Solver
+# Rubik's Cube Solver - kotlin version
 
 The program solves Rubik's cube.
 
@@ -10,13 +10,7 @@ practice the length rarely exceeds 25 steps.
 
 ## Requirements
 
-The program can be compiled and run under Linux. It is compiled using `g++`.
-
-On x86 architecture the program compiles with assembly code which
-requires AVX2 and BMI2 instruction set support by CPU. If the processor does
-not support these instructions, the program will not work.
-The assembly can be disabled manually in source file (_cubesrv.cc_) by
-remove/comment out a line containing `#define USE_ASM`.
+The program is compiled using `mvn`.
 
 To search for optimal solutions, a computer with at least 6GB RAM
 is recommended.  With 3-4 GB of RAM the program executes slightly slower.
@@ -34,14 +28,12 @@ a bigger search table is initialized to speed up the search.
 
 ## Compilation
 
-To compile, go to the directory with sources and run `make`.
+To compile, run `mvn install`.
 
 ## Running
 
-To run, go to the directory with sources and invoke `./cubesrv`
-(without parameters). Selecting the source directory as the current
-for program is important, because the program reads additional files
-(_cube.html_, _cube.css_ etc.) from the current directory.
+To run, invoke `./cubesrv`
+(without parameters).
 
 The program uses a web browser interface. After startup it waits
 for http requests on port 8080. So, after starting it, open

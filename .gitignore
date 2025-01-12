@@ -1,4 +1,3 @@
-/*.o
-/cubesrv
-/*.swp
-/tags
+*.swp
+/target/
+/.idea/
