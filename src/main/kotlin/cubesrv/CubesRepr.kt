@@ -9,7 +9,7 @@ package cubesrv
 /* A set of representative cubes for specific corners permutation and
  * orientations.
  */
-class CornerOrientReprCubes(var m_orients : cubecorner_orients) {
+class CornerOrientReprCubes(val m_orients : cubecorner_orients) {
     var m_items : LongArray = LongArray(0)
     var m_orientOccur : IntArray? = null
 
@@ -70,7 +70,7 @@ class CornerOrientReprCubes(var m_orients : cubecorner_orients) {
     fun size() : Int = m_items.count()
     fun edgeList() : LongArray = m_items
     companion object {
-        fun findSolutionEdgeMulti(ccoReprCubes : CornerOrientReprCubes,
+        private fun findSolutionEdgeMulti(ccoReprCubes : CornerOrientReprCubes,
                 ccoReprSearchCubes : CornerOrientReprCubes,
                 otransform : MutableList<EdgeReprCandidateTransform>,
                 reversed : Boolean) : cubeedges
@@ -85,7 +85,7 @@ class CornerOrientReprCubes(var m_orients : cubecorner_orients) {
             return cubeedges()
         }
 
-        fun findSolutionEdgeSingle(ccoReprCubes : CornerOrientReprCubes,
+        private fun findSolutionEdgeSingle(ccoReprCubes : CornerOrientReprCubes,
                 ccoReprSearchCubes : CornerOrientReprCubes,
                 erct : EdgeReprCandidateTransform,
                 reversed : Boolean) : cubeedges
@@ -157,10 +157,10 @@ class CornerOrientReprCubes(var m_orients : cubecorner_orients) {
 /* A set of representative cubes for specific corners permutation.
  */
 class CornerPermReprCubes {
-    companion object {
+    private companion object {
         val m_coreprCubesEmpty = CornerOrientReprCubes(cubecorner_orients())
     }
-    val m_coreprCubes = mutableListOf<CornerOrientReprCubes>()
+    private val m_coreprCubes = mutableListOf<CornerOrientReprCubes>()
 
     fun empty() : Boolean = m_coreprCubes.isEmpty()
     fun size() : Int = m_coreprCubes.count()
@@ -197,7 +197,7 @@ class CornerPermReprCubes {
 /* A set of representative cubes reachable at specific depth.
  */
 class CubesReprAtDepth(val m_reprPerms : CubecornerReprPerms) {
-    val m_cornerPermReprCubes =
+    private val m_cornerPermReprCubes =
         List<CornerPermReprCubes>(m_reprPerms.reprPermCount()) { CornerPermReprCubes() }
 
     fun size() : Int = m_cornerPermReprCubes.size
