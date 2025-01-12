@@ -16,27 +16,25 @@ class CornerOrientReprCubes(var m_orients : cubecorner_orients) {
     fun getOrients() : cubecorner_orients = m_orients
 
     fun addCubes(cearr : Collection<cubeedges>) : Int {
-        val edgeList = mutableListOf<Long>()
-        val idxList = mutableListOf<Int>()
+        val edgeMap = sortedMapOf<Long, Int>()
         for(ce in cearr) {
             val edge = ce.get()
-            if( !(edge in edgeList) ) {
+            if( !(edge in edgeMap) ) {
                 var idx = m_items.binarySearch(edge)
                 if( idx < 0 ) {
-                    edgeList.add(edge)
-                    idxList.add(-1-idx)
+                    edgeMap.put(edge, -1-idx)
                 }
             }
         }
-        idxList.sort()
-        edgeList.sort()
+        val edgeList = mutableListOf<Map.Entry<Long, Int>>()
+        edgeList.addAll(edgeMap.entries)
         val itemsNew = LongArray(m_items.size + edgeList.size)
         var srcPos = 0
         var idxsPos = 0
         var destPos = 0
         while( destPos < itemsNew.size ) {
-            if( idxsPos < idxList.size && idxList[idxsPos] == srcPos ) {
-                itemsNew[destPos] = edgeList[idxsPos]
+            if( idxsPos < edgeList.size && edgeList[idxsPos].value == srcPos ) {
+                itemsNew[destPos] = edgeList[idxsPos].key
                 ++idxsPos
             }else{
                 itemsNew[destPos] = m_items[srcPos]
