@@ -23,11 +23,10 @@ private fun depthMaxSelFn() : Int {
 private fun printUsage() {
     println("""
 usage:
-    cubesrv                                  start web server at port 8080
-    cubesrv <maxdepth>                       ditto
-    cubesrv <maxdepth> <cubecount>  <mode>   solve random cubes
-    cubesrv <maxdepth> fname.txt    <mode>   solve cubes from file
-    cubesrv <maxdepth> <cubestring> <mode>   solve the cube
+    cubesrv [<maxdepth>]                       start web server at port 8080
+    cubesrv [<maxdepth>] <cubecount>  <mode>   solve random cubes
+    cubesrv [<maxdepth>] fname.txt    <mode>   solve cubes from file
+    cubesrv [<maxdepth>] <cubestring> <mode>   solve the cube
 
 parameters:
     <maxdepth>          1..10 or 1r..10r
@@ -43,7 +42,7 @@ fun main(args : Array<String>) {
     var depthMax = depthMaxByMem[memModel].depthMax
     var useReverse = depthMaxByMem[memModel].useReverse
 
-    if( args.size >= 1 ) {
+    if( args.size == 1 || args.size == 3 ) {
         if( args[0] == "-h" || args[0] == "--help") {
             printUsage()
             return
@@ -56,11 +55,11 @@ fun main(args : Array<String>) {
         }
     }
     println("setup: depth $depthMax${if(useReverse) " rev" else ""}")
-    if( args.size >= 3 ) {
-        if(args[1][0].isDigit())
-            cubeTester(args[1].toInt(), args[2], depthMax, useReverse)
+    if( args.size >= 2 ) {
+        if(args[args.size-2][0].isDigit())
+            cubeTester(args[args.size-2].toInt(), args[args.size-1], depthMax, useReverse)
         else
-            solveCubes(args[1], args[2], depthMax, useReverse)
+            solveCubes(args[args.size-2], args[args.size-1], depthMax, useReverse)
     }else
         runServer(depthMax, useReverse)
 }

@@ -1,1 +1,4 @@
-exec java -Xmx4G -jar target/CubeSrv-1.0.jar "$@"
+#!/bin/sh
+maxmem=4G
+[ "(" $# = 1 -o $# = 3 ")" -a $1 = 9 ] && maxmem=8G
+exec java -Xmx$maxmem -jar target/CubeSrv-1.0.jar "$@"
