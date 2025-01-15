@@ -33,11 +33,10 @@ static unsigned depthMaxSelFn() {
 static void printUsage()
 {
     std::cout << "usage:" << std::endl
-        << "    cubesrv\t\t\t\t     start web server at port 8080" << std::endl
-        << "    cubesrv <maxdepth>\t\t\t     ditto" << std::endl
-        << "    cubesrv <maxdepth> <cubecount>  <mode>   solve random cubes" << std::endl
-        << "    cubesrv <maxdepth> fname.txt    <mode>   solve cubes from file" << std::endl
-        << "    cubesrv <maxdepth> <cubestring> <mode>   solve the cube" << std::endl
+        << "    cubesrv [<maxdepth>]\t\t       start web server at port 8080" << std::endl
+        << "    cubesrv [<maxdepth>] <cubecount>  <mode>   solve random cubes" << std::endl
+        << "    cubesrv [<maxdepth>] fname.txt    <mode>   solve cubes from file" << std::endl
+        << "    cubesrv [<maxdepth>] <cubestring> <mode>   solve the cube" << std::endl
         << std::endl
         << "parameters:" << std::endl
         << "    <maxdepth>\t\t1..10 or 1r..10r" << std::endl
@@ -52,7 +51,7 @@ int main(int argc, char *argv[]) {
     unsigned depthMax = depthMaxByMem[memModel].depthMax;
     bool useReverse = depthMaxByMem[memModel].useReverse;
 
-    if( argc >= 2 ) {
+    if( argc == 2 || argc == 4 ) {
         if( !strcmp(argv[1], "-h") || !strcmp(argv[1], "--help") ) {
             printUsage();
             return 0;
@@ -67,11 +66,11 @@ int main(int argc, char *argv[]) {
     }
     std::cout << "setup: depth " << depthMax << (useReverse ? " rev" : "") <<
         ASM_SETUP << std::endl;
-    if( argc >= 4 ) {
-        if(isdigit(argv[2][0]))
-            cubeTester(atoi(argv[2]), argv[3][0], depthMax, useReverse);
+    if( argc >= 3 ) {
+        if(isdigit(argv[argc-2][0]))
+            cubeTester(atoi(argv[argc-2]), argv[argc-1][0], depthMax, useReverse);
         else
-            solveCubes(argv[2], argv[3][0], depthMax, useReverse);
+            solveCubes(argv[argc-2], argv[argc-1][0], depthMax, useReverse);
     }else
         runServer(depthMax, useReverse);
     return 0;
