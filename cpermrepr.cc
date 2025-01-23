@@ -109,7 +109,7 @@ cubecorner_orients CubecornerReprPerms::getReprOrients(
             transform.push_back({ .transformedIdx = rct.transformIdx,
                     .reversed = rct.reversed, .symmetric = rct.symmetric, .ceTrans = csolved.ce });
             isInit = true;
-        }else if( isInit && ocand == orepr )
+        }else if( ocand == orepr )
             transform.push_back({ .transformedIdx = rct.transformIdx,
                     .reversed = rct.reversed, .symmetric = rct.symmetric, .ceTrans = csolved.ce });
     }
@@ -172,7 +172,7 @@ cubecorner_orients CubecornerReprPerms::getComposedReprOrients(
             transform.push_back({ .transformedIdx = rct.transformIdx,
                     .reversed = rct.reversed, .symmetric = rct.symmetric });
             isInit = true;
-        }else if( isInit && ocand == orepr )
+        }else if( ocand == orepr )
             transform.push_back({ .transformedIdx = rct.transformIdx,
                     .reversed = rct.reversed, .symmetric = rct.symmetric });
     }
