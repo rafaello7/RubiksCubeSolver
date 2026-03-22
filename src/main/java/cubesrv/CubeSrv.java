@@ -18,11 +18,11 @@ public class CubeSrv {
     }
 
     private static final DepthMaxByMem[] depthMaxByMem = {
-        new DepthMaxByMem(       0, 8, true  ), // ~320MB
-        new DepthMaxByMem(    2700, 9, true  ), // ~2.4GB
-        new DepthMaxByMem(    5120, 9, false ), // ~4.8GB
-        new DepthMaxByMem(1 << 30, 10, true  ), // ~27GB
-        new DepthMaxByMem(1 << 30, 10, false ), // ~53GB
+        new DepthMaxByMem(       0, 8, true  ),
+        new DepthMaxByMem(    2048, 9, true  ),
+        new DepthMaxByMem(    4096, 9, false ),
+        new DepthMaxByMem(1 << 30, 10, true  ),
+        new DepthMaxByMem(1 << 30, 10, false ),
     };
 
     private static int depthMaxSelFn() {
