@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 public class CubeRead {
 
-    private static boolean isCubeSolvable(Responder responder, cube c) {
+    private static boolean isCubeSolvable(Responder responder, Cube c) {
         boolean isSwapsOdd = false;
         int permScanned = 0;
         for (int i = 0; i < 8; i++) {
@@ -66,11 +66,11 @@ public class CubeRead {
         elemLoc(int wall, int row, int col) { this.wall = wall; this.row = row; this.col = col; }
     }
 
-    public static boolean cubeFromColorsOnSquares(Responder responder, String squareColors, cube[] c) {
+    public static boolean cubeFromColorsOnSquares(Responder responder, String squareColors, Cube[] c) {
         int[] R120 = {1, 2, 0};
         int[] R240 = {2, 0, 1};
-        cubecolor[][][] walls = new cubecolor[6][3][3];
-        for (cubecolor[][] ww : walls) for (cubecolor[] wr : ww) java.util.Arrays.fill(wr, cubecolor.CCOUNT);
+        CubeColor[][][] walls = new CubeColor[6][3][3];
+        for (CubeColor[][] ww : walls) for (CubeColor[] wr : ww) java.util.Arrays.fill(wr, CubeColor.CCOUNT);
         String colorLetters = "YOBRGW";
         elemLoc[][] cornerLocMap = {
             {new elemLoc(2,0,0), new elemLoc(1,0,2), new elemLoc(0,2,0)},
@@ -102,10 +102,10 @@ public class CubeRead {
                 responder.message("bad letter at column " + cno);
                 return false;
             }
-            walls[cno/9][cno%9/3][cno%3] = cubecolor.values()[idx];
+            walls[cno/9][cno%9/3][cno%3] = CubeColor.values()[idx];
         }
         for (int i = 0; i <= 5; i++) {
-            if (walls[i][1][1] != cubecolor.values()[i]) {
+            if (walls[i][1][1] != CubeColor.values()[i]) {
                 responder.message("bad orientation: wall=" + i + " exp=" + colorLetters.charAt(i)
                         + " is=" + colorLetters.charAt(walls[i][1][1].ordinal()));
                 return false;
@@ -114,7 +114,7 @@ public class CubeRead {
         for (int i = 0; i <= 7; i++) {
             boolean match = false;
             for (int n = 0; n <= 7; n++) {
-                cubecolor[] elemColors = cubeCornerColors[n];
+                CubeColor[] elemColors = cubeCornerColors[n];
                 match = true;
                 for (int r = 0; r <= 2; r++) {
                     elemLoc el = cornerLocMap[i][r];
@@ -145,7 +145,7 @@ public class CubeRead {
         for (int i = 0; i <= 11; i++) {
             boolean match = false;
             for (int n = 0; n <= 11; n++) {
-                cubecolor[] elemColors = cubeEdgeColors[n];
+                CubeColor[] elemColors = cubeEdgeColors[n];
                 match = true;
                 for (int r = 0; r <= 1; r++) {
                     elemLoc el = edgeLocMap[i][r];
@@ -171,7 +171,7 @@ public class CubeRead {
         return true;
     }
 
-    private static boolean cubeFromScrambleStr(Responder responder, String scrambleStr, cube[] c) {
+    private static boolean cubeFromScrambleStr(Responder responder, String scrambleStr, Cube[] c) {
         String[] rotateMapFromExtFmt = {
             "B1","B2","B3","F1","F2","F3","U1","U2","U3",
             "D1","D2","D3","R1","R2","R3","L1","L2","L3"
@@ -182,13 +182,13 @@ public class CubeRead {
             String scramSub = scrambleStr.substring(i);
             if (Character.isLetterOrDigit(scramSub.charAt(0))) {
                 int rd = 0;
-                while (rd < rotate_dir.RCOUNT.ordinal() && !scramSub.startsWith(rotateMapFromExtFmt[rd]))
+                while (rd < RotateDir.RCOUNT.ordinal() && !scramSub.startsWith(rotateMapFromExtFmt[rd]))
                     ++rd;
-                if (rd == rotate_dir.RCOUNT.ordinal()) {
+                if (rd == RotateDir.RCOUNT.ordinal()) {
                     responder.message("Unknown move: " + scramSub.substring(0, 2));
                     return false;
                 }
-                c[0] = cube.compose(c[0], crotated[rd]);
+                c[0] = Cube.compose(c[0], crotated[rd]);
                 i += 2;
             } else {
                 ++i;
@@ -215,7 +215,7 @@ public class CubeRead {
         return res.toString();
     }
 
-    public static boolean cubeFromString(Responder responder, String cubeStr, cube[] c) {
+    public static boolean cubeFromString(Responder responder, String cubeStr, Cube[] c) {
         if (Pattern.matches("[YOBRGW]{54}", cubeStr))
             return cubeFromColorsOnSquares(responder, cubeStr, c);
         else if (Pattern.matches("[URFDLB]{54}", cubeStr)) {
@@ -229,15 +229,14 @@ public class CubeRead {
     }
 
     public static void solveCubesFromFile(String fname, Responder responder,
-            java.util.List<cube> cubes) throws IOException {
+            java.util.List<Cube> cubes) throws IOException {
         try (BufferedReader br = new BufferedReader(new FileReader(fname))) {
             String line;
             while ((line = br.readLine()) != null) {
-                cube[] cv = {new cube()};
+                Cube[] cv = {new Cube()};
                 if (cubeFromString(responder, line, cv))
                     cubes.add(cv[0]);
             }
         }
     }
 }
-

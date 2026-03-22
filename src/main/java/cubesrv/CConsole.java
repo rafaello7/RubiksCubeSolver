@@ -10,13 +10,12 @@ import java.util.Random;
 import java.util.TreeMap;
 
 public class CConsole {
-
-    private static cube generateCube() {
+    private static Cube generateCube() {
         Random rng = new Random();
-        cube c = new cube(
-            cubecorners_perm.fromPermIdx(rng.nextInt(40320)),
-            cubecorner_orients.fromOrientIdx(rng.nextInt(2187)),
-            cubeedges.fromPermAndOrientIdx(rng.nextInt(479001600), rng.nextInt(2048)));
+        Cube c = new Cube(
+            CubecornersPerm.fromPermIdx(rng.nextInt(40320)),
+            CubecornerOrients.fromOrientIdx(rng.nextInt(2187)),
+            CubeEdges.fromPermAndOrientIdx(rng.nextInt(479001600), rng.nextInt(2048)));
         if (c.ccp.isPermParityOdd() != c.ce.isPermParityOdd()) {
             int p = c.ce.getPermAt(10);
             c.ce.setPermAt(10, c.ce.getPermAt(11));
@@ -25,65 +24,7 @@ public class CConsole {
         return c;
     }
 
-    public static class ConsoleResponder extends Responder {
-        private final int m_verboseLevel;
-        String m_solution  = null;
-        String m_movecount = null;
-        private final long m_startNano = System.nanoTime();
-
-        public ConsoleResponder(int verboseLevel) {
-            m_verboseLevel = verboseLevel + 1;
-        }
-
-        public int durationTimeMs() {
-            return (int)((System.nanoTime() - m_startNano) / 1_000_000L);
-        }
-
-        public String durationTime() {
-            int ms = durationTimeMs();
-            int minutes = ms / 60000;
-            ms %= 60000;
-            int seconds = ms / 1000;
-            ms %= 1000;
-            String res = (minutes != 0)
-                ? minutes + ":" + String.format("%02d", seconds)
-                : String.valueOf(seconds);
-            res += String.format(".%03d", ms);
-            return res;
-        }
-
-        @Override
-        public void handleMessage(MessageType mt, String msg) {
-            String pad = "                                                 ";
-            pad = pad.substring(Math.min(msg.length(), pad.length()));
-            switch (mt) {
-                case MT_UNQUALIFIED -> {
-                    if (m_verboseLevel > 0) {
-                        System.out.print("\r" + durationTime() + " " + msg + " " + pad);
-                        if (msg.startsWith("finished at ") || m_verboseLevel >= 3)
-                            System.out.println();
-                    }
-                }
-                case MT_PROGRESS -> {
-                    if (m_verboseLevel > 1)
-                        System.out.print("\r" + durationTime() + " " + msg + " " + pad);
-                }
-                case MT_MOVECOUNT -> {
-                    System.out.println("\r" + durationTime() + " moves: " + msg + " " + pad);
-                    m_movecount = msg;
-                }
-                case MT_SOLUTION -> {
-                    System.out.println("\r" + durationTime() + " " + msg + " " + pad);
-                    m_solution = msg;
-                }
-            }
-        }
-
-        public String getSolution()  { return m_solution; }
-        public String getMoveCount() { return m_movecount; }
-    }
-
-    private static void solveCubeList(List<cube> cubes, String mode, int depthMax, boolean useReverse) {
+    private static void solveCubeList(List<Cube> cubes, String mode, int depthMax, boolean useReverse) {
         CubeSearcher cubeSearcher = new CubeSearcher(depthMax, useReverse);
         if (mode.equals("O")) {
             ConsoleResponder responder = new ConsoleResponder(2);
@@ -92,7 +33,7 @@ public class CConsole {
         }
         TreeMap<String, int[]> moveCounters = new TreeMap<>();
         for (int i = 0; i < cubes.size(); i++) {
-            cube c = cubes.get(i);
+            Cube c = cubes.get(i);
             System.out.println(i + "  " + c.toParamText());
             System.out.println();
             cubePrint(c);
@@ -103,11 +44,11 @@ public class CConsole {
             for (String s : solution.split(" ")) {
                 if (!s.isEmpty()) {
                     int rd = rotateNameToDir(s);
-                    if (rd == rotate_dir.RCOUNT.ordinal()) {
+                    if (rd == RotateDir.RCOUNT.ordinal()) {
                         System.out.println("fatal: unrecognized move " + s);
                         return;
                     }
-                    c = cube.compose(c, crotated[rd]);
+                    c = Cube.compose(c, crotated[rd]);
                 }
             }
             if (!c.equals(csolved)) {
@@ -140,7 +81,7 @@ public class CConsole {
     }
 
     public static void solveCubes(String fnameOrCubeStr, String mode, int depthMax, boolean useReverse) {
-        List<cube> cubes = new ArrayList<>();
+        List<Cube> cubes = new ArrayList<>();
         ConsoleResponder responder = new ConsoleResponder(2);
         if (fnameOrCubeStr.endsWith(".txt")) {
             try {
@@ -150,7 +91,7 @@ public class CConsole {
                 return;
             }
         } else {
-            cube[] cv = {new cube()};
+            Cube[] cv = {new Cube()};
             if (!cubeFromString(responder, fnameOrCubeStr, cv)) return;
             cubes.add(cv[0]);
         }
@@ -158,7 +99,7 @@ public class CConsole {
     }
 
     public static void cubeTester(int cubeCount, String mode, int depthMax, boolean useReverse) {
-        List<cube> cubes = new ArrayList<>();
+        List<Cube> cubes = new ArrayList<>();
         for (int i = 0; i < cubeCount; i++) cubes.add(generateCube());
         solveCubeList(cubes, mode, depthMax, useReverse);
     }

@@ -16,10 +16,10 @@ public class CubesReprBG {
     public static class BGCornerPermReprCubes {
         public long[] m_items = new long[0];
 
-        public int addCubes(Collection<cubeedges> cearr) {
+        public int addCubes(Collection<CubeEdges> cearr) {
             List<Long> edgeList = new ArrayList<>();
             List<Integer> idxList = new ArrayList<>();
-            for (cubeedges ce : cearr) {
+            for (CubeEdges ce : cearr) {
                 long edge = ce.get();
                 if (!edgeList.contains(edge)) {
                     int idx = Arrays.binarySearch(m_items, edge);
@@ -47,7 +47,7 @@ public class CubesReprBG {
             return edgeList.size();
         }
 
-        public boolean containsCubeEdges(cubeedges ce) {
+        public boolean containsCubeEdges(CubeEdges ce) {
             return Arrays.binarySearch(m_items, ce.get()) >= 0;
         }
 
@@ -79,14 +79,14 @@ public class CubesReprBG {
         public BGCornerPermReprCubes getAt(int idx) { return m_cornerPermReprCubes[idx]; }
         public BGCornerPermReprCubes[] ccpCubesList() { return m_cornerPermReprCubes; }
 
-        public cubecorners_perm getPermAt(int reprPermIdx) {
+        public CubecornersPerm getPermAt(int reprPermIdx) {
             return m_reprPerms.getPermForIdx(reprPermIdx);
         }
 
-        public boolean containsCube(cube c) {
+        public boolean containsCube(Cube c) {
             int ccpReprSearchIdx = m_reprPerms.getReprPermIdx(c.ccp);
             BGCornerPermReprCubes ccpReprSearchCubes = m_cornerPermReprCubes[ccpReprSearchIdx];
-            cubeedges ceSearchRepr = m_reprPerms.getReprCubeedges(c.ccp, c.ce);
+            CubeEdges ceSearchRepr = m_reprPerms.getReprCubeedges(c.ccp, c.ce);
             return ccpReprSearchCubes.containsCubeEdges(ceSearchRepr);
         }
     }
@@ -101,7 +101,7 @@ public class CubesReprBG {
             m_cubesAtDepths.add(new BGCubesReprAtDepth(m_reprPerms));
             int cornerPermReprIdx = m_reprPerms.getReprPermIdx(csolved.ccp);
             BGCornerPermReprCubes ccpCubes = m_cubesAtDepths.get(0).add(cornerPermReprIdx);
-            cubeedges ceRepr = m_reprPerms.getReprCubeedges(csolved.ccp, csolved.ce);
+            CubeEdges ceRepr = m_reprPerms.getReprCubeedges(csolved.ccp, csolved.ce);
             ccpCubes.addCubes(java.util.Collections.singletonList(ceRepr));
         }
 
@@ -117,20 +117,20 @@ public class CubesReprBG {
             return m_cubesAtDepths.get(idx);
         }
 
-        public String getMoves(cube c, int searchTd, boolean movesRevp) {
+        public String getMoves(Cube c, int searchTd, boolean movesRevp) {
             boolean movesRev = movesRevp;
             int[] reverseMoveIdxs = {0, 1, 2, 3, 6, 5, 4, 9, 8, 7};
-            rotate_dir[][] transformedMoves = {
-                { rotate_dir.BLUE180, rotate_dir.GREEN180, rotate_dir.ORANGE180, rotate_dir.RED180,
-                  rotate_dir.WHITECW, rotate_dir.WHITE180, rotate_dir.WHITECCW, rotate_dir.YELLOWCW,
-                  rotate_dir.YELLOW180, rotate_dir.YELLOWCCW },
-                { rotate_dir.YELLOW180, rotate_dir.WHITE180, rotate_dir.BLUE180, rotate_dir.GREEN180,
-                  rotate_dir.REDCW, rotate_dir.RED180, rotate_dir.REDCCW, rotate_dir.ORANGECW,
-                  rotate_dir.ORANGE180, rotate_dir.ORANGECCW }
+            RotateDir[][] transformedMoves = {
+                { RotateDir.BLUE180, RotateDir.GREEN180, RotateDir.ORANGE180, RotateDir.RED180,
+                  RotateDir.WHITECW, RotateDir.WHITE180, RotateDir.WHITECCW, RotateDir.YELLOWCW,
+                  RotateDir.YELLOW180, RotateDir.YELLOWCCW },
+                { RotateDir.YELLOW180, RotateDir.WHITE180, RotateDir.BLUE180, RotateDir.GREEN180,
+                  RotateDir.REDCW, RotateDir.RED180, RotateDir.REDCCW, RotateDir.ORANGECW,
+                  RotateDir.ORANGE180, RotateDir.ORANGECCW }
             };
             List<Integer> rotateIdxs = new ArrayList<>();
             int insertPos = 0;
-            cube crepr = m_reprPerms.cubeRepresentative(c);
+            Cube crepr = m_reprPerms.cubeRepresentative(c);
             int ccpReprIdx = m_reprPerms.getReprPermIdx(crepr.ccp);
             int depth = 0;
             while (true) {
@@ -142,19 +142,19 @@ public class CubesReprBG {
                     System.exit(1);
                 }
             }
-            cube cc = c;
+            Cube cc = c;
             while (depth-- > 0) {
                 int cmidx = 0;
-                cube ccRev = cc.reverse();
-                cube cc1 = new cube();
+                Cube ccRev = cc.reverse();
+                Cube cc1 = new Cube();
                 while (cmidx < RCOUNTBG) {
                     int cm = BGSpaceRotations[cmidx].ordinal();
-                    cc1 = cube.compose(cc, crotated[cm]);
-                    cube cc1repr = m_reprPerms.cubeRepresentative(cc1);
+                    cc1 = Cube.compose(cc, crotated[cm]);
+                    Cube cc1repr = m_reprPerms.cubeRepresentative(cc1);
                     ccpReprIdx = m_reprPerms.getReprPermIdx(cc1repr.ccp);
                     BGCornerPermReprCubes ccpReprCubes = m_cubesAtDepths.get(depth).getAt(ccpReprIdx);
                     if (ccpReprCubes.containsCubeEdges(cc1repr.ce)) break;
-                    cc1 = cube.compose(ccRev, crotated[cm]);
+                    cc1 = Cube.compose(ccRev, crotated[cm]);
                     cc1repr = m_reprPerms.cubeRepresentative(cc1);
                     ccpReprIdx = m_reprPerms.getReprPermIdx(cc1repr.ccp);
                     BGCornerPermReprCubes ccpReprCubesRev = m_cubesAtDepths.get(depth).getAt(ccpReprIdx);
@@ -183,7 +183,7 @@ public class CubesReprBG {
             return res.toString();
         }
 
-        public String getMoves(cube c, int searchTd) { return getMoves(c, searchTd, false); }
+        public String getMoves(Cube c, int searchTd) { return getMoves(c, searchTd, false); }
 
         public int addCubesForReprPerm(int reprPermIdx, int depth) {
             int cubeCount = 0;
@@ -191,34 +191,34 @@ public class CubesReprBG {
             BGCornerPermReprCubes ccpReprCubesNewP = (depth == 1) ? null : m_cubesAtDepths.get(depth-2).getAt(reprPermIdx);
             BGCornerPermReprCubes ccpReprCubesNewC = ccpReprCubesC.getAt(reprPermIdx);
             BGCornerPermReprCubes ccpReprCubesNewN = m_cubesAtDepths.get(depth).add(reprPermIdx);
-            cubecorners_perm ccpNewRepr = m_reprPerms.getPermForIdx(reprPermIdx);
-            Set<cubecorners_perm> ccpChecked = new HashSet<>();
+            CubecornersPerm ccpNewRepr = m_reprPerms.getPermForIdx(reprPermIdx);
+            Set<CubecornersPerm> ccpChecked = new HashSet<>();
             for (int trrev = 0; trrev < (m_reprPerms.isUseReverse() ? 2 : 1); trrev++) {
-                cubecorners_perm ccpNewReprRev = (trrev != 0) ? ccpNewRepr.reverse() : ccpNewRepr;
+                CubecornersPerm ccpNewReprRev = (trrev != 0) ? ccpNewRepr.reverse() : ccpNewRepr;
                 for (int symmetric = 0; symmetric <= 1; symmetric++) {
-                    cubecorners_perm ccpNewS = (symmetric != 0) ? ccpNewReprRev.symmetric() : ccpNewReprRev;
+                    CubecornersPerm ccpNewS = (symmetric != 0) ? ccpNewReprRev.symmetric() : ccpNewReprRev;
                     for (int tdidx = 0; tdidx < TCOUNTBG; tdidx++) {
                         int td = BGSpaceTransforms[tdidx].ordinal();
-                        cubecorners_perm ccpNew = ccpNewS.transform(td);
+                        CubecornersPerm ccpNew = ccpNewS.transform(td);
                         if (!ccpChecked.contains(ccpNew)) {
                             ccpChecked.add(ccpNew);
                             for (int rdidx = 0; rdidx < RCOUNTBG; rdidx++) {
                                 int rd    = BGSpaceRotations[rdidx].ordinal();
                                 int rdRev = rotateDirReverse(rd);
                                 for (int reversed = 0; reversed < (m_reprPerms.isUseReverse() ? 2 : 1); reversed++) {
-                                    cubecorners_perm ccp = (reversed != 0)
-                                        ? cubecorners_perm.compose(crotated[rdRev].ccp, ccpNew)
-                                        : cubecorners_perm.compose(ccpNew, crotated[rdRev].ccp);
+                                    CubecornersPerm ccp = (reversed != 0)
+                                        ? CubecornersPerm.compose(crotated[rdRev].ccp, ccpNew)
+                                        : CubecornersPerm.compose(ccpNew, crotated[rdRev].ccp);
                                     int ccpReprIdx = m_reprPerms.getReprPermIdx(ccp);
                                     if (m_reprPerms.getPermForIdx(ccpReprIdx).equals(ccp)) {
                                         BGCornerPermReprCubes cpermReprCubesC = ccpReprCubesC.getAt(ccpReprIdx);
-                                        List<cubeedges> ceNewArr = new ArrayList<>();
+                                        List<CubeEdges> ceNewArr = new ArrayList<>();
                                         for (long edges : cpermReprCubesC.edgeList()) {
-                                            cubeedges ce = new cubeedges(edges);
-                                            cubeedges cenew = (reversed != 0)
-                                                ? cubeedges.compose(crotated[rd].ce, ce)
-                                                : cubeedges.compose(ce, crotated[rd].ce);
-                                            cubeedges cenewRepr = m_reprPerms.getReprCubeedges(ccpNew, cenew);
+                                            CubeEdges ce = new CubeEdges(edges);
+                                            CubeEdges cenew = (reversed != 0)
+                                                ? CubeEdges.compose(crotated[rd].ce, ce)
+                                                : CubeEdges.compose(ce, crotated[rd].ce);
+                                            CubeEdges cenewRepr = m_reprPerms.getReprCubeedges(ccpNew, cenew);
                                             if (ccpReprCubesNewP != null && ccpReprCubesNewP.containsCubeEdges(cenewRepr))
                                                 continue;
                                             if (ccpReprCubesNewC.containsCubeEdges(cenewRepr))
@@ -238,39 +238,39 @@ public class CubesReprBG {
         }
 
         public boolean searchMovesForReprPerm(int reprPermIdx, int depth, int depthMax,
-                cube cSearchT, boolean reversed, cube[] c, cube[] cSearch) {
+                                              Cube cSearchT, boolean reversed, Cube[] c, Cube[] cSearch) {
             BGCornerPermReprCubes ccpReprCubes = m_cubesAtDepths.get(depth).getAt(reprPermIdx);
-            cubecorners_perm ccp = m_reprPerms.getPermForIdx(reprPermIdx);
+            CubecornersPerm ccp = m_reprPerms.getPermForIdx(reprPermIdx);
             if (!ccpReprCubes.empty()) {
-                cubecorners_perm ccpSearch = reversed
-                    ? cubecorners_perm.compose(cSearchT.ccp, ccp)
-                    : cubecorners_perm.compose(ccp, cSearchT.ccp);
+                CubecornersPerm ccpSearch = reversed
+                    ? CubecornersPerm.compose(cSearchT.ccp, ccp)
+                    : CubecornersPerm.compose(ccp, cSearchT.ccp);
                 int ccpReprSearchIdx = m_reprPerms.getReprPermIdx(ccpSearch);
                 BGCornerPermReprCubes ccpReprSearchCubes = m_cubesAtDepths.get(depthMax).getAt(ccpReprSearchIdx);
                 if (ccpReprCubes.size() <= ccpReprSearchCubes.size() || !m_reprPerms.isSingleTransform(ccpSearch)) {
                     for (long edges : ccpReprCubes.edgeList()) {
-                        cubeedges ce = new cubeedges(edges);
-                        cubeedges ceSearch = reversed
-                            ? cubeedges.compose(cSearchT.ce, ce)
-                            : cubeedges.compose(ce, cSearchT.ce);
-                        cubeedges ceSearchRepr = m_reprPerms.getReprCubeedges(ccpSearch, ceSearch);
+                        CubeEdges ce = new CubeEdges(edges);
+                        CubeEdges ceSearch = reversed
+                            ? CubeEdges.compose(cSearchT.ce, ce)
+                            : CubeEdges.compose(ce, cSearchT.ce);
+                        CubeEdges ceSearchRepr = m_reprPerms.getReprCubeedges(ccpSearch, ceSearch);
                         if (ccpReprSearchCubes.containsCubeEdges(ceSearchRepr)) {
-                            cSearch[0] = new cube(ccpSearch, csolved.cco, ceSearch);
-                            c[0] = new cube(ccp, csolved.cco, ce);
+                            cSearch[0] = new Cube(ccpSearch, csolved.cco, ceSearch);
+                            c[0] = new Cube(ccp, csolved.cco, ce);
                             return true;
                         }
                     }
                 } else {
-                    cube cSearchTrev = cSearchT.reverse();
+                    Cube cSearchTrev = cSearchT.reverse();
                     for (long edges : ccpReprSearchCubes.edgeList()) {
-                        cubeedges ceSearchRepr = new cubeedges(edges);
-                        cubeedges ceSearch = m_reprPerms.getCubeedgesForRepresentative(ccpSearch, ceSearchRepr);
-                        cubeedges ce = reversed
-                            ? cubeedges.compose(cSearchTrev.ce, ceSearch)
-                            : cubeedges.compose(ceSearch, cSearchTrev.ce);
+                        CubeEdges ceSearchRepr = new CubeEdges(edges);
+                        CubeEdges ceSearch = m_reprPerms.getCubeedgesForRepresentative(ccpSearch, ceSearchRepr);
+                        CubeEdges ce = reversed
+                            ? CubeEdges.compose(cSearchTrev.ce, ceSearch)
+                            : CubeEdges.compose(ceSearch, cSearchTrev.ce);
                         if (ccpReprCubes.containsCubeEdges(ce)) {
-                            cSearch[0] = new cube(ccpSearch, csolved.cco, ceSearch);
-                            c[0] = new cube(ccp, csolved.cco, ce);
+                            cSearch[0] = new Cube(ccpSearch, csolved.cco, ceSearch);
+                            c[0] = new Cube(ccp, csolved.cco, ce);
                             return true;
                         }
                     }

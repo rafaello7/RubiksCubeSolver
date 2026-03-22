@@ -1,13 +1,9 @@
 package cubesrv;
 
-import static cubesrv.CubeDefs.*;
-import static cubesrv.CubesRepr.*;
-import static cubesrv.CubesAdd.*;
 import static cubesrv.ThreadPoolHelper.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class CubeCosetsAdd {
-
     public static final int TWOPHASE_DEPTH1_CATCHFIRST_MAX = 5;
     public static final int TWOPHASE_DEPTH1_MULTI_MAX = 6;
 
@@ -18,28 +14,28 @@ public class CubeCosetsAdd {
         CornerPermReprCubes[] list = ccReprCubesC.ccpCubesList();
         for (int idx = 0; idx < list.length; idx++) {
             CornerPermReprCubes ccpCubes = list[idx];
-            cubecorners_perm ccp = ccReprCubesC.getPermAt(idx);
+            CubecornersPerm ccp = ccReprCubesC.getPermAt(idx);
             for (CornerOrientReprCubes ccoCubes : ccpCubes.ccoCubesList()) {
-                cubecorner_orients cco = ccoCubes.getOrients();
+                CubecornerOrients cco = ccoCubes.getOrients();
                 for (int reversed = 0; reversed < (cubesReprByDepth.isUseReverse() ? 2 : 1); reversed++) {
-                    cubecorners_perm ccprev = (reversed != 0) ? ccp.reverse() : ccp;
-                    cubecorner_orients ccorev = (reversed != 0) ? cco.reverse(ccp) : cco;
+                    CubecornersPerm ccprev = (reversed != 0) ? ccp.reverse() : ccp;
+                    CubecornerOrients ccorev = (reversed != 0) ? cco.reverse(ccp) : cco;
                     for (int symmetric = 0; symmetric <= 1; symmetric++) {
-                        cubecorners_perm ccprevsymm = (symmetric != 0) ? ccprev.symmetric() : ccprev;
-                        cubecorner_orients ccorevsymm = (symmetric != 0) ? ccorev.symmetric() : ccorev;
-                        for (int td = 0; td < transform_dir.TCOUNT.ordinal(); td++) {
-                            cubecorners_perm ccpT = ccprevsymm.transform(td);
-                            cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                            cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
+                        CubecornersPerm ccprevsymm = (symmetric != 0) ? ccprev.symmetric() : ccprev;
+                        CubecornerOrients ccorevsymm = (symmetric != 0) ? ccorev.symmetric() : ccorev;
+                        for (int td = 0; td < TransformDir.TCOUNT.ordinal(); td++) {
+                            CubecornersPerm ccpT = ccprevsymm.transform(td);
+                            CubecornerOrients ccoT = ccorevsymm.transform(ccprevsymm, td);
+                            CubecornerOrients ccoReprBG = ccoT.representativeBG(ccpT);
                             int reprCOrientIdx = ccoReprBG.getOrientIdx();
                             if (reprCOrientIdx % THREAD_COUNT == threadNo) {
                                 for (long edges : ccoCubes.edgeList()) {
-                                    cubeedges ce = new cubeedges(edges);
-                                    cubeedges cerev = (reversed != 0) ? ce.reverse() : ce;
-                                    cubeedges cerevsymm = (symmetric != 0) ? cerev.symmetric() : cerev;
-                                    cubeedges ceT = cerevsymm.transform(td);
-                                    cubeedges ceReprBG = ceT.representativeBG();
-                                    cube c = new cube(ccpT, ccoT, ceT);
+                                    CubeEdges ce = new CubeEdges(edges);
+                                    CubeEdges cerev = (reversed != 0) ? ce.reverse() : ce;
+                                    CubeEdges cerevsymm = (symmetric != 0) ? cerev.symmetric() : cerev;
+                                    CubeEdges ceT = cerevsymm.transform(td);
+                                    CubeEdges ceReprBG = ceT.representativeBG();
+                                    Cube c = new Cube(ccpT, ccoT, ceT);
                                     if (bgCosets.getAt(depth).addCube(reprCOrientIdx, ceReprBG, c))
                                         ++reprCubeCountT;
                                 }

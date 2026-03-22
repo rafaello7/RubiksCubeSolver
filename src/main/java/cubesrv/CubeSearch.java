@@ -1,9 +1,6 @@
 package cubesrv;
 
-import static cubesrv.CubeDefs.*;
-import static cubesrv.CubesAdd.*;
 import static cubesrv.CubesAddBG.*;
-import cubesrv.CubeCosetsAdd;
 
 public class CubeSearch {
 
@@ -24,7 +21,7 @@ public class CubeSearch {
             m_cubesReprByDepthAdd.getReprCubes(m_depthMax, responder);
         }
 
-        public void searchMoves(cube csearch, String mode, Responder responder) {
+        public void searchMoves(Cube csearch, String mode, Responder responder) {
             String rev = m_cubesReprByDepthAdd.isUseReverse() ? " rev" : "";
             responder.message("setup: depth " + m_depthMax + rev);
             switch (mode) {

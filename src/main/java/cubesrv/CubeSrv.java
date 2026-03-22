@@ -6,7 +6,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CubeSrv {
-
     private static class DepthMaxByMem {
         final int memMinMB;
         final int depthMax;

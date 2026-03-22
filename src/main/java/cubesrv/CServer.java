@@ -60,7 +60,7 @@ public class CServer {
                     SocketChunkedResponder responder = new SocketChunkedResponder(fdReq);
                     String mode = query.substring(0, 1);
                     if (query.length() > 1 && query.charAt(1) == '=') {
-                        cube[] c = {new cube()};
+                        Cube[] c = {new Cube()};
                         if (cubeFromColorsOnSquares(responder, query.substring(2), c)) {
                             responder.message("thread count: " + THREAD_COUNT);
                             if (c[0].equals(csolved))

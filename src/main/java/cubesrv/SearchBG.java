@@ -31,13 +31,13 @@ public class SearchBG {
     }
 
     private static String getInSpaceMovesForMatch(BGCubesReprByDepth cubesReprByDepth,
-            cube cSearch, cube c, boolean searchRev, int searchTd,
-            int reversed, int symmetric, int tdidx) {
+                                                  Cube cSearch, Cube c, boolean searchRev, int searchTd,
+                                                  int reversed, int symmetric, int tdidx) {
         int td = BGSpaceTransforms[tdidx].ordinal();
-        cube cSearchT     = cSearch.transform(transformReverse(td));
-        cube cSearchTsymm = (symmetric != 0) ? cSearchT.symmetric() : cSearchT;
-        cube cT           = c.transform(transformReverse(td));
-        cube cTsymm       = (symmetric != 0) ? cT.symmetric() : cT;
+        Cube cSearchT     = cSearch.transform(transformReverse(td));
+        Cube cSearchTsymm = (symmetric != 0) ? cSearchT.symmetric() : cSearchT;
+        Cube cT           = c.transform(transformReverse(td));
+        Cube cTsymm       = (symmetric != 0) ? cT.symmetric() : cT;
         String moves;
         if (searchRev) {
             moves  = cubesReprByDepth.getMoves(cTsymm, searchTd, reversed == 0);
@@ -49,12 +49,12 @@ public class SearchBG {
         return moves;
     }
 
-    private static void generateInSpaceSearchTarr(cube csearch, boolean useReverse,
-            cube[][][] cSearchTarr) {
+    private static void generateInSpaceSearchTarr(Cube csearch, boolean useReverse,
+                                                  Cube[][][] cSearchTarr) {
         for (int rev = 0; rev < (useReverse ? 2 : 1); rev++) {
-            cube csearchrev = (rev != 0) ? csearch.reverse() : csearch;
+            Cube csearchrev = (rev != 0) ? csearch.reverse() : csearch;
             for (int sym = 0; sym <= 1; sym++) {
-                cube csearchrevsymm = (sym != 0) ? csearchrev.symmetric() : csearchrev;
+                Cube csearchrevsymm = (sym != 0) ? csearchrev.symmetric() : csearchrev;
                 for (int tdidx = 0; tdidx < TCOUNTBG; tdidx++)
                     cSearchTarr[rev][sym][tdidx] =
                         csearchrevsymm.transform(BGSpaceTransforms[tdidx].ordinal());
@@ -63,11 +63,11 @@ public class SearchBG {
     }
 
     private static boolean searchInSpaceMovesForIdxs(BGCubesReprByDepth cubesReprByDepth,
-            int depth, int depthMax, cube[][][] cSearchTarr,
+            int depth, int depthMax, Cube[][][] cSearchTarr,
             SearchIndexesBG indexes, String[] moves, boolean searchRev, int searchTd) {
-        cube cSearchT = cSearchTarr[indexes.reversed ? 1 : 0][indexes.symmetric ? 1 : 0][indexes.td];
-        cube[] c = {new cube()};
-        cube[] cSearch = {new cube()};
+        Cube cSearchT = cSearchTarr[indexes.reversed ? 1 : 0][indexes.symmetric ? 1 : 0][indexes.td];
+        Cube[] c = {new Cube()};
+        Cube[] cSearch = {new Cube()};
         if (cubesReprByDepth.searchMovesForReprPerm(indexes.permReprIdx,
                 depth, depthMax, cSearchT, indexes.reversed, c, cSearch)) {
             moves[0] = getInSpaceMovesForMatch(cubesReprByDepth, cSearch[0], c[0],
@@ -78,8 +78,8 @@ public class SearchBG {
     }
 
     private static boolean searchInSpaceMovesA(BGCubesReprByDepth cubesReprByDepthBG,
-            cube[][][] cSpaceArr, boolean searchRev, int searchTd,
-            int depth, int depthMax, String[] moves) {
+                                               Cube[][][] cSpaceArr, boolean searchRev, int searchTd,
+                                               int depth, int depthMax, String[] moves) {
         SearchIndexesBG indexes = new SearchIndexesBG();
         boolean useReverse = cubesReprByDepthBG.isUseReverse();
         do {
@@ -91,29 +91,29 @@ public class SearchBG {
     }
 
     private static boolean searchInSpaceMovesB(BGCubesReprByDepth cubesReprByDepthBG,
-            cube cSpace, boolean searchRev, int searchTd, int depth, int depthMax,
-            String[] moves) {
+                                               Cube cSpace, boolean searchRev, int searchTd, int depth, int depthMax,
+                                               String[] moves) {
         BGCubesReprAtDepth ccReprCubesC = cubesReprByDepthBG.getAt(depth);
         for (int idx1 = 0; idx1 < ccReprCubesC.ccpCubesList().length; idx1++) {
             BGCornerPermReprCubes ccpCubes1 = ccReprCubesC.ccpCubesList()[idx1];
-            cubecorners_perm ccp1 = ccReprCubesC.getPermAt(idx1);
+            CubecornersPerm ccp1 = ccReprCubesC.getPermAt(idx1);
             if (ccpCubes1.empty()) continue;
             for (long edges1 : ccpCubes1.edgeList()) {
-                cubeedges ce1 = new cubeedges(edges1);
-                cube c1 = new cube(ccp1, csolved.cco, ce1);
-                java.util.Set<cube> cubesChecked = new java.util.HashSet<>();
+                CubeEdges ce1 = new CubeEdges(edges1);
+                Cube c1 = new Cube(ccp1, csolved.cco, ce1);
+                java.util.Set<Cube> cubesChecked = new java.util.HashSet<>();
                 for (int rev1 = 0; rev1 <= (cubesReprByDepthBG.isUseReverse() ? 1 : 0); rev1++) {
-                    cube c1r = (rev1 != 0) ? c1.reverse() : c1;
+                    Cube c1r = (rev1 != 0) ? c1.reverse() : c1;
                     for (int sym1 = 0; sym1 <= 1; sym1++) {
-                        cube c1rs = (sym1 != 0) ? c1r.symmetric() : c1r;
+                        Cube c1rs = (sym1 != 0) ? c1r.symmetric() : c1r;
                         for (int td1idx = 0; td1idx < TCOUNTBG; td1idx++) {
-                            cube c1T = c1rs.transform(BGSpaceTransforms[td1idx].ordinal());
+                            Cube c1T = c1rs.transform(BGSpaceTransforms[td1idx].ordinal());
                             if (cubesChecked.contains(c1T)) continue;
                             cubesChecked.add(c1T);
-                            cube cSearch1 = cube.compose(c1T, cSpace);
+                            Cube cSearch1 = Cube.compose(c1T, cSpace);
                             String[] moves2 = {""};
-                            cube[][][] cSpaceArr = new cube[2][2][TCOUNTBG];
-                            for (cube[][] a : cSpaceArr) for (cube[] b : a) java.util.Arrays.fill(b, new cube());
+                            Cube[][][] cSpaceArr = new Cube[2][2][TCOUNTBG];
+                            for (Cube[][] a : cSpaceArr) for (Cube[] b : a) java.util.Arrays.fill(b, new Cube());
                             generateInSpaceSearchTarr(cSearch1, cubesReprByDepthBG.isUseReverse(), cSpaceArr);
                             if (searchInSpaceMovesA(cubesReprByDepthBG, cSpaceArr, searchRev,
                                     searchTd, depthMax, depthMax, moves2)) {
@@ -132,8 +132,8 @@ public class SearchBG {
     }
 
     public static int searchInSpaceMoves(BGCubesReprByDepthAdd cubesReprByDepthAdd,
-            cube cSpace, boolean searchRev, int searchTd,
-            int movesMax, Responder responder, String[] moves) {
+                                         Cube cSpace, boolean searchRev, int searchTd,
+                                         int movesMax, Responder responder, String[] moves) {
         BGCubesReprByDepth cubesReprByDepthBG = cubesReprByDepthAdd.getReprCubes(0, responder);
         if (cubesReprByDepthBG == null) return -1;
 
@@ -146,8 +146,8 @@ public class SearchBG {
         }
 
         if (cubesReprByDepthBG.availCount() <= movesMax) {
-            cube[][][] cSpaceTarr = new cube[2][2][TCOUNTBG];
-            for (cube[][] a : cSpaceTarr) for (cube[] b : a) java.util.Arrays.fill(b, new cube());
+            Cube[][][] cSpaceTarr = new Cube[2][2][TCOUNTBG];
+            for (Cube[][] a : cSpaceTarr) for (Cube[] b : a) java.util.Arrays.fill(b, new Cube());
             generateInSpaceSearchTarr(cSpace, cubesReprByDepthBG.isUseReverse(), cSpaceTarr);
 
             for (int depthSearch = cubesReprByDepthBG.availCount(); depthSearch <= movesMax; depthSearch++) {

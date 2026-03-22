@@ -1,47 +1,38 @@
 package cubesrv;
 
 import static cubesrv.CubeDefs.*;
-import static cubesrv.CPermReprBG.*;
-import static cubesrv.CubesRepr.*;
-import static cubesrv.CubesAdd.*;
 import static cubesrv.CubesAddBG.*;
-import cubesrv.CubeCosets;
-import cubesrv.CubeCosets.CubeCosetsAtDepth;
-import cubesrv.CubeCosetsAdd;
 import static cubesrv.CubeCosetsAdd.TWOPHASE_DEPTH1_CATCHFIRST_MAX;
 import static cubesrv.CubeCosetsAdd.TWOPHASE_DEPTH1_MULTI_MAX;
 import static cubesrv.SearchBG.*;
 import static cubesrv.ThreadPoolHelper.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class SearchQuick {
-
     public static final int TWOPHASE_SEARCHREV = 2;
 
     // Pair of cube + moves string
     private static class CubeWithMoves {
-        final cube c;
+        final Cube c;
         final String moves;
-        CubeWithMoves(cube c, String moves) { this.c = c; this.moves = moves; }
+        CubeWithMoves(Cube c, String moves) { this.c = c; this.moves = moves; }
     }
 
     private static int searchPhase1Cube2(CubesReprByDepth cubesReprByDepth,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            cube cSearchMid, List<cube> cubes,
-            int searchRev, int searchTd, int cube2Depth, int movesMaxp,
-            boolean catchFirst, Responder responder, String[] moves) {
+                                         BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                         Cube cSearchMid, List<Cube> cubes,
+                                         int searchRev, int searchTd, int cube2Depth, int movesMaxp,
+                                         boolean catchFirst, Responder responder, String[] moves) {
         int bestMoveCount = -1;
         int movesMax = movesMaxp;
-        for (cube cube2 : cubes) {
-            cube cSpace = cube.compose(cube2.reverse(), cSearchMid);
+        for (Cube cube2 : cubes) {
+            Cube cSpace = Cube.compose(cube2.reverse(), cSearchMid);
             String[] movesInSpace = {""};
             int depthInSpace = searchInSpaceMoves(bgcubesReprByDepthAdd, cSpace,
                     searchRev != 0, searchTd, movesMax - cube2Depth, responder, movesInSpace);
             if (depthInSpace >= 0) {
-                cube cube2T = cube2.transform(transformReverse(searchTd));
+                Cube cube2T = cube2.transform(transformReverse(searchTd));
                 String cube2Moves = cubesReprByDepth.getMoves(cube2T, searchRev == 0);
                 if (searchRev != 0)
                     moves[0] = cube2Moves + movesInSpace[0];
@@ -116,62 +107,62 @@ public class SearchQuick {
         }
     }
 
-    private static boolean searchMovesQuickForCcp(cubecorners_perm ccp,
-            CornerPermReprCubes ccpReprCubes,
-            CubesReprByDepth cubesReprByDepth,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosetsAtDepth bgCosetsAtDepth,
-            List<CubeWithMoves> csearchWithMovesAppend,
-            int depth, int depth1Max, int movesMaxp,
-            Responder responder, QuickSearchProgress searchProgress) {
+    private static boolean searchMovesQuickForCcp(CubecornersPerm ccp,
+                                                  CornerPermReprCubes ccpReprCubes,
+                                                  CubesReprByDepth cubesReprByDepth,
+                                                  BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                                  CubeCosetsAtDepth bgCosetsAtDepth,
+                                                  List<CubeWithMoves> csearchWithMovesAppend,
+                                                  int depth, int depth1Max, int movesMaxp,
+                                                  Responder responder, QuickSearchProgress searchProgress) {
         int movesMax = movesMaxp;
-        cube[][] csearchTarr0 = new cube[3][csearchWithMovesAppend.size()];
-        cube[][] csearchTarr1 = new cube[3][csearchWithMovesAppend.size()];
+        Cube[][] csearchTarr0 = new Cube[3][csearchWithMovesAppend.size()];
+        Cube[][] csearchTarr1 = new Cube[3][csearchWithMovesAppend.size()];
         for (int i = 0; i < csearchWithMovesAppend.size(); i++) {
-            cube c = csearchWithMovesAppend.get(i).c;
+            Cube c = csearchWithMovesAppend.get(i).c;
             csearchTarr0[0][i] = c;
             csearchTarr0[1][i] = c.transform(1);
             csearchTarr0[2][i] = c.transform(2);
-            cube crev = c.reverse();
+            Cube crev = c.reverse();
             csearchTarr1[0][i] = crev;
             csearchTarr1[1][i] = crev.transform(1);
             csearchTarr1[2][i] = crev.transform(2);
         }
         for (int reversed = 0; reversed < (cubesReprByDepth.isUseReverse() ? 2 : 1); reversed++) {
-            cubecorners_perm ccprev = (reversed != 0) ? ccp.reverse() : ccp;
+            CubecornersPerm ccprev = (reversed != 0) ? ccp.reverse() : ccp;
             for (int symmetric = 0; symmetric <= 1; symmetric++) {
-                cubecorners_perm ccprevsymm = (symmetric != 0) ? ccprev.symmetric() : ccprev;
-                for (int td = 0; td < transform_dir.TCOUNT.ordinal(); td++) {
-                    cubecorners_perm ccpT = ccprevsymm.transform(td);
+                CubecornersPerm ccprevsymm = (symmetric != 0) ? ccprev.symmetric() : ccprev;
+                for (int td = 0; td < TransformDir.TCOUNT.ordinal(); td++) {
+                    CubecornersPerm ccpT = ccprevsymm.transform(td);
                     for (CornerOrientReprCubes ccoReprCubes : ccpReprCubes.ccoCubesList()) {
-                        cubecorner_orients cco = ccoReprCubes.getOrients();
-                        cubecorner_orients ccorev = (reversed != 0) ? cco.reverse(ccp) : cco;
-                        cubecorner_orients ccorevsymm = (symmetric != 0) ? ccorev.symmetric() : ccorev;
-                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        List<cubeedges> ceTarr = new ArrayList<>();
+                        CubecornerOrients cco = ccoReprCubes.getOrients();
+                        CubecornerOrients ccorev = (reversed != 0) ? cco.reverse(ccp) : cco;
+                        CubecornerOrients ccorevsymm = (symmetric != 0) ? ccorev.symmetric() : ccorev;
+                        CubecornerOrients ccoT = ccorevsymm.transform(ccprevsymm, td);
+                        List<CubeEdges> ceTarr = new ArrayList<>();
                         for (int srchItem = 0; srchItem < csearchWithMovesAppend.size(); srchItem++) {
                             for (int searchRev = 0; searchRev < TWOPHASE_SEARCHREV; searchRev++) {
                                 for (int searchTd = 0; searchTd < 3; searchTd++) {
-                                    cube csearchT = (searchRev == 0 ? csearchTarr0 : csearchTarr1)[searchTd][srchItem];
-                                    cubecorners_perm ccpSearch = cubecorners_perm.compose(ccpT, csearchT.ccp);
-                                    cubecorner_orients ccoSearch = cubecorner_orients.compose(ccoT, csearchT.ccp, csearchT.cco);
-                                    cubecorner_orients ccoSearchReprBG = ccoSearch.representativeBG(ccpSearch);
+                                    Cube csearchT = (searchRev == 0 ? csearchTarr0 : csearchTarr1)[searchTd][srchItem];
+                                    CubecornersPerm ccpSearch = CubecornersPerm.compose(ccpT, csearchT.ccp);
+                                    CubecornerOrients ccoSearch = CubecornerOrients.compose(ccoT, csearchT.ccp, csearchT.cco);
+                                    CubecornerOrients ccoSearchReprBG = ccoSearch.representativeBG(ccpSearch);
                                     int searchReprCOrientIdx = ccoSearchReprBG.getOrientIdx();
                                     if (bgCosetsAtDepth.containsCCOrients(searchReprCOrientIdx)) {
                                         if (ceTarr.isEmpty()) {
                                             for (long edges : ccoReprCubes.edgeList()) {
-                                                cubeedges ce = new cubeedges(edges);
-                                                cubeedges cerev = (reversed != 0) ? ce.reverse() : ce;
-                                                cubeedges cerevsymm = (symmetric != 0) ? cerev.symmetric() : cerev;
+                                                CubeEdges ce = new CubeEdges(edges);
+                                                CubeEdges cerev = (reversed != 0) ? ce.reverse() : ce;
+                                                CubeEdges cerevsymm = (symmetric != 0) ? cerev.symmetric() : cerev;
                                                 ceTarr.add(cerevsymm.transform(td));
                                             }
                                         }
-                                        for (cubeedges ceT : ceTarr) {
-                                            cubeedges ceSearch = cubeedges.compose(ceT, csearchT.ce);
-                                            cubeedges ceSearchSpaceRepr = ceSearch.representativeBG();
-                                            List<cube> cubesForCE = bgCosetsAtDepth.getCubesForCE(searchReprCOrientIdx, ceSearchSpaceRepr);
+                                        for (CubeEdges ceT : ceTarr) {
+                                            CubeEdges ceSearch = CubeEdges.compose(ceT, csearchT.ce);
+                                            CubeEdges ceSearchSpaceRepr = ceSearch.representativeBG();
+                                            List<Cube> cubesForCE = bgCosetsAtDepth.getCubesForCE(searchReprCOrientIdx, ceSearchSpaceRepr);
                                             if (cubesForCE != null) {
-                                                cube cSearch1 = new cube(ccpSearch, ccoSearch, ceSearch);
+                                                Cube cSearch1 = new Cube(ccpSearch, ccoSearch, ceSearch);
                                                 String[] inspaceWithCube2Moves = {""};
                                                 int moveCount = searchPhase1Cube2(cubesReprByDepth,
                                                         bgcubesReprByDepthAdd,
@@ -180,8 +171,8 @@ public class SearchQuick {
                                                         searchProgress.isCatchFirst(),
                                                         responder, inspaceWithCube2Moves);
                                                 if (moveCount >= 0) {
-                                                    cube cube1 = new cube(ccpT, ccoT, ceT);
-                                                    cube cube1T = cube1.transform(transformReverse(searchTd));
+                                                    Cube cube1 = new Cube(ccpT, ccoT, ceT);
+                                                    Cube cube1T = cube1.transform(transformReverse(searchTd));
                                                     String cube1Moves = cubesReprByDepth.getMoves(cube1T, searchRev != 0);
                                                     String cubeMovesAppend = csearchWithMovesAppend.get(srchItem).moves;
                                                     String ms = (searchRev != 0)
@@ -206,17 +197,17 @@ public class SearchQuick {
     }
 
     private static void searchMovesQuickTa(int threadNo,
-            CubesReprByDepth cubesReprByDepth,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosets bgCosets,
-            cube csearch, int depth, int depth1Max,
-            Responder responder, QuickSearchProgress searchProgress) {
+                                           CubesReprByDepth cubesReprByDepth,
+                                           BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                           CubeCosets bgCosets,
+                                           Cube csearch, int depth, int depth1Max,
+                                           Responder responder, QuickSearchProgress searchProgress) {
         int[] itemIdx = {-1};
         while (true) {
             int movesMax = searchProgress.inc(responder, itemIdx);
             if (movesMax < 0) break;
             CornerPermReprCubes ccpReprCubes = cubesReprByDepth.getAt(depth).getAt(itemIdx[0]);
-            cubecorners_perm ccp = cubesReprByDepth.getReprPermForIdx(itemIdx[0]);
+            CubecornersPerm ccp = cubesReprByDepth.getReprPermForIdx(itemIdx[0]);
             if (!ccpReprCubes.empty()) {
                 List<CubeWithMoves> cubesWithMoves = List.of(new CubeWithMoves(csearch, ""));
                 if (searchMovesQuickForCcp(ccp, ccpReprCubes, cubesReprByDepth,
@@ -228,19 +219,19 @@ public class SearchQuick {
     }
 
     private static void searchMovesQuickTb1(int threadNo, CubesReprByDepth cubesReprByDepth,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosets bgCosets, cube csearch, int depth1Max,
-            Responder responder, QuickSearchProgress searchProgress) {
+                                            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                            CubeCosets bgCosets, Cube csearch, int depth1Max,
+                                            Responder responder, QuickSearchProgress searchProgress) {
         int[] item2Idx = {-1};
         while (true) {
             int movesMax = searchProgress.inc(responder, item2Idx);
             if (movesMax < 0) break;
             CornerPermReprCubes ccp2ReprCubes = cubesReprByDepth.getAt(depth1Max).getAt(item2Idx[0]);
-            cubecorners_perm ccp2 = cubesReprByDepth.getReprPermForIdx(item2Idx[0]);
+            CubecornersPerm ccp2 = cubesReprByDepth.getReprPermForIdx(item2Idx[0]);
             if (ccp2ReprCubes.empty()) continue;
             List<CubeWithMoves> cubesWithMoves = new ArrayList<>();
-            for (int rd = 0; rd < rotate_dir.RCOUNT.ordinal(); rd++) {
-                cube c1Search = cube.compose(crotated[rd], csearch);
+            for (int rd = 0; rd < RotateDir.RCOUNT.ordinal(); rd++) {
+                Cube c1Search = Cube.compose(crotated[rd], csearch);
                 String cube1Moves = cubesReprByDepth.getMoves(crotated[rd]);
                 cubesWithMoves.add(new CubeWithMoves(c1Search, cube1Moves));
             }
@@ -252,47 +243,47 @@ public class SearchQuick {
     }
 
     private static void searchMovesQuickTb(int threadNo, CubesReprByDepth cubesReprByDepth,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosets bgCosets, cube csearch, int depth, int depth1Max,
-            Responder responder, QuickSearchProgress searchProgress) {
+                                           BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                           CubeCosets bgCosets, Cube csearch, int depth, int depth1Max,
+                                           Responder responder, QuickSearchProgress searchProgress) {
         CubesReprAtDepth ccReprCubesC = cubesReprByDepth.getAt(depth);
         while (true) {
             int[] item2Idx = {0};
             int movesMax = searchProgress.inc(responder, item2Idx);
             if (movesMax < 0) break;
             CornerPermReprCubes ccp2ReprCubes = cubesReprByDepth.getAt(depth1Max).getAt(item2Idx[0]);
-            cubecorners_perm ccp2 = cubesReprByDepth.getReprPermForIdx(item2Idx[0]);
+            CubecornersPerm ccp2 = cubesReprByDepth.getReprPermForIdx(item2Idx[0]);
             if (ccp2ReprCubes.empty()) continue;
             CornerPermReprCubes[] list = ccReprCubesC.ccpCubesList();
             for (int idx1 = 0; idx1 < list.length; idx1++) {
                 CornerPermReprCubes ccp1ReprCubes = list[idx1];
-                cubecorners_perm ccp1 = ccReprCubesC.getPermAt(idx1);
+                CubecornersPerm ccp1 = ccReprCubesC.getPermAt(idx1);
                 if (ccp1ReprCubes.empty()) continue;
                 for (CornerOrientReprCubes cco1ReprCubes : ccp1ReprCubes.ccoCubesList()) {
-                    cubecorner_orients cco1 = cco1ReprCubes.getOrients();
+                    CubecornerOrients cco1 = cco1ReprCubes.getOrients();
                     for (long edges1 : cco1ReprCubes.edgeList()) {
-                        cubeedges ce1 = new cubeedges(edges1);
-                        List<cube> cubesChecked = new ArrayList<>();
+                        CubeEdges ce1 = new CubeEdges(edges1);
+                        List<Cube> cubesChecked = new ArrayList<>();
                         List<CubeWithMoves> cubesWithMoves = new ArrayList<>();
                         for (int rev1 = 0; rev1 <= (cubesReprByDepth.isUseReverse() ? 1 : 0); rev1++) {
-                            cubecorners_perm ccp1rev = (rev1 != 0) ? ccp1.reverse() : ccp1;
-                            cubecorner_orients cco1rev = (rev1 != 0) ? cco1.reverse(ccp1) : cco1;
-                            cubeedges ce1rev = (rev1 != 0) ? ce1.reverse() : ce1;
+                            CubecornersPerm ccp1rev = (rev1 != 0) ? ccp1.reverse() : ccp1;
+                            CubecornerOrients cco1rev = (rev1 != 0) ? cco1.reverse(ccp1) : cco1;
+                            CubeEdges ce1rev = (rev1 != 0) ? ce1.reverse() : ce1;
                             for (int sym1 = 0; sym1 < 2; sym1++) {
-                                cubecorners_perm ccp1revsymm = (sym1 != 0) ? ccp1rev.symmetric() : ccp1rev;
-                                cubecorner_orients cco1revsymm = (sym1 != 0) ? cco1rev.symmetric() : cco1rev;
-                                cubeedges ce1revsymm = (sym1 != 0) ? ce1rev.symmetric() : ce1rev;
-                                for (int td1 = 0; td1 < transform_dir.TCOUNT.ordinal(); td1++) {
-                                    cubecorners_perm ccp1T = ccp1revsymm.transform(td1);
-                                    cubecorner_orients cco1T = cco1revsymm.transform(ccp1revsymm, td1);
-                                    cubeedges ce1T = ce1revsymm.transform(td1);
-                                    cube c1T = new cube(ccp1T, cco1T, ce1T);
+                                CubecornersPerm ccp1revsymm = (sym1 != 0) ? ccp1rev.symmetric() : ccp1rev;
+                                CubecornerOrients cco1revsymm = (sym1 != 0) ? cco1rev.symmetric() : cco1rev;
+                                CubeEdges ce1revsymm = (sym1 != 0) ? ce1rev.symmetric() : ce1rev;
+                                for (int td1 = 0; td1 < TransformDir.TCOUNT.ordinal(); td1++) {
+                                    CubecornersPerm ccp1T = ccp1revsymm.transform(td1);
+                                    CubecornerOrients cco1T = cco1revsymm.transform(ccp1revsymm, td1);
+                                    CubeEdges ce1T = ce1revsymm.transform(td1);
+                                    Cube c1T = new Cube(ccp1T, cco1T, ce1T);
                                     if (cubesChecked.contains(c1T)) continue;
                                     cubesChecked.add(c1T);
-                                    cubecorners_perm ccp1Search = cubecorners_perm.compose(ccp1T, csearch.ccp);
-                                    cubecorner_orients cco1Search = cubecorner_orients.compose(cco1T, csearch.ccp, csearch.cco);
-                                    cubeedges ce1Search = cubeedges.compose(ce1T, csearch.ce);
-                                    cube c1Search = new cube(ccp1Search, cco1Search, ce1Search);
+                                    CubecornersPerm ccp1Search = CubecornersPerm.compose(ccp1T, csearch.ccp);
+                                    CubecornerOrients cco1Search = CubecornerOrients.compose(cco1T, csearch.ccp, csearch.cco);
+                                    CubeEdges ce1Search = CubeEdges.compose(ce1T, csearch.ce);
+                                    Cube c1Search = new Cube(ccp1Search, cco1Search, ce1Search);
                                     String cube1Moves = cubesReprByDepth.getMoves(c1T);
                                     cubesWithMoves.add(new CubeWithMoves(c1Search, cube1Moves));
                                 }
@@ -310,11 +301,11 @@ public class SearchQuick {
     }
 
     private static boolean searchMovesQuickA(CubesReprByDepthAdd cubesReprByDepthAdd,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosetsAdd bgCosetsAdd,
-            cube csearch, int depthSearch, boolean catchFirst,
-            Responder responder, int movesMax,
-            int[] moveCount, String[] moves) {
+                                             BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                             CubeCosetsAdd bgCosetsAdd,
+                                             Cube csearch, int depthSearch, boolean catchFirst,
+                                             Responder responder, int movesMax,
+                                             int[] moveCount, String[] moves) {
         moveCount[0] = -1;
         CubesReprByDepth cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(0, responder);
         CubeCosets bgCosets = bgCosetsAdd.getBGcosets(cubesReprByDepthAdd, 0, responder);
@@ -343,10 +334,10 @@ public class SearchQuick {
     }
 
     private static boolean searchMovesQuickB(CubesReprByDepthAdd cubesReprByDepthAdd,
-            BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
-            CubeCosetsAdd bgCosetsAdd,
-            cube csearch, int depth1Max, int depthSearch, boolean catchFirst,
-            Responder responder, int movesMax, int[] moveCount, String[] moves) {
+                                             BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
+                                             CubeCosetsAdd bgCosetsAdd,
+                                             Cube csearch, int depth1Max, int depthSearch, boolean catchFirst,
+                                             Responder responder, int movesMax, int[] moveCount, String[] moves) {
         moveCount[0] = -1;
         CubesReprByDepth cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(depth1Max, responder);
         CubeCosets bgCosets = bgCosetsAdd.getBGcosets(cubesReprByDepthAdd, depth1Max, responder);
@@ -370,7 +361,7 @@ public class SearchQuick {
             CubesReprByDepthAdd cubesReprByDepthAdd,
             BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
             CubeCosetsAdd bgCosetsAdd,
-            cube csearch, Responder responder) {
+            Cube csearch, Responder responder) {
         CubesReprByDepth cubesReprByDepth = cubesReprByDepthAdd.getReprCubes(0, responder);
         CubeCosets bgCosets = bgCosetsAdd.getBGcosets(cubesReprByDepthAdd, 0, responder);
         if (cubesReprByDepth == null || bgCosets == null) return;
@@ -400,7 +391,7 @@ public class SearchQuick {
             CubesReprByDepthAdd cubesReprByDepthAdd,
             BGCubesReprByDepthAdd bgcubesReprByDepthAdd,
             CubeCosetsAdd bgCosetsAdd,
-            cube csearch, Responder responder) {
+            Cube csearch, Responder responder) {
         String movesBest = "";
         int bestMoveCount = 999;
         for (int depthSearch = 0; depthSearch <= 12; depthSearch++) {
@@ -428,4 +419,3 @@ public class SearchQuick {
         responder.message("not found");
     }
 }
-
