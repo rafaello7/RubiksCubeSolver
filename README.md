@@ -1,4 +1,4 @@
-# Rubik's Cube Solver - kotlin version
+# Rubik's Cube Solver - Java version
 
 The program solves Rubik's cube.
 
@@ -28,12 +28,19 @@ a bigger search table is initialized to speed up the search.
 
 ## Compilation
 
-To compile, run `mvn install`.
+To compile, run:
+
+```bash
+mvn clean package
+```
 
 ## Running
 
-To run, invoke `./cubesrv`
-(without parameters).
+To run the server mode:
+
+```bash
+./cubesrv
+```
 
 The program uses a web browser interface. After startup it waits
 for http requests on port 8080. So, after starting it, open
