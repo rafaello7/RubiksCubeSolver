@@ -1,7 +1,7 @@
 #ifndef CUBECOSETS_H
 #define CUBECOSETS_H
 
-#include "cubedefs.h"
+#include "cube.h"
 #include <vector>
 
 /* A set of spaces (cosets of BG space) reachable at specific depth.

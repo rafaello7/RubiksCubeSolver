@@ -1,7 +1,7 @@
 #ifndef CPERMREPRBG_H
 #define CPERMREPRBG_H
 
-#include "cubedefs.h"
+#include "cube.h"
 #include <vector>
 
 enum {

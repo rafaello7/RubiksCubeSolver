@@ -1,7 +1,7 @@
 #ifndef CPERMREPR_H
 #define CPERMREPR_H
 
-#include "cubedefs.h"
+#include "cube.h"
 #include <vector>
 
 /* Representative cube is a cube chosen from set of similar cubes.

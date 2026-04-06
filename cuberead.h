@@ -1,7 +1,7 @@
 #ifndef CUBEREAD_H
 #define CUBEREAD_H
 
-#include "cubedefs.h"
+#include "cube.h"
 #include "responder.h"
 
 bool cubeFromColorsOnSquares(Responder&, const char *squareColors, cube&);
