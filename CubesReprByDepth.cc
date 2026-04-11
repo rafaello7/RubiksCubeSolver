@@ -168,7 +168,7 @@ unsigned long CubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int de
 
 bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
         unsigned depth, unsigned depthMax, const cube &cSearchT,
-        bool reversed, cube &c, cube &cSearch) const
+        bool reversed, cube &c) const
 {
     std::vector<EdgeReprCandidateTransform> otransform;
     const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth]->getAt(reprPermIdx);
@@ -198,10 +198,6 @@ bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
                 cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
                         ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
                 if( !ce.isNil() ) {
-                    cubeedges ceSearch = reversed ?
-                        cubeedges::compose(cSearchT.ce, ce) :
-                        cubeedges::compose(ce, cSearchT.ce);
-                    cSearch = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
                     c = { .ccp = ccp, .cco = cco, .ce = ce };
                     return true;
                 }
@@ -220,13 +216,6 @@ bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
                 cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
                         ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
                 if( !ce.isNil() ) {
-                    CornersOrient ccoSearch = reversed ?
-                        CornersOrient::compose(cSearchT.cco, ccp, cco) :
-                        CornersOrient::compose(cco, cSearchT.ccp, cSearchT.cco);
-                    cubeedges ceSearch = reversed ?
-                        cubeedges::compose(cSearchT.ce, ce) :
-                        cubeedges::compose(ce, cSearchT.ce);
-                    cSearch = { .ccp = ccpSearch, .cco = ccoSearch, .ce = ceSearch };
                     c = { .ccp = ccp, .cco = cco, .ce = ce };
                     return true;
                 }

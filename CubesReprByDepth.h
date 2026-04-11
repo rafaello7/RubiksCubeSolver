@@ -35,7 +35,7 @@ public:
     unsigned long addCubesForReprPerm(unsigned reprPermIdx, int depth);
     bool searchMovesForReprPerm(unsigned reprPermIdx,
             unsigned depth, unsigned depthMax, const cube &cSearchT,
-            bool reversed, cube &c, cube &cSearch) const;
+            bool reversed, cube &c) const;
 };
 
 #endif // CUBESREPRBYDEPTH_H

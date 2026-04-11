@@ -81,30 +81,11 @@ std::string SearchProgress::progressStr()
 }
 
 static std::string getMovesForMatch(const CubesReprByDepth &cubesReprByDepth,
-        const cube &cSearch, const cube &c, unsigned searchRev, unsigned searchTd,
-        unsigned reversed, unsigned symmetric, unsigned td)
+        const cube &cSearch, const cube &c)
 {
-    // cube found:
-    //  if reversed: cSearch = transform(symmetric((csearch rev))) ⊙  c
-    //      (csearch rev) = symmetric(transformReverse(cSearch)) ⊙  symmetric(transformReverse(c rev))
-    //  if not: cSearch = c ⊙  transform(symmetric(csearch))
-    //      (csearch rev) = (symmetric(transformReverse(cSearch)) rev) ⊙  (symmetric(transformReverse(c rev)) rev)
-    cube cSearchT = cSearch.transform(transformReverse(td));
-    cube cSearchTsymm = symmetric ? cSearchT.symmetric() : cSearchT;
-    cube cT = c.transform(transformReverse(td));
-    cube cTsymm = symmetric ? cT.symmetric() : cT;
-    if( searchTd ) {
-        cSearchTsymm = cSearchTsymm.transform(transformReverse(searchTd));
-        cTsymm = cTsymm.transform(transformReverse(searchTd));
-    }
-    std::string moves;
-    if( searchRev ) {
-        moves = cubesReprByDepth.getMoves(cTsymm, !reversed);
-        moves += cubesReprByDepth.getMoves(cSearchTsymm, reversed);
-    }else{
-        moves = cubesReprByDepth.getMoves(cSearchTsymm, !reversed);
-        moves += cubesReprByDepth.getMoves(cTsymm, reversed);
-    }
+    cube cMid = cube::compose(c, cSearch);
+    std::string moves = cubesReprByDepth.getMoves(cMid, true);
+    moves += cubesReprByDepth.getMoves(c, false);
     return moves;
 }
 
@@ -123,16 +104,17 @@ static void generateSearchTarr(const cube &csearch, bool useReverse, cube cSearc
 
 static bool searchMovesForIdxs(const CubesReprByDepth &cubesReprByDepth,
         unsigned depth, unsigned depthMax, const cube cSearchTarr[2][2][TCOUNT],
-        const SearchIndexes &indexes, std::string &moves,
-        unsigned searchRev, unsigned searchTd)
+        const SearchIndexes &indexes, std::string &moves)
 {
     const cube &cSearchT = cSearchTarr[indexes.reversed][indexes.symmetric][indexes.td];
-    cube c, cSearch;
+    cube c;
     if( cubesReprByDepth.searchMovesForReprPerm(indexes.permReprIdx,
-            depth, depthMax, cSearchT, indexes.reversed, c, cSearch) )
+            depth, depthMax, cSearchT, indexes.reversed, c) )
     {
-        moves = getMovesForMatch(cubesReprByDepth, cSearch, c, searchRev,
-                searchTd, indexes.reversed, indexes.symmetric, indexes.td);
+        cube cT = c.transform(transformReverse(indexes.td));
+        cube cTsymm = indexes.symmetric ? cT.symmetric() : cT;
+        cube cTsymmrev = indexes.reversed ? cTsymm.reverse() : cTsymm;
+        moves = getMovesForMatch(cubesReprByDepth, cSearchTarr[0][0][0], cTsymmrev);
         return true;
     }
 
@@ -149,7 +131,7 @@ static void searchMovesTa(unsigned threadNo,
 
     while( searchProgress->inc(*responder, &indexes) ) {
         std::string moves;
-        if( searchMovesForIdxs(*cubesReprByDepth, depth, depthMax, cSearchTarr, indexes, moves, 0, 0) ) {
+        if( searchMovesForIdxs(*cubesReprByDepth, depth, depthMax, cSearchTarr, indexes, moves) ) {
             responder->solution(moves.c_str());
             searchProgress->inc(*responder, NULL);
             return;
@@ -211,7 +193,7 @@ static void searchMovesTb(unsigned threadNo,
                                         cubesReprByDepth->isUseReverse(), cSearchTarr);
                                 std::string moves2;
                                 if( searchMovesForIdxs(*cubesReprByDepth, depthMax,
-                                            depthMax, cSearchTarr, indexes2, moves2, 0, 0) )
+                                            depthMax, cSearchTarr, indexes2, moves2) )
                                 {
                                     std::string moves = moves2;
                                     moves += cubesReprByDepth->getMoves(c1T);
