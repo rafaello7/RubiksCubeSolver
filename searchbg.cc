@@ -106,7 +106,7 @@ static bool searchInSpaceMovesB(const BGCubesReprByDepth &cubesReprByDepthBG,
             ccpCubes1It != ccReprCubesC.ccpCubesEnd(); ++ccpCubes1It)
     {
         const BGCornerPermReprCubes &ccpCubes1 = *ccpCubes1It;
-        cubecorners_perm ccp1 = ccReprCubesC.getPermAt(ccpCubes1It);
+        CornersPerm ccp1 = ccReprCubesC.getPermAt(ccpCubes1It);
         if( ccpCubes1.empty() )
             continue;
         for(BGCornerPermReprCubes::edges_iter edge1It = ccpCubes1.edgeBegin();

@@ -180,12 +180,12 @@ static void searchMovesTb(unsigned threadNo,
             continue;
         for(CubesReprAtDepth::ccpcubes_iter ccpCubes1It : ccp1FilledIters) {
             const CornerPermReprCubes &ccpCubes1 = *ccpCubes1It;
-            cubecorners_perm ccp1 = ccReprCubesC.getPermAt(ccpCubes1It);
+            CornersPerm ccp1 = ccReprCubesC.getPermAt(ccpCubes1It);
             for(CornerPermReprCubes::ccocubes_iter ccoCubes1It = ccpCubes1.ccoCubesBegin();
                     ccoCubes1It != ccpCubes1.ccoCubesEnd(); ++ccoCubes1It)
             {
                 const CornerOrientReprCubes &ccoCubes1 = *ccoCubes1It;
-                cubecorner_orients cco1 = ccoCubes1.getOrients();
+                CornersOrient cco1 = ccoCubes1.getOrients();
                 for(CornerOrientReprCubes::edges_iter edge1It = ccoCubes1.edgeBegin();
                         edge1It != ccoCubes1.edgeEnd(); ++edge1It)
                 {

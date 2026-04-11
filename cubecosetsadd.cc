@@ -14,25 +14,25 @@ static void addBGcosetsT(unsigned threadNo,
             ccpCubesIt != ccReprCubesC.ccpCubesEnd(); ++ccpCubesIt)
     {
         const CornerPermReprCubes &ccpCubes = *ccpCubesIt;
-        cubecorners_perm ccp = ccReprCubesC.getPermAt(ccpCubesIt);
+        CornersPerm ccp = ccReprCubesC.getPermAt(ccpCubesIt);
         for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpCubes.ccoCubesBegin();
                 ccoCubesIt != ccpCubes.ccoCubesEnd(); ++ccoCubesIt)
         {
             const CornerOrientReprCubes &ccoCubes = *ccoCubesIt;
-            cubecorner_orients cco = ccoCubes.getOrients();
+            CornersOrient cco = ccoCubes.getOrients();
 
             for(unsigned reversed = 0;
                     reversed < (cubesReprByDepth->isUseReverse() ? 2 : 1); ++reversed)
             {
-                cubecorners_perm ccprev = reversed ? ccp.reverse() : ccp;
-                cubecorner_orients ccorev = reversed ? cco.reverse(ccp) : cco;
+                CornersPerm ccprev = reversed ? ccp.reverse() : ccp;
+                CornersOrient ccorev = reversed ? cco.reverse(ccp) : cco;
                 for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                    cubecorners_perm ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
-                    cubecorner_orients ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
+                    CornersPerm ccprevsymm = symmetric ? ccprev.symmetric() : ccprev;
+                    CornersOrient ccorevsymm = symmetric ? ccorev.symmetric() : ccorev;
                     for(unsigned td = 0; td < TCOUNT; ++td) {
-                        cubecorners_perm ccpT = ccprevsymm.transform(td);
-                        cubecorner_orients ccoT = ccorevsymm.transform(ccprevsymm, td);
-                        cubecorner_orients ccoReprBG = ccoT.representativeBG(ccpT);
+                        CornersPerm ccpT = ccprevsymm.transform(td);
+                        CornersOrient ccoT = ccorevsymm.transform(ccprevsymm, td);
+                        CornersOrient ccoReprBG = ccoT.representativeBG(ccpT);
                         unsigned reprCOrientIdx = ccoReprBG.getOrientIdx();
 
                         if( reprCOrientIdx % THREAD_COUNT == threadNo ) {

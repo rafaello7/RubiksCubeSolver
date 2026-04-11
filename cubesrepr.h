@@ -19,7 +19,7 @@
 class CornerOrientReprCubes {
 	std::vector<cubeedges> m_items;
     const std::array<unsigned,64> *m_orientOccur;
-    cubecorner_orients m_orients;
+    CornersOrient m_orients;
     CornerOrientReprCubes(const CornerOrientReprCubes&) = delete;
     static cubeedges findSolutionEdgeMulti(
             const CornerOrientReprCubes &ccoReprCubes,
@@ -32,7 +32,7 @@ class CornerOrientReprCubes {
             const EdgeReprCandidateTransform&,
             bool reversed);
 public:
-    explicit CornerOrientReprCubes(cubecorner_orients orients)
+    explicit CornerOrientReprCubes(CornersOrient orients)
         : m_orientOccur(nullptr), m_orients(orients)
     {
     }
@@ -42,7 +42,7 @@ public:
     }
 
     typedef std::vector<cubeedges>::const_iterator edges_iter;
-    cubecorner_orients getOrients() const { return m_orients; }
+    CornersOrient getOrients() const { return m_orients; }
     unsigned addCubes(const std::vector<cubeedges>&);
     void initOccur(std::array<unsigned, 64>&);
 	bool containsCubeEdges(cubeedges) const;
@@ -69,7 +69,7 @@ class CornerPermReprCubes {
     std::vector<CornerOrientReprCubes> m_coreprCubes;
     std::vector<std::array<unsigned,64>> m_orientOccurMem;
     struct ItemLessCco {
-        bool operator()(const CornerOrientReprCubes &a, const cubecorner_orients &b) {
+        bool operator()(const CornerOrientReprCubes &a, const CornersOrient &b) {
             return a.getOrients() < b;
         }
     };
@@ -82,8 +82,8 @@ public:
     unsigned size() const { return m_coreprCubes.size(); }
     size_t cubeCount() const;
     void initOccur();
-    const CornerOrientReprCubes &cornerOrientCubesAt(cubecorner_orients cco) const;
-	CornerOrientReprCubes &cornerOrientCubesAdd(cubecorner_orients);
+    const CornerOrientReprCubes &cornerOrientCubesAt(CornersOrient cco) const;
+	CornerOrientReprCubes &cornerOrientCubesAdd(CornersOrient);
     ccocubes_iter ccoCubesBegin() const { return m_coreprCubes.begin(); }
     ccocubes_iter ccoCubesEnd() const { return m_coreprCubes.end(); }
 };
@@ -105,13 +105,13 @@ public:
     const CornerPermReprCubes &getAt(unsigned idx) const {
         return m_cornerPermReprCubes[idx];
     }
-    const CornerPermReprCubes &getFor(cubecorners_perm ccp) const {
+    const CornerPermReprCubes &getFor(CornersPerm ccp) const {
         unsigned reprPermIdx = m_reprPerms.getReprPermIdx(ccp);
         return m_cornerPermReprCubes[reprPermIdx];
     }
     ccpcubes_iter ccpCubesBegin() const { return m_cornerPermReprCubes.begin(); }
     ccpcubes_iter ccpCubesEnd() const { return m_cornerPermReprCubes.end(); }
-    cubecorners_perm getPermAt(ccpcubes_iter) const;
+    CornersPerm getPermAt(ccpcubes_iter) const;
 };
 
 class CubesReprByDepth {
@@ -129,7 +129,7 @@ public:
     void incAvailCount() { ++m_availCount; }
     const CubesReprAtDepth &operator[](unsigned idx) const { return *m_cubesAtDepths[idx]; }
     CubesReprAtDepth &operator[](unsigned idx);
-    cubecorners_perm getReprPermForIdx(unsigned reprPermIdx) const {
+    CornersPerm getReprPermForIdx(unsigned reprPermIdx) const {
         return m_reprPerms.getPermForIdx(reprPermIdx);
     }
 

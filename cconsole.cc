@@ -21,9 +21,9 @@ static cube generateCube()
     fclose(fp);
     unsigned long rnd = (unsigned long)rndarr[1] << 32 | rndarr[0];
     cube c;
-    c.ccp = cubecorners_perm::fromPermIdx(rnd % 40320);
+    c.ccp = CornersPerm::fromPermIdx(rnd % 40320);
     rnd /= 40320;
-    c.cco = cubecorner_orients::fromOrientIdx(rnd % 2187);
+    c.cco = CornersOrient::fromOrientIdx(rnd % 2187);
     rnd /= 2187;
     unsigned ceOrient = rnd % 2048;
     rnd /= 2048;

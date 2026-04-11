@@ -1,6 +1,6 @@
 #include "cube.h"
 
-cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1orient,
+CornersOrient::CornersOrient(unsigned corner0orient, unsigned corner1orient,
 			unsigned corner2orient, unsigned corner3orient,
 			unsigned corner4orient, unsigned corner5orient,
 			unsigned corner6orient, unsigned corner7orient)
@@ -10,10 +10,10 @@ cubecorner_orients::cubecorner_orients(unsigned corner0orient, unsigned corner1o
 {
 }
 
-cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
-            cubecorners_perm ccp2, cubecorner_orients cco2)
+CornersOrient CornersOrient::compose(CornersOrient cco1,
+            CornersPerm ccp2, CornersOrient cco2)
 {
-    cubecorner_orients res;
+    CornersOrient res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm(
@@ -49,7 +49,7 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
         : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorner_orients chk = res;
+    CornersOrient chk = res;
     res.orients = 0;
 #endif
 #endif // USE_ASM
@@ -79,11 +79,11 @@ cubecorner_orients cubecorner_orients::compose(cubecorner_orients cco1,
 	return res;
 }
 
-cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
-            cubecorners_perm ccp2, cubecorner_orients cco2,
-            cubecorners_perm ccp3, cubecorner_orients cco3)
+CornersOrient CornersOrient::compose3(CornersOrient cco1,
+            CornersPerm ccp2, CornersOrient cco2,
+            CornersPerm ccp3, CornersOrient cco3)
 {
-    cubecorner_orients res;
+    CornersOrient res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm(
@@ -133,7 +133,7 @@ cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
         : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorner_orients chk = res;
+    CornersOrient chk = res;
     res.orients = 0;
 #endif
 #endif // USE_ASM
@@ -167,9 +167,9 @@ cubecorner_orients cubecorner_orients::compose3(cubecorner_orients cco1,
 	return res;
 }
 
-cubecorner_orients cubecorner_orients::reverse(cubecorners_perm ccp) const {
+CornersOrient CornersOrient::reverse(CornersPerm ccp) const {
     unsigned short revOrients = (orients & 0xaaaa) >> 1 | (orients & 0x5555) << 1;
-    cubecorner_orients res;
+    CornersOrient res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
@@ -200,7 +200,7 @@ cubecorner_orients cubecorner_orients::reverse(cubecorners_perm ccp) const {
         : "ymm1", "ymm2"
         );
 #ifdef ASMCHECK
-    cubecorner_orients chk = res;
+    CornersOrient chk = res;
     res.orients = 0;
 #endif
 #endif // USE_ASM
@@ -222,7 +222,7 @@ cubecorner_orients cubecorner_orients::reverse(cubecorners_perm ccp) const {
 	return res;
 }
 
-unsigned short cubecorner_orients::getOrientIdx() const
+unsigned short CornersOrient::getOrientIdx() const
 {
 	unsigned short res = 0;
 	for(unsigned i = 0; i < 7; ++i)
@@ -230,9 +230,9 @@ unsigned short cubecorner_orients::getOrientIdx() const
 	return res;
 }
 
-cubecorner_orients cubecorner_orients::fromOrientIdx(unsigned short idx)
+CornersOrient CornersOrient::fromOrientIdx(unsigned short idx)
 {
-    cubecorner_orients res;
+    CornersOrient res;
     int sum = 0;
     for(unsigned i = 0; i < 7; ++i) {
         unsigned short val = idx % 3;
@@ -244,11 +244,11 @@ cubecorner_orients cubecorner_orients::fromOrientIdx(unsigned short idx)
     return res;
 }
 
-bool cubecorner_orients::isBGspace() const {
+bool CornersOrient::isBGspace() const {
     return orients == 0;
 }
 
-bool cubecorner_orients::isYWspace(cubecorners_perm ccp) const {
+bool CornersOrient::isYWspace(CornersPerm ccp) const {
     const unsigned orients0356[8] = { 0, 1, 1, 0, 1, 0, 0, 1 };
     const unsigned orients1247[8] = { 2, 0, 0, 2, 0, 2, 2, 0 };
     for(unsigned i = 0; i < 8; ++i) {
@@ -272,7 +272,7 @@ bool cubecorner_orients::isYWspace(cubecorners_perm ccp) const {
     return true;
 }
 
-bool cubecorner_orients::isORspace(cubecorners_perm ccp) const {
+bool CornersOrient::isORspace(CornersPerm ccp) const {
     const unsigned orients0356[8] = { 0, 2, 2, 0, 2, 0, 0, 2 };
     const unsigned orients1247[8] = { 1, 0, 0, 1, 0, 1, 1, 0 };
     for(unsigned i = 0; i < 8; ++i) {
@@ -296,9 +296,9 @@ bool cubecorner_orients::isORspace(cubecorners_perm ccp) const {
     return true;
 }
 
-cubecorner_orients cubecorner_orients::representativeBG(cubecorners_perm ccp) const
+CornersOrient CornersOrient::representativeBG(CornersPerm ccp) const
 {
-    cubecorner_orients orepr;
+    CornersOrient orepr;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
@@ -329,7 +329,7 @@ cubecorner_orients cubecorner_orients::representativeBG(cubecorners_perm ccp) co
         : "ymm1", "ymm2"
         );
 #ifdef ASMCHECK
-    cubecorner_orients chk = orepr;
+    CornersOrient chk = orepr;
     orepr.orients = 0;
 #endif
 #endif // USE_ASM
@@ -351,11 +351,11 @@ cubecorner_orients cubecorner_orients::representativeBG(cubecorners_perm ccp) co
     return orepr;
 }
 
-cubecorner_orients cubecorner_orients::representativeYW(cubecorners_perm ccp) const
+CornersOrient CornersOrient::representativeYW(CornersPerm ccp) const
 {
     unsigned oadd[8] = { 2, 1, 1, 2, 1, 2, 2, 1 };
-    cubecorner_orients orepr;
-    cubecorners_perm ccpRev = ccp.reverse();
+    CornersOrient orepr;
+    CornersPerm ccpRev = ccp.reverse();
     for(unsigned i = 0; i < 8; ++i) {
         unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
         orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
@@ -363,11 +363,11 @@ cubecorner_orients cubecorner_orients::representativeYW(cubecorners_perm ccp) co
     return orepr;
 }
 
-cubecorner_orients cubecorner_orients::representativeOR(cubecorners_perm ccp) const
+CornersOrient CornersOrient::representativeOR(CornersPerm ccp) const
 {
     unsigned oadd[8] = { 1, 2, 2, 1, 2, 1, 1, 2 };
-    cubecorner_orients orepr;
-    cubecorners_perm ccpRev = ccp.reverse();
+    CornersOrient orepr;
+    CornersPerm ccpRev = ccp.reverse();
     for(unsigned i = 0; i < 8; ++i) {
         unsigned toAdd = oadd[i] == oadd[ccpRev.getAt(i)] ? 0 : oadd[i];
         orepr.setAt(i, (getAt(ccpRev.getAt(i))+toAdd) % 3);
@@ -375,10 +375,10 @@ cubecorner_orients cubecorner_orients::representativeOR(cubecorners_perm ccp) co
     return orepr;
 }
 
-cubecorner_orients cubecorner_orients::transform(cubecorners_perm ccp, unsigned transformDir) const
+CornersOrient CornersOrient::transform(CornersPerm ccp, unsigned transformDir) const
 {
     const cube &ctrans = ctransformed[transformDir];
     const cube &ctransRev = ctransformed[transformReverse(transformDir)];
-	return cubecorner_orients::compose3(ctrans.cco, ccp, *this, ctransRev.ccp, ctransRev.cco);
+	return CornersOrient::compose3(ctrans.cco, ccp, *this, ctransRev.ccp, ctransRev.cco);
 }
 

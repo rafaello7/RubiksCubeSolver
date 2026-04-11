@@ -39,7 +39,7 @@ class CubecornerReprPerms {
         std::vector<ReprCandidateTransform> transform;
     };
 
-    std::vector<cubecorners_perm> m_reprPerms;
+    std::vector<CornersPerm> m_reprPerms;
     std::vector<CubecornerPermToRepr> m_permToRepr;
     const bool m_useReverse;
 public:
@@ -52,20 +52,20 @@ public:
     /* Returns corners permutation of representative cube for a cube
      * given by the corners permutation.
      */
-    cubecorners_perm getReprPerm(cubecorners_perm) const;
+    CornersPerm getReprPerm(CornersPerm) const;
 
     /* Returns a number in range 0..653 or 0..983, depend on use of moves
      * reversing.
      */
-    unsigned getReprPermIdx(cubecorners_perm) const;
+    unsigned getReprPermIdx(CornersPerm) const;
 
-    cubecorners_perm getPermForIdx(unsigned reprPermIdx) const;
+    CornersPerm getPermForIdx(unsigned reprPermIdx) const;
 
     /* Returns true when the corners permutation determines uniquely
      * the transformation needed to convert a cube having the permutation to
      * representative one.
      */
-    bool isSingleTransform(cubecorners_perm) const;
+    bool isSingleTransform(CornersPerm) const;
 
     /* Returns corner orientations of representative cube for a cube given
      * by corners permutation and orientations. The transform is an output
@@ -76,15 +76,15 @@ public:
      * The transform can be passed later to cubeedgesRepresentative
      * to get the edges of representative cube.
      */
-    cubecorner_orients getReprOrients(
-            cubecorners_perm, cubecorner_orients,
+    CornersOrient getReprOrients(
+            CornersPerm, CornersOrient,
              std::vector<EdgeReprCandidateTransform> &transform) const;
 
-    cubecorner_orients getComposedReprOrients(
-            cubecorners_perm, cubecorner_orients, bool reverse,
+    CornersOrient getComposedReprOrients(
+            CornersPerm, CornersOrient, bool reverse,
             cubeedges ce2, std::vector<EdgeReprCandidateTransform>&) const;
-    cubecorner_orients getOrientsForComposedRepr(cubecorners_perm ccpSearch,
-            cubecorner_orients ccoSearchRepr, bool reversed, const cube &cSearchT,
+    CornersOrient getOrientsForComposedRepr(CornersPerm ccpSearch,
+            CornersOrient ccoSearchRepr, bool reversed, const cube &cSearchT,
             std::vector<EdgeReprCandidateTransform>&) const;
 
     static cubeedges getReprCubeedges(cubeedges,

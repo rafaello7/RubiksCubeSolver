@@ -158,8 +158,8 @@ const char *transformName(unsigned td) {
 
 /*
 struct cubecorners {
-	cubecorners_perm perm;
-	cubecorner_orients orients;
+	CornersPerm perm;
+	CornersOrient orients;
 
     cubecorners(unsigned corner0perm, unsigned corner0orient,
             unsigned corner1perm, unsigned corner1orient,

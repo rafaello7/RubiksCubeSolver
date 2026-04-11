@@ -3,19 +3,19 @@
 
 #include <string>
 #include "cubedefs.h"
-#include "cubecornersperm.h"
-#include "cubecornerorients.h"
+#include "CornersPerm.h"
+#include "CornersOrient.h"
 #include "cubeedges.h"
 
 struct cube {
-	cubecorners_perm ccp;
-    cubecorner_orients cco;
+	CornersPerm ccp;
+    CornersOrient cco;
 	cubeedges ce;
 
     static cube compose(const cube &c1, const cube &c2) {
         return {
-            .ccp = cubecorners_perm::compose(c1.ccp, c2.ccp),
-            .cco = cubecorner_orients::compose(c1.cco, c2.ccp, c2.cco),
+            .ccp = CornersPerm::compose(c1.ccp, c2.ccp),
+            .cco = CornersOrient::compose(c1.cco, c2.ccp, c2.cco),
             .ce = cubeedges::compose(c1.ce, c2.ce)
         };
     }

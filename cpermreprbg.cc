@@ -19,16 +19,16 @@ BGCubecornerReprPerms::BGCubecornerReprPerms(bool useReverse)
 {
     m_reprPerms.reserve(useReverse ? 1672 : 2768);
     for(unsigned pidx = 0; pidx < 40320; ++pidx) {
-        cubecorners_perm perm = cubecorners_perm::fromPermIdx(pidx);
-        cubecorners_perm permRepr;
+        CornersPerm perm = CornersPerm::fromPermIdx(pidx);
+        CornersPerm permRepr;
         std::vector<ReprCandidateTransform> transform;
         for(unsigned reversed = 0; reversed < (useReverse ? 2 : 1); ++reversed) {
-            cubecorners_perm permr = reversed ? perm.reverse() : perm;
+            CornersPerm permr = reversed ? perm.reverse() : perm;
             for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                cubecorners_perm permchk = symmetric ? permr.symmetric() : permr;
+                CornersPerm permchk = symmetric ? permr.symmetric() : permr;
                 for(unsigned short tdidx = 0; tdidx < TCOUNTBG; ++tdidx) {
                     unsigned short td = BGSpaceTransforms[tdidx];
-                    cubecorners_perm cand = permchk.transform(td);
+                    CornersPerm cand = permchk.transform(td);
                     if( tdidx == 0 && reversed == 0  && symmetric == 0 || cand < permRepr ) {
                         permRepr = cand;
                         transform.clear();
@@ -57,28 +57,28 @@ BGCubecornerReprPerms::~BGCubecornerReprPerms()
 {
 }
 
-cubecorners_perm BGCubecornerReprPerms::getReprPerm(cubecorners_perm ccp) const
+CornersPerm BGCubecornerReprPerms::getReprPerm(CornersPerm ccp) const
 {
     unsigned permReprIdx = m_permToRepr.at(ccp.getPermIdx()).reprIdx;
     return m_reprPerms[permReprIdx];
 }
 
-unsigned BGCubecornerReprPerms::getReprPermIdx(cubecorners_perm ccp) const
+unsigned BGCubecornerReprPerms::getReprPermIdx(CornersPerm ccp) const
 {
     return m_permToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
-cubecorners_perm BGCubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
+CornersPerm BGCubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
 {
     return m_reprPerms[reprPermIdx];
 }
 
-bool BGCubecornerReprPerms::isSingleTransform(cubecorners_perm ccp) const {
+bool BGCubecornerReprPerms::isSingleTransform(CornersPerm ccp) const {
     return m_permToRepr[ccp.getPermIdx()].transform.size() == 1;
 }
 
 cubeedges BGCubecornerReprPerms::getReprCubeedges(
-        cubecorners_perm ccp, cubeedges ce) const
+        CornersPerm ccp, cubeedges ce) const
 {
     CubecornerPermToRepr permToRepr = m_permToRepr.at(ccp.getPermIdx());
     cubeedges erepr, cesymm, cerev, cerevsymm;
@@ -119,12 +119,12 @@ cubeedges BGCubecornerReprPerms::getReprCubeedges(
 }
 
 cube BGCubecornerReprPerms::cubeRepresentative(const cube &c) const {
-    cubecorners_perm ccpRepr = getReprPerm(c.ccp);
+    CornersPerm ccpRepr = getReprPerm(c.ccp);
     cubeedges ceRepr = getReprCubeedges(c.ccp, c.ce);
     return { .ccp = ccpRepr, .cco = csolved.cco, .ce = ceRepr };
 }
 
-cubeedges BGCubecornerReprPerms::getCubeedgesForRepresentative(cubecorners_perm ccpSearch,
+cubeedges BGCubecornerReprPerms::getCubeedgesForRepresentative(CornersPerm ccpSearch,
         cubeedges ceSearchRepr) const
 {
     const CubecornerPermToRepr &permToRepr = m_permToRepr.at(ccpSearch.getPermIdx());

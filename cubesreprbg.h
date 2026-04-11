@@ -48,7 +48,7 @@ public:
     }
     ccpcubes_iter ccpCubesBegin() const { return m_cornerPermReprCubes.begin(); }
     ccpcubes_iter ccpCubesEnd() const { return m_cornerPermReprCubes.end(); }
-    cubecorners_perm getPermAt(ccpcubes_iter) const;
+    CornersPerm getPermAt(ccpcubes_iter) const;
     bool containsCube(const cube&) const;
 };
 

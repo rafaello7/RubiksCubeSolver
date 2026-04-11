@@ -1,6 +1,6 @@
 #include "cube.h"
 
-cubecorners_perm::cubecorners_perm(unsigned corner0perm, unsigned corner1perm,
+CornersPerm::CornersPerm(unsigned corner0perm, unsigned corner1perm,
 			unsigned corner2perm, unsigned corner3perm,
 			unsigned corner4perm, unsigned corner5perm,
 			unsigned corner6perm, unsigned corner7perm)
@@ -10,9 +10,9 @@ cubecorners_perm::cubecorners_perm(unsigned corner0perm, unsigned corner1perm,
 {
 }
 
-cubecorners_perm cubecorners_perm::compose(cubecorners_perm ccp1, cubecorners_perm ccp2)
+CornersPerm CornersPerm::compose(CornersPerm ccp1, CornersPerm ccp2)
 {
-    cubecorners_perm res;
+    CornersPerm res;
 #ifdef USE_ASM
     unsigned long tmp1;
 
@@ -35,7 +35,7 @@ cubecorners_perm cubecorners_perm::compose(cubecorners_perm ccp1, cubecorners_pe
             : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorners_perm chk = res;
+    CornersPerm chk = res;
     res.perm = 0;
 #endif
 #endif // USE_ASM
@@ -58,10 +58,10 @@ cubecorners_perm cubecorners_perm::compose(cubecorners_perm ccp1, cubecorners_pe
     return res;
 }
 
-cubecorners_perm cubecorners_perm::compose3(cubecorners_perm ccp1, cubecorners_perm ccp2,
-        cubecorners_perm ccp3)
+CornersPerm CornersPerm::compose3(CornersPerm ccp1, CornersPerm ccp2,
+        CornersPerm ccp3)
 {
-    cubecorners_perm res;
+    CornersPerm res;
 #ifdef USE_ASM
     unsigned long tmp1;
 
@@ -90,7 +90,7 @@ cubecorners_perm cubecorners_perm::compose3(cubecorners_perm ccp1, cubecorners_p
             : "xmm1", "xmm2"
        );
 #ifdef ASMCHECK
-    cubecorners_perm chk = res;
+    CornersPerm chk = res;
     res.perm = 0;
 #endif
 #endif // USE_ASM
@@ -122,9 +122,9 @@ cubecorners_perm cubecorners_perm::compose3(cubecorners_perm ccp1, cubecorners_p
     return res;
 }
 
-cubecorners_perm cubecorners_perm::reverse() const
+CornersPerm CornersPerm::reverse() const
 {
-    cubecorners_perm res;
+    CornersPerm res;
 #ifdef USE_ASM
     unsigned long tmp1;
     asm (
@@ -157,7 +157,7 @@ cubecorners_perm cubecorners_perm::reverse() const
         : "ymm1", "ymm2"
         );
 #ifdef ASMCHECK
-    cubecorners_perm chk = res;
+    CornersPerm chk = res;
     res.perm = 0;
 #endif
 #endif // USE_ASM
@@ -179,7 +179,7 @@ cubecorners_perm cubecorners_perm::reverse() const
 	return res;
 }
 
-unsigned short cubecorners_perm::getPermIdx() const {
+unsigned short CornersPerm::getPermIdx() const {
     unsigned short res = 0;
     unsigned indexes = 0;
     for(int i = 7; i >= 0; --i) {
@@ -190,10 +190,10 @@ unsigned short cubecorners_perm::getPermIdx() const {
     return res;
 }
 
-cubecorners_perm cubecorners_perm::fromPermIdx(unsigned short idx)
+CornersPerm CornersPerm::fromPermIdx(unsigned short idx)
 {
     unsigned unused = 0x76543210;
-    cubecorners_perm ccp;
+    CornersPerm ccp;
 
     for(unsigned cornerIdx = 8; cornerIdx > 0; --cornerIdx) {
         unsigned p = idx % cornerIdx * 4;
@@ -205,7 +205,7 @@ cubecorners_perm cubecorners_perm::fromPermIdx(unsigned short idx)
     return ccp;
 }
 
-bool cubecorners_perm::isPermParityOdd() const
+bool CornersPerm::isPermParityOdd() const
 {
     bool isSwapsOdd = false;
     unsigned permScanned = 0;
@@ -222,17 +222,17 @@ bool cubecorners_perm::isPermParityOdd() const
     return isSwapsOdd;
 }
 
-static cubecorners_perm cubecornerPermsTransform1(cubecorners_perm ccp, int idx)
+static CornersPerm cubecornerPermsTransform1(CornersPerm ccp, int idx)
 {
-    cubecorners_perm ccp1 = cubecorners_perm::compose(ctransformed[idx].ccp, ccp);
-	return cubecorners_perm::compose(ccp1,
+    CornersPerm ccp1 = CornersPerm::compose(ctransformed[idx].ccp, ccp);
+	return CornersPerm::compose(ccp1,
             ctransformed[transformReverse(idx)].ccp);
 }
 
-cubecorners_perm cubecorners_perm::transform(unsigned transformDir) const
+CornersPerm CornersPerm::transform(unsigned transformDir) const
 {
-    cubecorners_perm cctr = ctransformed[transformDir].ccp;
-    cubecorners_perm ccrtr = ctransformed[transformReverse(transformDir)].ccp;
-    return cubecorners_perm::compose3(cctr, *this, ccrtr);
+    CornersPerm cctr = ctransformed[transformDir].ccp;
+    CornersPerm ccrtr = ctransformed[transformReverse(transformDir)].ccp;
+    return CornersPerm::compose3(cctr, *this, ccrtr);
 }
 

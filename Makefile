@@ -1,6 +1,6 @@
 O = -O3
 
-OBJS = cubedefs.o cubecornersperm.o cubecornerorients.o cubeedges.o cube.o \
+OBJS = cubedefs.o CornersPerm.o CornersOrient.o cubeedges.o cube.o \
 	   cpermrepr.o cubesrepr.o cpermreprbg.o cubesreprbg.o cubecosets.o \
 	   responder.o cuberead.o progressbase.o threadpoolhelper.o \
 	   cubesadd.o cubesaddbg.o cubecosetsadd.o searchoptimal.o \
