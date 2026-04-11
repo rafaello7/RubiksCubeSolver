@@ -1,5 +1,5 @@
 #include "searchquick.h"
-#include "cubesadd.h"
+#include "CubesReprByDepthAdd.h"
 #include "cubecosetsadd.h"
 #include "searchbg.h"
 #include "progressbase.h"

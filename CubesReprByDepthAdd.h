@@ -1,7 +1,7 @@
-#ifndef CUBESADD_H
-#define CUBESADD_H
+#ifndef CUBESREPRBYDEPTHADD_H
+#define CUBESREPRBYDEPTHADD_H
 
-#include "cubesrepr.h"
+#include "CubesReprByDepth.h"
 #include "responder.h"
 
 class CubesReprByDepthAdd {
@@ -18,4 +18,4 @@ public:
     const CubesReprByDepth *getReprCubes(unsigned depth, Responder&);
 };
 
-#endif // CUBESADD_H
+#endif // CUBESREPRBYDEPTHADD_H

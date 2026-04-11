@@ -1,7 +1,7 @@
 #ifndef CUBESEARCH_H
 #define CUBESEARCH_H
 
-#include "cubesadd.h"
+#include "CubesReprByDepthAdd.h"
 #include "cubesaddbg.h"
 #include "cubecosetsadd.h"
 #include "responder.h"

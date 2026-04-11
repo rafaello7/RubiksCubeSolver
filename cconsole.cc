@@ -1,5 +1,5 @@
 #include "cconsole.h"
-#include "cubesadd.h"
+#include "CubesReprByDepthAdd.h"
 #include "cuberead.h"
 #include "responder.h"
 #include "cubesearch.h"

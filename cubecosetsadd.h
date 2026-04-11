@@ -2,7 +2,7 @@
 #define CUBECOSETSADD_H
 
 #include "cubecosets.h"
-#include "cubesadd.h"
+#include "CubesReprByDepthAdd.h"
 #include "responder.h"
 
 enum {

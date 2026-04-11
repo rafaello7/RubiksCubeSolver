@@ -1,6 +1,5 @@
-#include "cubesadd.h"
+#include "CubesReprByDepthAdd.h"
 #include "progressbase.h"
-#include "cubesrepr.h"
 #include "threadpoolhelper.h"
 #include <iostream>
 

@@ -1,9 +1,11 @@
 O = -O3
 
 OBJS = cubedefs.o CornersPerm.o CornersOrient.o cubeedges.o cube.o \
-	   cpermrepr.o cubesrepr.o cpermreprbg.o cubesreprbg.o cubecosets.o \
+	   cpermrepr.o CornerOrientReprCubes.o CornerPermReprCubes.o \
+       CubesReprAtDepth.o CubesReprByDepth.o \
+       cpermreprbg.o cubesreprbg.o cubecosets.o \
 	   responder.o cuberead.o progressbase.o threadpoolhelper.o \
-	   cubesadd.o cubesaddbg.o cubecosetsadd.o searchoptimal.o \
+	   CubesReprByDepthAdd.o cubesaddbg.o cubecosetsadd.o searchoptimal.o \
 	   searchbg.o searchquick.o cubesearch.o cserver.o cconsole.o \
 	   cubesrv.o
 
