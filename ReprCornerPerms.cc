@@ -8,34 +8,35 @@ ReprCornerPerms::ReprCornerPerms(bool useReverse)
     m_reprPerms.reserve(m_useReverse ? 654 : 984);
     for(unsigned pidx = 0; pidx < 40320; ++pidx) {
         CornersPerm perm = CornersPerm::fromPermIdx(pidx);
-        CornersPerm permRepr;
-        std::vector<ReprCandidateTransform> transform;
-        for(unsigned reversed = 0; reversed < (m_useReverse ? 2 : 1); ++reversed) {
-            CornersPerm permr = reversed ? perm.reverse() : perm;
-            for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
-                CornersPerm permchk = symmetric ? permr.symmetric() : permr;
-                for(unsigned short td = 0; td < TCOUNT; ++td) {
-                    CornersPerm cand = permchk.transform(td);
-                    if( td+reversed+symmetric == 0 || cand < permRepr ) {
-                        permRepr = cand;
-                        transform.clear();
-                        transform.push_back({ .reversed = (bool)reversed,
-                                .symmetric = (bool)symmetric, .transformIdx = td });
-                    }else if( cand == permRepr ) {
-                        transform.push_back({ .reversed = (bool)reversed,
-                                .symmetric = (bool)symmetric, .transformIdx = td });
+        if( m_permToRepr[pidx].reprIdx < 0 ) {
+            CornersPerm permRepr;
+            for(unsigned reversed = 0; reversed < (m_useReverse ? 2 : 1); ++reversed) {
+                CornersPerm permr = reversed ? perm.reverse() : perm;
+                for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
+                    CornersPerm permchk = symmetric ? permr.symmetric() : permr;
+                    for(unsigned short td = 0; td < TCOUNT; ++td) {
+                        CornersPerm cand = permchk.transform(td);
+                        if( td+reversed+symmetric == 0 || cand < permRepr )
+                            permRepr = cand;
+                    }
+                }
+            }
+            int reprIdx = m_reprPerms.size();
+            m_reprPerms.push_back(permRepr);
+            for(unsigned short td = 0; td < TCOUNT; ++td) {
+                CornersPerm permtd = permRepr.transform(transformReverse(td));
+                for(unsigned symmetric = 0; symmetric < 2; ++symmetric) {
+                    CornersPerm premsymmtd = symmetric ? permtd.symmetric() : permtd;
+                    for(unsigned reversed = 0; reversed < (m_useReverse ? 2 : 1); ++reversed) {
+                        CornersPerm permrsymmtd = reversed ? premsymmtd.reverse() : premsymmtd;
+                        CubecornerPermToRepr &permToRepr = m_permToRepr[permrsymmtd.getPermIdx()];
+                        permToRepr.reprIdx = reprIdx;
+                        permToRepr.transform.push_back({ .reversed = (bool)reversed,
+                                    .symmetric = (bool)symmetric, .transformIdx = td });
                     }
                 }
             }
         }
-        CubecornerPermToRepr &permToReprRepr = m_permToRepr[permRepr.getPermIdx()];
-        if( permToReprRepr.reprIdx < 0 ) {
-            permToReprRepr.reprIdx = m_reprPerms.size();
-            m_reprPerms.push_back(permRepr);
-        }
-        CubecornerPermToRepr &permToRepr = m_permToRepr[perm.getPermIdx()];
-        permToRepr.reprIdx = permToReprRepr.reprIdx;
-        permToRepr.transform.swap(transform);
     }
     std::cout << "repr size=" << m_reprPerms.size() << std::endl;
 }
