@@ -2,9 +2,9 @@
 #define SEARCHQUICK_H
 
 #include "CubesReprByDepthAdd.h"
-#include "cubesaddbg.h"
-#include "cubecosetsadd.h"
-#include "responder.h"
+#include "BGCubesReprByDepthAdd.h"
+#include "CubeCosetsAdd.h"
+#include "Responder.h"
 
 void searchMovesQuickCatchFirst(CubesReprByDepthAdd&, BGCubesReprByDepthAdd&,
         CubeCosetsAdd&, const cube &csearch, Responder&);

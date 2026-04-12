@@ -1,6 +1,6 @@
 #include "CubesReprAtDepth.h"
 
-CubesReprAtDepth::CubesReprAtDepth(const CubecornerReprPerms &reprPerms)
+CubesReprAtDepth::CubesReprAtDepth(const ReprCornerPerms &reprPerms)
     : m_reprPerms(reprPerms), m_cornerPermReprCubes(reprPerms.reprPermCount())
 {
 }

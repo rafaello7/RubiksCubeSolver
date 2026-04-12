@@ -1,13 +1,15 @@
 O = -O3
 
 OBJS = cubedefs.o CornersPerm.o CornersOrient.o cubeedges.o cube.o \
-	   cpermrepr.o CornerOrientReprCubes.o CornerPermReprCubes.o \
-       CubesReprAtDepth.o CubesReprByDepth.o \
-       cpermreprbg.o cubesreprbg.o cubecosets.o \
-	   responder.o cuberead.o progressbase.o threadpoolhelper.o \
-	   CubesReprByDepthAdd.o cubesaddbg.o cubecosetsadd.o searchoptimal.o \
-	   searchbg.o searchquick.o cubesearch.o cserver.o cconsole.o \
-	   cubesrv.o
+	   ReprCornerPerms.o CornerOrientReprCubes.o \
+       CornerPermReprCubes.o CubesReprAtDepth.o CubesReprByDepth.o \
+       BGReprCornerPerms.o \
+       BGCornerPermReprCubes.o BGCubesReprAtDepth.o BGCubesReprByDepth.o \
+       CubeCosetsAtDepth.o \
+	   CubesReprByDepthAdd.o BGCubesReprByDepthAdd.o CubeCosetsAdd.o \
+	   Responder.o cuberead.o ProgressBase.o threadpoolhelper.o \
+       searchoptimal.o searchbg.o searchquick.o CubeSearcher.o \
+       cserver.o cconsole.o cubesrv.o
 
 cubesrv: $(OBJS)
 	g++ $O -pthread $(OBJS) -o cubesrv

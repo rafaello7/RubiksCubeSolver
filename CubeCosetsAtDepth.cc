@@ -1,4 +1,4 @@
-#include "cubecosets.h"
+#include "CubeCosetsAtDepth.h"
 
 
 bool CubeCosetsAtDepth::addCube(unsigned ccoReprIdx, cubeedges ceRepr, const cube &c)

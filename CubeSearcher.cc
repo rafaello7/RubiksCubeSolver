@@ -1,4 +1,4 @@
-#include "cubesearch.h"
+#include "CubeSearcher.h"
 #include "searchoptimal.h"
 #include "searchquick.h"
 #include <sstream>

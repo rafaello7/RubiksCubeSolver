@@ -141,7 +141,7 @@ unsigned long CubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int de
                                             edgeIt != corientReprCubesC.edgeEnd(); ++edgeIt)
                                     {
                                         const cubeedges ce = *edgeIt;
-                                        cubeedges cenewRepr = CubecornerReprPerms::getComposedReprCubeedges(
+                                        cubeedges cenewRepr = ReprCornerPerms::getComposedReprCubeedges(
                                                 ce, reversed, otransformNew);
                                         if( corientReprCubesNewP != NULL &&
                                                 corientReprCubesNewP->containsCubeEdges(cenewRepr) )

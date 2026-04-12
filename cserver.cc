@@ -1,10 +1,10 @@
 #include "cubedefs.h"
 #include "cserver.h"
-#include "responder.h"
-#include "progressbase.h"
+#include "Responder.h"
+#include "ProgressBase.h"
 #include "cuberead.h"
 #include "threadpoolhelper.h"
-#include "cubesearch.h"
+#include "CubeSearcher.h"
 #include <cstdio>
 #include <cstring>
 #include <mutex>

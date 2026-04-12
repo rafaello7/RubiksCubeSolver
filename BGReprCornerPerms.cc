@@ -1,4 +1,4 @@
-#include "cpermreprbg.h"
+#include "BGReprCornerPerms.h"
 #include <iostream>
 
 
@@ -14,7 +14,7 @@ const unsigned BGSpaceTransforms[TCOUNTBG] = {
 };
 
 
-BGCubecornerReprPerms::BGCubecornerReprPerms(bool useReverse)
+BGReprCornerPerms::BGReprCornerPerms(bool useReverse)
     : m_permToRepr(40320), m_useReverse(useReverse)
 {
     m_reprPerms.reserve(useReverse ? 1672 : 2768);
@@ -53,31 +53,31 @@ BGCubecornerReprPerms::BGCubecornerReprPerms(bool useReverse)
     std::cout << "bg repr size=" << m_reprPerms.size() << std::endl;
 }
 
-BGCubecornerReprPerms::~BGCubecornerReprPerms()
+BGReprCornerPerms::~BGReprCornerPerms()
 {
 }
 
-CornersPerm BGCubecornerReprPerms::getReprPerm(CornersPerm ccp) const
+CornersPerm BGReprCornerPerms::getReprPerm(CornersPerm ccp) const
 {
     unsigned permReprIdx = m_permToRepr.at(ccp.getPermIdx()).reprIdx;
     return m_reprPerms[permReprIdx];
 }
 
-unsigned BGCubecornerReprPerms::getReprPermIdx(CornersPerm ccp) const
+unsigned BGReprCornerPerms::getReprPermIdx(CornersPerm ccp) const
 {
     return m_permToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
-CornersPerm BGCubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
+CornersPerm BGReprCornerPerms::getPermForIdx(unsigned reprPermIdx) const
 {
     return m_reprPerms[reprPermIdx];
 }
 
-bool BGCubecornerReprPerms::isSingleTransform(CornersPerm ccp) const {
+bool BGReprCornerPerms::isSingleTransform(CornersPerm ccp) const {
     return m_permToRepr[ccp.getPermIdx()].transform.size() == 1;
 }
 
-cubeedges BGCubecornerReprPerms::getReprCubeedges(
+cubeedges BGReprCornerPerms::getReprCubeedges(
         CornersPerm ccp, cubeedges ce) const
 {
     CubecornerPermToRepr permToRepr = m_permToRepr.at(ccp.getPermIdx());
@@ -118,13 +118,13 @@ cubeedges BGCubecornerReprPerms::getReprCubeedges(
     return erepr;
 }
 
-cube BGCubecornerReprPerms::cubeRepresentative(const cube &c) const {
+cube BGReprCornerPerms::cubeRepresentative(const cube &c) const {
     CornersPerm ccpRepr = getReprPerm(c.ccp);
     cubeedges ceRepr = getReprCubeedges(c.ccp, c.ce);
     return { .ccp = ccpRepr, .cco = csolved.cco, .ce = ceRepr };
 }
 
-cubeedges BGCubecornerReprPerms::getCubeedgesForRepresentative(CornersPerm ccpSearch,
+cubeedges BGReprCornerPerms::getCubeedgesForRepresentative(CornersPerm ccpSearch,
         cubeedges ceSearchRepr) const
 {
     const CubecornerPermToRepr &permToRepr = m_permToRepr.at(ccpSearch.getPermIdx());

@@ -1,10 +1,10 @@
-#ifndef CUBESEARCH_H
-#define CUBESEARCH_H
+#ifndef CUBESEARCHER_H
+#define CUBESEARCHER_H
 
 #include "CubesReprByDepthAdd.h"
-#include "cubesaddbg.h"
-#include "cubecosetsadd.h"
-#include "responder.h"
+#include "BGCubesReprByDepthAdd.h"
+#include "CubeCosetsAdd.h"
+#include "Responder.h"
 
 class CubeSearcher {
     CubesReprByDepthAdd m_cubesReprByDepthAdd;
@@ -18,4 +18,4 @@ public:
 };
 
 
-#endif // CUBESEARCH_H
+#endif // CUBESEARCHER_H

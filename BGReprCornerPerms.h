@@ -1,5 +1,5 @@
-#ifndef CPERMREPRBG_H
-#define CPERMREPRBG_H
+#ifndef BGREPRCORNERPERMS_H
+#define BGREPRCORNERPERMS_H
 
 #include "cube.h"
 #include <vector>
@@ -12,7 +12,7 @@ enum {
 extern const unsigned BGSpaceRotations[];
 extern const unsigned BGSpaceTransforms[];
 
-class BGCubecornerReprPerms {
+class BGReprCornerPerms {
     struct ReprCandidateTransform {
         bool reversed;
         bool symmetric;
@@ -28,8 +28,8 @@ class BGCubecornerReprPerms {
     std::vector<CubecornerPermToRepr> m_permToRepr;
     const bool m_useReverse;
 public:
-    explicit BGCubecornerReprPerms(bool useReverse);
-    ~BGCubecornerReprPerms();
+    explicit BGReprCornerPerms(bool useReverse);
+    ~BGReprCornerPerms();
 
     bool isUseReverse() const { return m_useReverse; }
     unsigned reprPermCount() const { return m_reprPerms.size(); }
@@ -58,4 +58,4 @@ public:
             CornersPerm ccpSearch, cubeedges ceSearchRepr) const;
 };
 
-#endif // CPERMREPRBG_H
+#endif // BGREPRCORNERPERMS_H

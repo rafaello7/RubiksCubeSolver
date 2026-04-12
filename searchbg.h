@@ -1,8 +1,8 @@
 #ifndef SEARCHBG_H
 #define SEARCHBG_H
 
-#include "cubesaddbg.h"
-#include "responder.h"
+#include "BGCubesReprByDepthAdd.h"
+#include "Responder.h"
 
 /* The cSpace cube shall be in BG space. The function searches for a shortest
  * solution consisting from the BG moves, no longer than movesMax. If such

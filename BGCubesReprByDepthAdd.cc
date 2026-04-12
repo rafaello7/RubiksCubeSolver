@@ -1,6 +1,6 @@
-#include "cubesaddbg.h"
-#include "progressbase.h"
-#include "cubesreprbg.h"
+#include "BGCubesReprByDepthAdd.h"
+#include "ProgressBase.h"
+#include "BGCubesReprByDepth.h"
 #include "threadpoolhelper.h"
 #include <iostream>
 #include <mutex>

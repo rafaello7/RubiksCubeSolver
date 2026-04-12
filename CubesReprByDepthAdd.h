@@ -2,7 +2,7 @@
 #define CUBESREPRBYDEPTHADD_H
 
 #include "CubesReprByDepth.h"
-#include "responder.h"
+#include "Responder.h"
 
 class CubesReprByDepthAdd {
     CubesReprByDepth m_cubesReprByDepth;

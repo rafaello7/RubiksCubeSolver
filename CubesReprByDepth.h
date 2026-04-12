@@ -6,7 +6,7 @@
 #include <memory>
 
 class CubesReprByDepth {
-    CubecornerReprPerms m_reprPerms;
+    ReprCornerPerms m_reprPerms;
     std::vector<std::shared_ptr<CubesReprAtDepth>> m_cubesAtDepths;
     unsigned m_availCount;
 

@@ -1,8 +1,8 @@
-#include "cpermrepr.h"
+#include "ReprCornerPerms.h"
 #include <iostream>
 
 
-CubecornerReprPerms::CubecornerReprPerms(bool useReverse)
+ReprCornerPerms::ReprCornerPerms(bool useReverse)
     : m_permToRepr(40320), m_useReverse(useReverse)
 {
     m_reprPerms.reserve(m_useReverse ? 654 : 984);
@@ -40,31 +40,31 @@ CubecornerReprPerms::CubecornerReprPerms(bool useReverse)
     std::cout << "repr size=" << m_reprPerms.size() << std::endl;
 }
 
-CubecornerReprPerms::~CubecornerReprPerms()
+ReprCornerPerms::~ReprCornerPerms()
 {
 }
 
-CornersPerm CubecornerReprPerms::getReprPerm(CornersPerm ccp) const
+CornersPerm ReprCornerPerms::getReprPerm(CornersPerm ccp) const
 {
     unsigned reprPermIdx = m_permToRepr.at(ccp.getPermIdx()).reprIdx;
     return m_reprPerms[reprPermIdx];
 }
 
-unsigned CubecornerReprPerms::getReprPermIdx(CornersPerm ccp) const
+unsigned ReprCornerPerms::getReprPermIdx(CornersPerm ccp) const
 {
     return m_permToRepr.at(ccp.getPermIdx()).reprIdx;
 }
 
-CornersPerm CubecornerReprPerms::getPermForIdx(unsigned reprPermIdx) const
+CornersPerm ReprCornerPerms::getPermForIdx(unsigned reprPermIdx) const
 {
     return m_reprPerms[reprPermIdx];
 }
 
-bool CubecornerReprPerms::isSingleTransform(CornersPerm ccp) const {
+bool ReprCornerPerms::isSingleTransform(CornersPerm ccp) const {
     return m_permToRepr[ccp.getPermIdx()].transform.size() == 1;
 }
 
-CornersOrient CubecornerReprPerms::getReprOrients(
+CornersOrient ReprCornerPerms::getReprOrients(
         CornersPerm ccp, CornersOrient cco,
         std::vector<EdgeReprCandidateTransform> &transform) const
 {
@@ -127,7 +127,7 @@ CornersOrient CubecornerReprPerms::getReprOrients(
  *                    along with c1.ce, to get representative cubeedges of
  *                    c1.ce ⊙  ce2
  */
-CornersOrient CubecornerReprPerms::getComposedReprOrients(
+CornersOrient ReprCornerPerms::getComposedReprOrients(
         CornersPerm ccp, CornersOrient cco, bool reverse,
         cubeedges ce2, std::vector<EdgeReprCandidateTransform> &transform) const
 {
@@ -207,7 +207,7 @@ CornersOrient CubecornerReprPerms::getComposedReprOrients(
     return orepr;
 }
 
-CornersOrient CubecornerReprPerms::getOrientsForComposedRepr(
+CornersOrient ReprCornerPerms::getOrientsForComposedRepr(
         CornersPerm ccpSearch, CornersOrient ccoSearchRepr,
         bool reversed, const cube &cSearchT,
         std::vector<EdgeReprCandidateTransform> &transform) const
@@ -262,7 +262,7 @@ CornersOrient CubecornerReprPerms::getOrientsForComposedRepr(
     return cco;
 }
 
-cubeedges CubecornerReprPerms::getReprCubeedges(cubeedges ce,
+cubeedges ReprCornerPerms::getReprCubeedges(cubeedges ce,
         const std::vector<EdgeReprCandidateTransform> &transform)
 {
     cubeedges cerepr;
@@ -311,7 +311,7 @@ cubeedges CubecornerReprPerms::getReprCubeedges(cubeedges ce,
     return cerepr;
 }
 
-cubeedges CubecornerReprPerms::getComposedReprCubeedges(
+cubeedges ReprCornerPerms::getComposedReprCubeedges(
         cubeedges ce, bool reverse,
         const std::vector<EdgeReprCandidateTransform> &transform)
 {
@@ -379,7 +379,7 @@ cubeedges CubecornerReprPerms::getComposedReprCubeedges(
     return cerepr;
 }
 
-cube CubecornerReprPerms::cubeRepresentative(const cube &c) const {
+cube ReprCornerPerms::cubeRepresentative(const cube &c) const {
     std::vector<EdgeReprCandidateTransform> transform;
 
     CornersPerm ccpRepr = getReprPerm(c.ccp);

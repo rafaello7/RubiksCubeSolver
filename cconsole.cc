@@ -1,8 +1,8 @@
 #include "cconsole.h"
 #include "CubesReprByDepthAdd.h"
 #include "cuberead.h"
-#include "responder.h"
-#include "cubesearch.h"
+#include "Responder.h"
+#include "CubeSearcher.h"
 #include <iostream>
 #include <cstring>
 #include <chrono>

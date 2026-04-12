@@ -2,7 +2,7 @@
 #define SEARCHOPTIMAL_H
 
 #include "CubesReprByDepthAdd.h"
-#include "responder.h"
+#include "Responder.h"
 
 void searchMovesOptimal(CubesReprByDepthAdd&, const cube &csearch, unsigned depthMax, Responder&);
 

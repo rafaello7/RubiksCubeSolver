@@ -1,5 +1,5 @@
 #include "CubesReprByDepthAdd.h"
-#include "progressbase.h"
+#include "ProgressBase.h"
 #include "threadpoolhelper.h"
 #include <iostream>
 

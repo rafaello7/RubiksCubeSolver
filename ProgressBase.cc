@@ -1,4 +1,4 @@
-#include "progressbase.h"
+#include "ProgressBase.h"
 #include <mutex>
 
 static std::mutex gProgressMutex;

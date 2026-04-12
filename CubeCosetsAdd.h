@@ -1,9 +1,9 @@
 #ifndef CUBECOSETSADD_H
 #define CUBECOSETSADD_H
 
-#include "cubecosets.h"
+#include "CubeCosets.h"
 #include "CubesReprByDepthAdd.h"
-#include "responder.h"
+#include "Responder.h"
 
 enum {
     TWOPHASE_DEPTH1_CATCHFIRST_MAX = 5u,

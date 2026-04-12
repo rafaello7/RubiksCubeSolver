@@ -1,4 +1,5 @@
 #include "CornerOrientReprCubes.h"
+#include "ReprCornerPerms.h"
 #include <iostream>
 #include <algorithm>
 #include <set>
@@ -68,7 +69,7 @@ cubeedges CornerOrientReprCubes::findSolutionEdgeMulti(
             edgeIt != ccoReprCubes.edgeEnd(); ++edgeIt)
     {
         const cubeedges ce = *edgeIt;
-        cubeedges ceSearchRepr = CubecornerReprPerms::getComposedReprCubeedges(
+        cubeedges ceSearchRepr = ReprCornerPerms::getComposedReprCubeedges(
                 ce, reversed, otransform);
         if( ccoReprSearchCubes.containsCubeEdges(ceSearchRepr) )
             return ce;

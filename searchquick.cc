@@ -1,8 +1,8 @@
 #include "searchquick.h"
 #include "CubesReprByDepthAdd.h"
-#include "cubecosetsadd.h"
+#include "CubeCosetsAdd.h"
 #include "searchbg.h"
-#include "progressbase.h"
+#include "ProgressBase.h"
 #include "threadpoolhelper.h"
 #include <algorithm>
 

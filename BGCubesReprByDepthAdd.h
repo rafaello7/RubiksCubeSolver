@@ -1,8 +1,8 @@
-#ifndef CUBESADDBG_H
-#define CUBESADDBG_H
+#ifndef BGCUBESREPRBYDEPTHADD_H
+#define BGCUBESREPRBYDEPTHADD_H
 
-#include "cubesreprbg.h"
-#include "responder.h"
+#include "BGCubesReprByDepth.h"
+#include "Responder.h"
 #include <mutex>
 
 class BGCubesReprByDepthAdd {
@@ -20,4 +20,4 @@ public:
     const BGCubesReprByDepth *getReprCubes(unsigned depth, Responder&);
 };
 
-#endif // CUBESADDBG_H
+#endif // BGCUBESREPRBYDEPTHADD_H

@@ -1,7 +1,8 @@
-#ifndef CPERMREPR_H
-#define CPERMREPR_H
+#ifndef REPRCORNERPERMS_H
+#define REPRCORNERPERMS_H
 
 #include "cube.h"
+#include "EdgeReprCandidateTransform.h"
 #include <vector>
 
 /* Representative cube is a cube chosen from set of similar cubes.
@@ -20,14 +21,7 @@
  * reversing.
  */
 
-struct EdgeReprCandidateTransform {
-    unsigned transformedIdx;
-    bool reversed;
-    bool symmetric;
-    cubeedges ceTrans;
-};
-
-class CubecornerReprPerms {
+class ReprCornerPerms {
     struct ReprCandidateTransform {
         bool reversed;
         bool symmetric;
@@ -43,8 +37,8 @@ class CubecornerReprPerms {
     std::vector<CubecornerPermToRepr> m_permToRepr;
     const bool m_useReverse;
 public:
-    explicit CubecornerReprPerms(bool useReverse);
-    ~CubecornerReprPerms();
+    explicit ReprCornerPerms(bool useReverse);
+    ~ReprCornerPerms();
 
     bool isUseReverse() const { return m_useReverse; }
     unsigned reprPermCount() const { return m_reprPerms.size(); }
@@ -96,4 +90,4 @@ public:
     cube cubeRepresentative(const cube&) const;
 };
 
-#endif // CPERMREPR_H
+#endif // REPRCORNERPERMS_H

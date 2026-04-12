@@ -1,5 +1,4 @@
 #include "searchbg.h"
-#include "cubesaddbg.h"
 #include <algorithm>
 
 struct SearchIndexes {

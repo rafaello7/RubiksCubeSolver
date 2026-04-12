@@ -1,7 +1,8 @@
 #ifndef CUBESREPR_H
 #define CUBESREPR_H
 
-#include "cpermrepr.h"
+#include "EdgeReprCandidateTransform.h"
+#include "CornersOrient.h"
 #include <vector>
 #include <array>
 

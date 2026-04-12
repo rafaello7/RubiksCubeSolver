@@ -1,5 +1,5 @@
 #include "searchoptimal.h"
-#include "progressbase.h"
+#include "ProgressBase.h"
 #include "CubesReprByDepthAdd.h"
 #include "threadpoolhelper.h"
 #include <algorithm>

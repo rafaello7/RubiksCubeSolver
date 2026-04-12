@@ -1,5 +1,4 @@
-#include "CubesReprByDepthAdd.h"
-#include "cubesreprbg.h"
+#include "cubedefs.h"
 #include "cserver.h"
 #include "cconsole.h"
 #include <iostream>

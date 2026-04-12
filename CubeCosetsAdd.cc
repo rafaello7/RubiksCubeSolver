@@ -1,4 +1,4 @@
-#include "cubecosetsadd.h"
+#include "CubeCosetsAdd.h"
 #include "CubesReprByDepthAdd.h"
 #include "threadpoolhelper.h"
 #include <atomic>

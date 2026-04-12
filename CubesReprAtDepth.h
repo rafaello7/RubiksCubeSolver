@@ -2,15 +2,17 @@
 #define CUBESREPRATDEPTH_H
 
 #include "CornerPermReprCubes.h"
+#include "ReprCornerPerms.h"
+#include <vector>
 
 /* A set of representative cubes reachable at specific depth.
  */
 class CubesReprAtDepth {
-    const CubecornerReprPerms &m_reprPerms;
+    const ReprCornerPerms &m_reprPerms;
     std::vector<CornerPermReprCubes> m_cornerPermReprCubes;
 public:
     typedef std::vector<CornerPermReprCubes>::const_iterator ccpcubes_iter;
-    explicit CubesReprAtDepth(const CubecornerReprPerms&);
+    explicit CubesReprAtDepth(const ReprCornerPerms&);
     CubesReprAtDepth(const CubesReprAtDepth&) = delete;
     ~CubesReprAtDepth();
     size_t size() const { return m_cornerPermReprCubes.size(); }
