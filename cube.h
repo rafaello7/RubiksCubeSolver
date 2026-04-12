@@ -34,9 +34,10 @@ struct cube {
         };
     }
     cube transform(unsigned transformDir) const;
-	bool operator==(const cube &c) const;
-	bool operator!=(const cube &c) const;
-	bool operator<(const cube &c) const;
+    bool operator==(const cube &c) const;
+    bool operator!=(const cube &c) const;
+    bool operator<(const cube &c) const;
+    bool isNil() const { return ce.isNil(); }
     bool isBGspace() const { return cco.isBGspace() && ce.isBGspace(); }
     bool isYWspace() const { return cco.isYWspace(ccp) && ce.isYWspace(); }
     bool isORspace() const { return cco.isORspace(ccp) && ce.isORspace(); }

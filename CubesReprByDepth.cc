@@ -166,9 +166,9 @@ unsigned long CubesReprByDepth::addCubesForReprPerm(unsigned reprPermIdx, int de
     return cubeCount;
 }
 
-bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
+cube CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
         unsigned depth, unsigned depthMax, const cube &cSearchT,
-        bool reversed, cube &c) const
+        bool reversed) const
 {
     std::vector<EdgeReprCandidateTransform> otransform;
     const CornerPermReprCubes &ccpReprCubes = m_cubesAtDepths[depth]->getAt(reprPermIdx);
@@ -197,10 +197,8 @@ bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
                     continue;
                 cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
                         ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
-                if( !ce.isNil() ) {
-                    c = { .ccp = ccp, .cco = cco, .ce = ce };
-                    return true;
-                }
+                if( !ce.isNil() )
+                    return { .ccp = ccp, .cco = cco, .ce = ce };
             }
         }else{
             for(CornerPermReprCubes::ccocubes_iter ccoCubesIt = ccpReprSearchCubes.ccoCubesBegin();
@@ -215,13 +213,11 @@ bool CubesReprByDepth::searchMovesForReprPerm(unsigned reprPermIdx,
                     continue;
                 cubeedges ce = CornerOrientReprCubes::findSolutionEdge(
                         ccoReprCubes, ccoReprSearchCubes, otransform, reversed);
-                if( !ce.isNil() ) {
-                    c = { .ccp = ccp, .cco = cco, .ce = ce };
-                    return true;
-                }
+                if( !ce.isNil() )
+                    return { .ccp = ccp, .cco = cco, .ce = ce };
             }
         }
     }
-    return false;
+    return cube();
 }
 

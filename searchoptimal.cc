@@ -107,10 +107,9 @@ static bool searchMovesForIdxs(const CubesReprByDepth &cubesReprByDepth,
         const SearchIndexes &indexes, std::string &moves)
 {
     const cube &cSearchT = cSearchTarr[indexes.reversed][indexes.symmetric][indexes.td];
-    cube c;
-    if( cubesReprByDepth.searchMovesForReprPerm(indexes.permReprIdx,
-            depth, depthMax, cSearchT, indexes.reversed, c) )
-    {
+    cube c = cubesReprByDepth.searchMovesForReprPerm(indexes.permReprIdx,
+            depth, depthMax, cSearchT, indexes.reversed);
+    if( !c.isNil() ) {
         cube cT = c.transform(transformReverse(indexes.td));
         cube cTsymm = indexes.symmetric ? cT.symmetric() : cT;
         cube cTsymmrev = indexes.reversed ? cTsymm.reverse() : cTsymm;

@@ -33,9 +33,9 @@ public:
      * Before call the set should be filled up to depth-1.
      */
     unsigned long addCubesForReprPerm(unsigned reprPermIdx, int depth);
-    bool searchMovesForReprPerm(unsigned reprPermIdx,
+    cube searchMovesForReprPerm(unsigned reprPermIdx,
             unsigned depth, unsigned depthMax, const cube &cSearchT,
-            bool reversed, cube &c) const;
+            bool reversed) const;
 };
 
 #endif // CUBESREPRBYDEPTH_H
